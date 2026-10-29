@@ -238,3 +238,34 @@ Media: https://thomasaitest.github.io/blokkverden/progress/it3/
 31 vitest grønne (inkl. helvete-dim dual-store)
 
 Media: https://thomasaitest.github.io/blokkverden/progress/it9/
+
+## Iterasjon 10 (2026-10-29) — dør-gap, Helvete-himmel/lava, portal, ulv
+
+**Tid:** start 22:09:55 CET → slutt ~23:10 CET (~60 min). Kvalitet over kvantitet.
+
+### Bugs funnet og fikset
+1. Dør åpen: terskel-gap (sky) — sill + 2-blokk flush panel
+2. Helvete-himmel blek/hvit — `setDayTime` hvert frame overskrev dim-vis; nå `applyHelveteSky` (rød/mørk)
+3. Helvete: få lava nær spawn — lavere terrengbaseline + lavaTop 28; synlig Glødstein-klynger
+4. Portal-foto: isolert klar 4×5 tent ramme (6 portal + 14 frame)
+5. Ulv-temming: rekkevidde/approach før bone-interact
+
+### Nye features (verifisert)
+1. Ulv (`ulv`): temmes med Bein, følger spiller, sitt/stå-toggle
+
+### Verifisert fungerer
+- Dør lukket/åpen uten terskel-hull
+- Helvete rød himmel/fog (ikke blek)
+- Lava-sjøer + glødstein i Helvete
+- Portal full tent ramme
+- Round-trip OW urørt
+- Båt, fiske naturlig 3/3, lampe av/på, skilt, seng
+- Ulv tame/follow/sit
+
+### Media
+`public/progress/it10/` (+ webm)
+
+### Tester
+31 vitest grønne
+
+Media: https://thomasaitest.github.io/blokkverden/progress/it10/

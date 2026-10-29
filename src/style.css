@@ -1,0 +1,185 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body, #app {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #87b5e0;
+  font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+canvas#game {
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+}
+#hud { pointer-events: none; }
+#crosshair {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border: 2px solid rgba(255,255,255,0.85);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.4);
+  z-index: 10;
+}
+#crosshair::after {
+  content: '';
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 4px; height: 4px;
+  margin: -2px 0 0 -2px;
+  background: #fff;
+  border-radius: 50%;
+}
+#break-bar {
+  position: fixed;
+  left: 50%;
+  top: calc(50% + 28px);
+  width: 80px;
+  height: 6px;
+  margin-left: -40px;
+  background: rgba(0,0,0,0.45);
+  border-radius: 3px;
+  opacity: 0;
+  z-index: 10;
+  overflow: hidden;
+}
+#break-fill {
+  height: 100%;
+  width: 0%;
+  background: #e8e8e8;
+}
+#hotbar {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  background: rgba(0,0,0,0.45);
+  border-radius: 8px;
+  pointer-events: auto;
+  z-index: 10;
+}
+.hb-slot {
+  width: 44px;
+  height: 44px;
+  background: rgba(40,40,40,0.7);
+  border: 2px solid #555;
+  border-radius: 4px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  image-rendering: pixelated;
+}
+.hb-slot.active { border-color: #fff; box-shadow: 0 0 0 1px #000; }
+.hb-slot span {
+  position: absolute;
+  bottom: 1px; right: 3px;
+  font-size: 10px;
+  color: #ddd;
+  text-shadow: 0 1px 1px #000;
+}
+#debug {
+  position: fixed;
+  left: 8px;
+  top: 8px;
+  color: #fff;
+  text-shadow: 1px 1px 0 #000;
+  font-size: 12px;
+  line-height: 1.35;
+  z-index: 10;
+  white-space: pre;
+}
+#hint {
+  position: fixed;
+  left: 50%;
+  top: 20%;
+  transform: translateX(-50%);
+  color: #fff;
+  text-align: center;
+  text-shadow: 0 1px 3px #000;
+  font-size: 14px;
+  z-index: 10;
+  background: rgba(0,0,0,0.35);
+  padding: 10px 16px;
+  border-radius: 8px;
+  pointer-events: none;
+}
+#app.playing #hint { display: none; }
+
+/* Touch */
+#touch-controls {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+}
+.joystick {
+  position: absolute;
+  left: 24px;
+  bottom: 90px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  border: 2px solid rgba(255,255,255,0.35);
+  pointer-events: auto;
+  touch-action: none;
+}
+.joy-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 52px;
+  height: 52px;
+  margin: 0;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: rgba(255,255,255,0.45);
+  border: 2px solid rgba(255,255,255,0.7);
+}
+.touch-btns {
+  position: absolute;
+  right: 18px;
+  bottom: 90px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: auto;
+}
+.tbtn {
+  min-width: 72px;
+  padding: 14px 12px;
+  border: none;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.28);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.tbtn.danger { background: rgba(220,80,60,0.55); }
+.tbtn:active { transform: scale(0.96); }
+.look-zone {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 55%;
+  height: 70%;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+@media (pointer: fine) {
+  #touch-controls { display: none !important; }
+}

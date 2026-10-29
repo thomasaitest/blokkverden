@@ -5,6 +5,12 @@ export class SoundBus {
   private enabled = true;
   private stepCool = 0;
   private ambientTimer = 0;
+  private vol = 0.25;
+
+  setVolume(v: number): void {
+    this.vol = Math.max(0, Math.min(1, v)) * 0.35;
+    if (this.master) this.master.gain.value = this.vol;
+  }
 
   private ensure(): AudioContext | null {
     if (!this.enabled) return null;
@@ -13,7 +19,7 @@ export class SoundBus {
       if (!AC) return null;
       this.ctx = new AC();
       this.master = this.ctx.createGain();
-      this.master.gain.value = 0.25;
+      this.master.gain.value = this.vol;
       this.master.connect(this.ctx.destination);
     }
     if (this.ctx.state === 'suspended') void this.ctx.resume();

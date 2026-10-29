@@ -147,6 +147,51 @@ export function createAtlasCanvas(): HTMLCanvasElement {
   fillTile(d, 35, (lx, ly) => (Math.abs(lx - 8) + Math.abs(ly - 8) < 6 ? [80, 230, 240, 255] : [0, 0, 0, 0]));
 
 
+
+  // 36 farmland
+  fillTile(d, 36, (_x, ly, rnd) => {
+    const v = 70 + rnd * 25;
+    return ly < 3 ? [v + 20, v - 10, 20, 255] : [v, v * 0.7, 25, 255];
+  });
+  // 37 crop young
+  fillTile(d, 37, (lx, ly) => {
+    if (ly > 10 && Math.abs(lx - 8) < 2) return [40, 120, 30, 255];
+    if (ly > 6 && Math.abs(lx - 8) < 1) return [50, 140, 40, 255];
+    return [0, 0, 0, 0];
+  });
+  // 38 crop ripe
+  fillTile(d, 38, (lx, ly) => {
+    if (ly > 4 && Math.abs(lx - 8) < 3) return [200, 180, 40, 255];
+    if (ly > 10 && Math.abs(lx - 8) < 2) return [80, 140, 30, 255];
+    return [0, 0, 0, 0];
+  });
+  // 39 enchant table
+  fillTile(d, 39, (lx, ly, rnd) => {
+    if (ly < 3) return [40, 20, 60, 255];
+    if (ly > 12) return [30, 30, 40, 255];
+    return [80 + rnd * 40, 40, 140 + rnd * 40, 255];
+  });
+  // 40 boat
+  fillTile(d, 40, (lx, ly) => {
+    if (ly > 8 && lx > 2 && lx < 13) return [140, 90, 40, 255];
+    if (ly > 4 && ly <= 8 && (lx === 3 || lx === 12)) return [120, 80, 35, 255];
+    return [0, 0, 0, 0];
+  });
+  // 41 bread
+  fillTile(d, 41, (lx, ly) => (Math.hypot(lx - 8, ly - 9) < 5 ? [200, 150, 70, 255] : [0, 0, 0, 0]));
+  // 42 seeds
+  fillTile(d, 42, (lx, ly) => (Math.hypot(lx - 8, ly - 8) < 3 ? [180, 160, 60, 255] : [0, 0, 0, 0]));
+  // 43 xp orb
+  fillTile(d, 43, (lx, ly) => (Math.hypot(lx - 8, ly - 8) < 5 ? [80, 255, 80, 255] : [0, 0, 0, 0]));
+  // 44 hoe
+  fillTile(d, 44, (lx, ly) => {
+    if (ly >= 8 && lx >= 6 && lx <= 9) return [140, 90, 40, 255];
+    if (ly >= 3 && ly <= 7 && lx >= 4 && lx <= 12) return [160, 160, 170, 255];
+    return [0, 0, 0, 0];
+  });
+  // 45 wheat item
+  fillTile(d, 45, (lx, ly) => (ly > 4 && Math.abs(lx - 8) < 2 ? [220, 190, 50, 255] : [0, 0, 0, 0]));
+
   ctx.putImageData(img, 0, 0);
   return canvas;
 }

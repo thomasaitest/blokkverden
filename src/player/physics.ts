@@ -89,10 +89,10 @@ export function movePlayer(
   p.inWater = feetWater || waterAt(world, p.x, p.y + 1.0, p.z);
 
   const speed = p.inWater
-    ? (p.sprinting ? 2.2 : 1.6)
-    : p.sneaking ? 1.3 : p.sprinting ? 5.6 : 4.3;
-  const gravity = p.inWater ? 6 : 28;
-  const jumpVel = p.inWater ? 4.5 : 8.5;
+    ? (p.sprinting ? 2.4 : 1.8)
+    : p.sneaking ? 1.3 : p.sprinting ? 5.612 : 4.317;
+  const gravity = p.inWater ? 5 : 32;
+  const jumpVel = p.inWater ? 4.2 : 9.0;
 
   const sin = Math.sin(p.yaw);
   const cos = Math.cos(p.yaw);

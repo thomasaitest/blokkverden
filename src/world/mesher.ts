@@ -76,8 +76,8 @@ function buildMesh(
         if (transparentPass !== def.transparent) continue;
         const wx = ox + lx;
         const wz = oz + lz;
-        const wLevel = id === BlockId.Water ? (chunk.waterLevel[chunk.index(lx, y, lz)] || 7) : 7;
-        const hTop = id === BlockId.Water ? Math.max(0.125, wLevel / 7) : 1;
+        const wLevel = id === BlockId.Water || id === BlockId.Crop ? (chunk.waterLevel[chunk.index(lx, y, lz)] || (id === BlockId.Crop ? 0 : 7)) : 7;
+        const hTop = id === BlockId.Water ? Math.max(0.125, wLevel / 7) : id === BlockId.Crop ? Math.min(1, 0.4 + wLevel * 0.085) : 1;
         // Cull water top against fuller water above
         const skipTop = id === BlockId.Water && getWorld(wx, y + 1, wz) === BlockId.Water;
 
@@ -100,7 +100,8 @@ function buildMesh(
           if (def.transparent && neighbor === id && id !== BlockId.Torch) continue;
           if (!def.transparent && nDef && !nDef.transparent && !nDef.liquid) continue;
 
-          const tileIdx = def.tiles[face.tile];
+          let tileIdx = def.tiles[face.tile];
+          if (id === BlockId.Crop) tileIdx = wLevel >= 7 ? 38 : 37;
           const uv = tileUV(tileIdx);
           const shade =
             face.dir[1] === 1 ? 1.0 : face.dir[1] === -1 ? 0.55 : face.dir[0] !== 0 ? 0.75 : 0.85;

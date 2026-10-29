@@ -78,6 +78,12 @@ export class Inventory {
     this.add(stack(ItemId.CraftingTable, 1));
     this.add(stack(ItemId.Furnace, 1));
     this.add(stack(ItemId.Chest, 1));
+    this.add(stack(ItemId.Seeds, 16));
+    this.add(stack(ItemId.WoodHoe, 1, 60));
+    this.add(stack(ItemId.Boat, 1));
+    this.add(stack(ItemId.Bread, 8));
+    this.add(stack(ItemId.IronHelmet, 1, 165));
+    this.add(stack(ItemId.IronChest, 1, 240));
   }
 
   toJSON() {

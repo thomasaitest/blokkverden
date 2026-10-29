@@ -22,6 +22,9 @@ export const BlockId = {
   SnowGrass: 19,
   Bed: 20,
   Wool: 21,
+  Farmland: 22,
+  Crop: 23,
+  EnchantTable: 24,
 } as const;
 
 export type BlockId = (typeof BlockId)[keyof typeof BlockId];
@@ -67,6 +70,9 @@ export const BLOCKS: Record<number, BlockDef> = {
   [19]: B(19, 'Snøgress', true, true, false, false, 0.6, { top: 24, bottom: 1, side: 25 }),
   [20]: B(20, 'Seng', true, false, true, false, 0.4, { top: 32, bottom: 7, side: 32 }),
   [21]: B(21, 'Ull', true, true, false, false, 0.4, { top: 33, bottom: 33, side: 33 }),
+  [22]: B(22, 'Åkerjord', true, true, false, false, 0.5, { top: 36, bottom: 1, side: 36 }),
+  [23]: B(23, 'Avling', false, false, true, false, 0.05, { top: 37, bottom: 37, side: 37 }),
+  [24]: B(24, 'Fortryllelsesbord', true, true, false, false, 2.0, { top: 39, bottom: 3, side: 39 }),
 };
 
 export function isSolid(id: number): boolean { return BLOCKS[id]?.solid ?? false; }

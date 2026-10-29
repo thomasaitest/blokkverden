@@ -1,0 +1,25 @@
+{
+  "fpsBefore": 56,
+  "fpsWalk": 38,
+  "sleepOk": true,
+  "state": {
+    "x": 2.5,
+    "y": 30.005,
+    "z": 6.5,
+    "fps": 32.90110315463514,
+    "chunks": 178,
+    "meshes": 178,
+    "health": 20,
+    "hunger": 20,
+    "dayTime": 0.3514072222222222,
+    "mobs": 4,
+    "dead": false,
+    "view": 7,
+    "xp": 0,
+    "level": 1,
+    "armor": 15,
+    "projectiles": 0,
+    "boats": 1,
+    "glLost": false
+  }
+}

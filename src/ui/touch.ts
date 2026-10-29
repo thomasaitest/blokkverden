@@ -1,7 +1,7 @@
 import type { InputState } from '../player/controls';
 
 /** On-screen joystick + look + break/place/jump for iPad/iPhone. */
-export function setupTouchControls(root: HTMLElement, input: InputState): () => void {
+export function setupTouchControls(root: HTMLElement, input: InputState, hooks?: { onInventory?: () => void; onPause?: () => void }): () => void {
   const overlay = document.createElement('div');
   overlay.id = 'touch-controls';
   overlay.innerHTML = `
@@ -12,7 +12,10 @@ export function setupTouchControls(root: HTMLElement, input: InputState): () => 
       <button type="button" id="btn-jump" class="tbtn">Hoppe</button>
       <button type="button" id="btn-place" class="tbtn">Plasser</button>
       <button type="button" id="btn-break" class="tbtn danger">Knus</button>
+      <button type="button" id="btn-sneak" class="tbtn">Smyg</button>
     </div>
+    <button type="button" id="btn-inv" class="tbtn">E</button>
+    <button type="button" id="btn-pause-touch" class="tbtn">❚❚</button>
     <div class="look-zone" id="look-zone"></div>
   `;
   root.appendChild(overlay);
@@ -142,6 +145,15 @@ export function setupTouchControls(root: HTMLElement, input: InputState): () => 
     e.preventDefault();
     input.placePressed = true;
   });
+
+  const btnSneak = overlay.querySelector('#btn-sneak') as HTMLElement | null;
+  if (btnSneak) {
+    hold(btnSneak, () => { input.sneak = true; }, () => { input.sneak = false; });
+  }
+  const btnInv = overlay.querySelector('#btn-inv') as HTMLElement | null;
+  if (btnInv) btnInv.addEventListener('pointerdown', (e) => { e.preventDefault(); hooks?.onInventory?.(); });
+  const btnPause = overlay.querySelector('#btn-pause-touch') as HTMLElement | null;
+  if (btnPause) btnPause.addEventListener('pointerdown', (e) => { e.preventDefault(); hooks?.onPause?.(); });
 
   return () => overlay.remove();
 }

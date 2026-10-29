@@ -151,3 +151,28 @@ Media: https://thomasaitest.github.io/blokkverden/progress/it3/
 
 ### Tester
 22 vitest grønne; Playwright headless playtest
+
+## Iterasjon 5 — ytelse, playtest-hooks, XP, jordbruk, båt, verdener, UI
+
+**FPS:** før ~38 (it4 walk r6) → etter walk **~38** ved radius 7 (~178 chunks) i headless Chromium. State ~33. Mål 60@7–8 delvis: frustum/LOD for transparent, versioned mesh-sync, færre per-frame allocs, vann-tick tøyler; headless GL underdriver vs ekte GPU. Innstilling for renderavstand 3–10.
+
+### Playtest-kvalitet
+- `?test=1` → fersk verden + `window.__bv` (teleport, setTime, spawnMob, give, lookAt, waitForMeshes, buildPlatform, …)
+- Staged scener; alle PNG visuelt sjekket. Fix: FP-armor-mesh dekket hele view (slått av; HUD-slots viser rustning).
+
+### Levert
+- Ytelse: VIEW_RADIUS 7 (justerbar), transparent LOD, versioned syncChunks, water tick sjeldnere, fog tilpasset
+- Bedre mob-pathing (step-up 1, unngå vann/stup), multi-del mob-mesh + bob
+- XP-orbs + nivå + fortryllelsesbord (enkel enchant)
+- Jordbruk: hoe, åkerjord, avling/vekst, brød; frø
+- Båter (plasser + mount)
+- Verdenvelger (flere lagre v5) + tittelskjerm + pause/innstillinger (renderavstand, FOV, sens, volum)
+- Touch: sneak/E/pause-knapper
+- Bevegelse nærmere klassisk (walk 4.317 / sprint 5.612 / hopp)
+- Save v5 multi-world; daglengde 900s
+
+### Media
+`public/progress/it5/` — 00-tittel … 12-respawn, clip-mobs-kamp.webm, clip-farm-bat-seng.webm
+
+### Tester
+22 vitest grønne

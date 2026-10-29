@@ -11,6 +11,12 @@ export interface Recipe {
 }
 
 export const RECIPES: Recipe[] = [
+  { w: 2, h: 2, pattern: [ItemId.Planks, ItemId.Planks, ItemId.Planks, 0], result: stack(ItemId.Boat, 1) },
+  { w: 3, h: 2, pattern: [ItemId.Planks, ItemId.Planks, 0, 0, ItemId.Stick, 0], result: stack(ItemId.WoodHoe, 1, 60) },
+  { w: 3, h: 2, pattern: [ItemId.IronIngot, ItemId.IronIngot, 0, 0, ItemId.Stick, 0], result: stack(ItemId.IronHoe, 1, 250) },
+  { w: 3, h: 1, pattern: [ItemId.Wheat, ItemId.Wheat, ItemId.Wheat], result: stack(ItemId.Bread, 1) },
+  { w: 3, h: 3, pattern: [0, ItemId.Diamond, 0, ItemId.Diamond, ItemId.Cobble, ItemId.Diamond, ItemId.Cobble, ItemId.Cobble, ItemId.Cobble], result: stack(ItemId.EnchantTable, 1) },
+
   // bed
   { w: 3, h: 2, pattern: [ItemId.WoolItem, ItemId.WoolItem, ItemId.WoolItem, ItemId.Planks, ItemId.Planks, ItemId.Planks], result: stack(ItemId.Bed, 1) },
   // bow

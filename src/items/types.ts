@@ -15,10 +15,12 @@ export const ItemId = {
   LeatherHelmet: 120, LeatherChest: 121, LeatherLegs: 122, LeatherBoots: 123,
   IronHelmet: 124, IronChest: 125, IronLegs: 126, IronBoots: 127,
   DiamondHelmet: 128, DiamondChest: 129, DiamondLegs: 130, DiamondBoots: 131,
+  Seeds: 63, Wheat: 64, Bread: 65, Boat: 66,
+  WoodHoe: 116, IronHoe: 117, EnchantTable: 24,
 } as const;
 
 export type ItemId = (typeof ItemId)[keyof typeof ItemId];
-export type ToolKind = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'bow' | 'none';
+export type ToolKind = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'bow' | 'hoe' | 'none';
 export type ArmorSlot = 'head' | 'chest' | 'legs' | 'feet';
 export type BlockMaterial = 'ground' | 'wood' | 'stone' | 'plant' | 'glass' | 'other';
 
@@ -96,6 +98,15 @@ export const ITEMS: Record<number, ItemDef> = {
   [129]: armor(129, 'Diamantbryst', 'chest', 8, 35, 528),
   [130]: armor(130, 'Diamantbukser', 'legs', 6, 35, 495),
   [131]: armor(131, 'Diamantstøvler', 'feet', 3, 35, 429),
+  [22]: blk(22, 'Åkerjord', 36, 22),
+  [23]: blk(23, 'Avling', 37, 23),
+  [24]: blk(24, 'Fortryllelsesbord', 39, 24),
+  [63]: { id: 63, name: 'Frø', stackable: true, maxStack: 64, iconTile: 42 },
+  [64]: { id: 64, name: 'Hvete', stackable: true, maxStack: 64, iconTile: 45 },
+  [65]: { id: 65, name: 'Brød', stackable: true, maxStack: 64, iconTile: 41, food: 5 },
+  [66]: { id: 66, name: 'Båt', stackable: false, maxStack: 1, iconTile: 40 },
+  [116]: tool(116, 'Trehakkejord', 'hoe', 'wood', 60, 1, 1, 44),
+  [117]: tool(117, 'Jernhakkejord', 'hoe', 'iron', 250, 1, 1, 44),
 };
 
 export function blockMaterial(blockId: number): BlockMaterial {
@@ -133,12 +144,18 @@ export function dropForBlock(blockId: number, held: ItemStack | null): ItemStack
   if (blockId === 15) return pick ? stack(51, 1) : null;
   if (blockId === 16 || blockId === 17) return pick ? stack(blockId, 1) : null;
   if (blockId === 18) return pick ? stack(55, 1) : null;
-  if (blockId === 1 || blockId === 19) return stack(2, 1);
+  if (blockId === 1 || blockId === 19) {
+    if (Math.random() < 0.12) return stack(63, 1);
+    return stack(2, 1);
+  }
   if (blockId === 7) {
     if (Math.random() < 0.08) return stack(52, 1);
     if (Math.random() < 0.1) return stack(50, 1);
     return null;
   }
+  if (blockId === 7 && Math.random() < 0.05) return stack(63, 1); // seeds from leaves rare — handled above
+  if (blockId === 23) return null; // crops handled by harvestCrop
+  if (blockId === 22) return stack(2, 1);
   if (blockId === 9) return null;
   if (blockId === 12) return stack(12, 1);
   const placeable = Object.values(ITEMS).find((i) => i.placeBlock === blockId);

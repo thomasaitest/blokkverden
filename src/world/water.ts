@@ -3,7 +3,7 @@ import { CHUNK_HEIGHT, CHUNK_SIZE, chunkKey } from './chunk';
 import type { World } from './world';
 
 /** Tick flowing water with a budget. */
-export function tickWater(world: World, budget = 80): void {
+export function tickWater(world: World, budget = 80): number {
   let n = 0;
   const updates: { x: number; y: number; z: number; level: number }[] = [];
 
@@ -61,4 +61,5 @@ export function tickWater(world: World, budget = 80): void {
   for (const u of updates) {
     world.setWater(u.x, u.y, u.z, u.level);
   }
+  return updates.length;
 }

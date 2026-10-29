@@ -6,7 +6,10 @@ import { SeededNoise } from './noise';
 import { generateTerrain, placeTreesForChunk } from './terrain';
 import { relightChunk } from './light';
 
-export const VIEW_RADIUS = 6;
+export let VIEW_RADIUS = 7;
+export function setViewRadius(r: number): void {
+  VIEW_RADIUS = Math.max(3, Math.min(10, r | 0));
+}
 
 export class World {
   readonly seed: number;
@@ -44,6 +47,16 @@ export class World {
       this.useWorker = false;
       this.worker = null;
     }
+  }
+
+  meshQueue(): { dirty: number; meshing: number } {
+    return { dirty: this.dirtyMeshes.size, meshing: this.meshing.size };
+  }
+
+  markMeshDirty(cx: number, cz: number): void {
+    this.dirtyMeshes.add(chunkKey(cx, cz));
+    const c = this.chunks.get(chunkKey(cx, cz));
+    if (c) c.dirty = true;
   }
 
   getChunk(cx: number, cz: number): Chunk | undefined {
@@ -302,31 +315,42 @@ export class World {
     if (c.lightDirty) this.relight(c);
     this.meshes.set(key, meshChunk(c, (x, y, z) => this.getBlock(x, y, z), (x, y, z) => this.getLight(x, y, z)));
     c.dirty = false;
+    c.meshVersion++;
+    this.meshRevision++;
   }
 
   findSpawn(): { x: number; y: number; z: number } {
     this.ensureChunk(0, 0);
-    // Prefer dry grass/sand near origin
-    for (let r = 0; r < 48; r++) {
-      for (let dx = -r; dx <= r; dx++) {
-        for (let dz = -r; dz <= r; dz++) {
-          if (Math.max(Math.abs(dx), Math.abs(dz)) !== r && r > 0) continue;
-          const wx = 8 + dx;
-          const wz = 8 + dz;
-          this.ensureChunk(Math.floor(wx / CHUNK_SIZE), Math.floor(wz / CHUNK_SIZE));
-          for (let y = CHUNK_HEIGHT - 1; y > SEA_LEVEL; y--) {
-            const id = this.getBlock(wx, y, wz);
-            if (isSolid(id) && this.getBlock(wx, y + 1, wz) === BlockId.Air && this.getBlock(wx, y + 2, wz) === BlockId.Air) {
-              return { x: wx + 0.5, y: y + 1.01, z: wz + 0.5 };
+    const prefer = (id: number) => id === BlockId.Grass || id === BlockId.Sand || id === BlockId.SnowGrass || id === BlockId.Dirt;
+    for (let pass = 0; pass < 2; pass++) {
+      for (let r = 0; r < 64; r++) {
+        for (let dx = -r; dx <= r; dx++) {
+          for (let dz = -r; dz <= r; dz++) {
+            if (Math.max(Math.abs(dx), Math.abs(dz)) !== r && r > 0) continue;
+            const wx = 8 + dx;
+            const wz = 8 + dz;
+            this.ensureChunk(Math.floor(wx / CHUNK_SIZE), Math.floor(wz / CHUNK_SIZE));
+            for (let y = CHUNK_HEIGHT - 2; y > SEA_LEVEL; y--) {
+              const id = this.getBlock(wx, y, wz);
+              const above = this.getBlock(wx, y + 1, wz);
+              const above2 = this.getBlock(wx, y + 2, wz);
+              if (!isSolid(id) || above !== BlockId.Air || above2 !== BlockId.Air) continue;
+              if (this.getBlock(wx, y + 1, wz) === BlockId.Water) continue;
+              if (pass === 0 && !prefer(id)) continue;
+              return { x: wx + 0.5, y: y + 1.05, z: wz + 0.5 };
             }
           }
         }
       }
     }
-    for (let y = CHUNK_HEIGHT - 1; y > 0; y--) {
-      if (isSolid(this.getBlock(8, y, 8))) return { x: 8.5, y: y + 2, z: 8.5 };
+    // Fallback: build a grass pad
+    const y = SEA_LEVEL + 4;
+    for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) {
+      this.setBlock(8 + dx, y, 8 + dz, BlockId.Grass);
+      this.setBlock(8 + dx, y + 1, 8 + dz, BlockId.Air);
+      this.setBlock(8 + dx, y + 2, 8 + dz, BlockId.Air);
     }
-    return { x: 8.5, y: SEA_LEVEL + 5, z: 8.5 };
+    return { x: 8.5, y: y + 1.05, z: 8.5 };
   }
 
   serializeModified(): { cx: number; cz: number; blocks: number[]; waterLevel: number[] }[] {

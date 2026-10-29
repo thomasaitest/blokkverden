@@ -29,6 +29,7 @@ export function createHud(root: HTMLElement, inv: Inventory, atlas: HTMLCanvasEl
     <div id="hint">Klikk · WASD · dobbel-W · Space · Shift · E · 1–9 · høyreklikk ovn/kiste/benk<br/>Spis: høyreklikk mat i hotbar · På nettbrett: styrespak</div>
   `;
   root.appendChild(el);
+  setTimeout(() => { const h = el.querySelector('#hint') as HTMLElement | null; if (h) h.style.display = 'none'; }, 8000);
 
   const hotbarEl = el.querySelector('#hotbar') as HTMLElement;
   let slot = inv.selected;
@@ -99,7 +100,7 @@ export function createHud(root: HTMLElement, inv: Inventory, atlas: HTMLCanvasEl
       const cz = Math.floor(p.z / CHUNK_SIZE);
       const held = inv.held();
       debugEl.textContent = [
-        `Blokkverden it4`,
+        `Blokkverden it5`,
         `${fps.toFixed(0)} fps`,
         `xyz: ${p.x.toFixed(2)} / ${p.y.toFixed(2)} / ${p.z.toFixed(2)}`,
         `chunk: ${cx} ${cz}`,

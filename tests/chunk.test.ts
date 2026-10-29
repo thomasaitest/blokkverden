@@ -39,8 +39,8 @@ describe('Chunk + terrain', () => {
 });
 
 describe('World', () => {
-  it('view radius is 6', async () => {
+  it('view radius is 7', async () => {
     const { VIEW_RADIUS } = await import('../src/world/world');
-    expect(VIEW_RADIUS).toBe(6);
+    expect(VIEW_RADIUS).toBe(7);
   });
 });

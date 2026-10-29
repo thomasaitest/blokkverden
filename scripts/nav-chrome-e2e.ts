@@ -66,13 +66,26 @@ async function main() {
   await canvas.click({ position: { x: 640, y: 360 } });
   await sleep(300);
 
+  const resetPose = async () => {
+    await page.evaluate(() => {
+      const bv = (window as any).__bv;
+      // Flat pad so terrain never blocks the direction checks
+      for (let x = 4; x <= 12; x++) for (let z = 4; z <= 12; z++) {
+        bv.world.setBlock(x, 35, z, 1); // stone
+        bv.world.setBlock(x, 36, z, 0);
+        bv.world.setBlock(x, 37, z, 0);
+        bv.world.setBlock(x, 38, z, 0);
+      }
+      bv.look(0, 0);
+      bv.teleport(8.5, 36.05, 8.5);
+    });
+    await sleep(150);
+  };
+
+  await resetPose();
+
   // Setup: known yaw via __bv (scenario only), then REAL keys for movement.
-  await page.evaluate(() => {
-    const bv = (window as any).__bv;
-    bv.look(0, 0);
-    bv.teleport(8.5, bv.player.y, 8.5);
-  });
-  await sleep(100);
+  await resetPose();
   const p0 = await page.evaluate(() => {
     const p = (window as any).__bv.player;
     return { x: p.x, y: p.y, z: p.z, yaw: p.yaw };
@@ -89,8 +102,7 @@ async function main() {
   const wOk = dW.dz < -0.8 && Math.abs(dW.dx) < 0.5; // forward -Z at yaw 0
   console.log('W', dW, wOk ? 'OK' : 'FAIL');
 
-  await page.evaluate(() => { const bv = (window as any).__bv; bv.look(0, 0); bv.teleport(8.5, bv.player.y, 8.5); });
-  await sleep(80);
+  await resetPose();
   await page.keyboard.down('KeyS');
   await sleep(700);
   await page.keyboard.up('KeyS');
@@ -98,8 +110,7 @@ async function main() {
   const sOk = (pS.z - 8.5) > 0.8 && Math.abs(pS.x - 8.5) < 0.5;
   console.log('S', pS, sOk ? 'OK' : 'FAIL');
 
-  await page.evaluate(() => { const bv = (window as any).__bv; bv.look(0, 0); bv.teleport(8.5, bv.player.y, 8.5); });
-  await sleep(80);
+  await resetPose();
   await page.keyboard.down('KeyD');
   await sleep(700);
   await page.keyboard.up('KeyD');
@@ -107,8 +118,7 @@ async function main() {
   const dOk = (pD.x - 8.5) > 0.8 && Math.abs(pD.z - 8.5) < 0.5;
   console.log('D', pD, dOk ? 'OK' : 'FAIL');
 
-  await page.evaluate(() => { const bv = (window as any).__bv; bv.look(0, 0); bv.teleport(8.5, bv.player.y, 8.5); });
-  await sleep(80);
+  await resetPose();
   await page.keyboard.down('ArrowLeft');
   await sleep(700);
   await page.keyboard.up('ArrowLeft');

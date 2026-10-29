@@ -208,7 +208,11 @@ export function bindDesktopControls(
     onSlot(input.hotbarSlot);
   };
 
-  const onBlur = () => clearMovement();
+  // Only clear stuck keys when the tab is actually hidden. window "blur" fires
+  // during pointer-lock focus transitions on Chrome/Mac and was wiping WASD.
+  const onVisibility = () => {
+    if (document.visibilityState === 'hidden') clearMovement();
+  };
 
   window.addEventListener('keydown', onKeyDown);
   window.addEventListener('keyup', onKeyUp);
@@ -219,7 +223,7 @@ export function bindDesktopControls(
   document.addEventListener('pointerlockchange', onLockChange);
   document.addEventListener('pointerlockerror', onLockError);
   canvas.addEventListener('wheel', onWheel, { passive: false });
-  window.addEventListener('blur', onBlur);
+  document.addEventListener('visibilitychange', onVisibility);
 
   return () => {
     window.removeEventListener('keydown', onKeyDown);
@@ -231,7 +235,7 @@ export function bindDesktopControls(
     document.removeEventListener('pointerlockchange', onLockChange);
     document.removeEventListener('pointerlockerror', onLockError);
     canvas.removeEventListener('wheel', onWheel);
-    window.removeEventListener('blur', onBlur);
+    document.removeEventListener('visibilitychange', onVisibility);
   };
 }
 

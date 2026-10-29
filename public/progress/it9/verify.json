@@ -3,7 +3,7 @@
     {
       "area": "båt mount/styr/av",
       "ok": true,
-      "detail": "{\"placed\":true,\"mountOk\":true,\"steered\":true,\"dismountOk\":true,\"boatY\":30.88,\"dist\":3.5518732351452296}"
+      "detail": "{\"placed\":true,\"mountOk\":true,\"steered\":true,\"dismountOk\":true,\"boatY\":30.88,\"dist\":3.561701643494349}"
     },
     {
       "area": "fiske 5/5",
@@ -23,7 +23,7 @@
     {
       "area": "it8 regresjon portal+give",
       "ok": true,
-      "detail": "{\"pos0\":{\"x\":2.5,\"z\":8.5},\"bed\":true,\"portals\":6,\"held\":1,\"perf\":{\"drawCalls\":67,\"triangles\":43092,\"programs\":12},\"build\":true}"
+      "detail": "{\"pos0\":{\"x\":2.5,\"z\":8.5},\"bed\":true,\"portals\":6,\"held\":1,\"perf\":{\"drawCalls\":65,\"triangles\":43068,\"programs\":13},\"build\":true}"
     },
     {
       "area": "3D skilt",

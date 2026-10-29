@@ -209,11 +209,11 @@ Media: https://thomasaitest.github.io/blokkverden/progress/it3/
 
 ## Iterasjon 9 (2026-10-29) — kvalitet, båt/fiske/dør/lampe, Helvete-dimensjon
 
-**Tid:** start 21:12:58 CET → slutt ~22:13 CET (~60 min). Kvalitet over kvantitet.
+**Tid:** start 21:12:58 CET → slutt 22:06 CET (kvalitet + ærlig fiske-verifisering).
 
 ### Bugs funnet og fikset
 1. Båt: mount-avstand for stor + styring — mount innen rekkevidde, vannlinje-visning, sneak-avstigning
-2. Fiske: bite/reel upålitelig — forceInstantBite i test, 8s bite-vindu, alltid RawFish ved bite (5/5)
+2. Fiske: bite/reel upålitelig — 8s bite-vindu, alltid RawFish ved bite; castFish tvinger IKKE lenger; naturlig bite 3/3 wall-clock + 5/5 verify
 3. Dør: gjennomsiktig hull — egen svingbar mesh (ikke greedy), opaque, lukket/åpen skudd
 4. Lampe: lite synlig «på» — hoppet over greedy mesh, BasicMaterial mørk/av vs lys/på + PointLight, natt-par
 5. Helvete: overworld-korrupsjon (it8) — separat chunk-store per dimensjon, round-trip-test

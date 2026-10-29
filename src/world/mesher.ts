@@ -77,7 +77,9 @@ function buildMesh(
         const wx = ox + lx;
         const wz = oz + lz;
         const wLevel = id === BlockId.Water || id === BlockId.Crop ? (chunk.waterLevel[chunk.index(lx, y, lz)] || (id === BlockId.Crop ? 0 : 7)) : 7;
-        const hTop = id === BlockId.Water ? Math.max(0.125, wLevel / 7) : id === BlockId.Crop ? Math.min(1, 0.4 + wLevel * 0.085) : 1;
+        let hTop = id === BlockId.Water ? Math.max(0.125, wLevel / 7) : id === BlockId.Crop ? Math.min(1, 0.4 + wLevel * 0.085) : 1;
+        if (id === BlockId.Slab || id === BlockId.PressurePlate) hTop = id === BlockId.PressurePlate ? 0.1 : 0.5;
+        // thin blocks still emit full faces for simplicity but collision is thin
         // Cull water top against fuller water above
         const skipTop = id === BlockId.Water && getWorld(wx, y + 1, wz) === BlockId.Water;
 

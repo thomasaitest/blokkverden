@@ -1,0 +1,21 @@
+{
+  "perf": {
+    "before": {
+      "fps": 9.23076923076923,
+      "perf": {
+        "drawCalls": 83,
+        "triangles": 117454,
+        "programs": 2
+      }
+    },
+    "after": {
+      "fps": 34,
+      "perf": {
+        "drawCalls": 49,
+        "triangles": 144440,
+        "programs": 4
+      }
+    }
+  },
+  "hint": "checked"
+}

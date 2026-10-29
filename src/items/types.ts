@@ -16,7 +16,7 @@ export const ItemId = {
   IronHelmet: 124, IronChest: 125, IronLegs: 126, IronBoots: 127,
   DiamondHelmet: 128, DiamondChest: 129, DiamondLegs: 130, DiamondBoots: 131,
   Seeds: 63, Wheat: 64, Bread: 65, Boat: 66, FishingRod: 67, MapItem: 68, RawFish: 69, CookedFish: 70,
-  WoodHoe: 116, IronHoe: 117, EnchantTable: 24,
+  WoodHoe: 116, IronHoe: 117, EnchantTable: 24, Door: 26, Trapdoor: 27, Fence: 28, Gate: 29, Stairs: 30, Slab: 31, GlassPane: 32, Ladder: 33, Sign: 34, RedDust: 35, Lever: 36, Button: 37, Lamp: 38, PressurePlate: 39, Helstein: 40, Sjelegrus: 41, PortalFrame: 43,
 } as const;
 
 export type ItemId = (typeof ItemId)[keyof typeof ItemId];
@@ -110,6 +110,23 @@ export const ITEMS: Record<number, ItemDef> = {
   [69]: { id: 69, name: 'Råfisk', stackable: true, maxStack: 64, iconTile: 49, food: 2 },
   [70]: { id: 70, name: 'Stekt fisk', stackable: true, maxStack: 64, iconTile: 50, food: 5 },
   [25]: blk(25, 'Fremkaller', 46, 25),
+  [26]: blk(26, 'Dør', 52, 26),
+  [27]: blk(27, 'Falldør', 52, 27),
+  [28]: blk(28, 'Gjerde', 53, 28),
+  [29]: blk(29, 'Grind', 53, 29),
+  [30]: blk(30, 'Trapp', 7, 30),
+  [31]: blk(31, 'Plate', 7, 31),
+  [32]: blk(32, 'Glassrute', 10, 32),
+  [33]: blk(33, 'Stige', 54, 33),
+  [34]: blk(34, 'Skilt', 55, 34),
+  [35]: blk(35, 'Rødtråd', 56, 35),
+  [36]: blk(36, 'Spak', 57, 36),
+  [37]: blk(37, 'Knapp', 57, 37),
+  [38]: blk(38, 'Lampe', 58, 38),
+  [39]: blk(39, 'Trykkplate', 59, 39),
+  [40]: blk(40, 'Helstein', 60, 40),
+  [41]: blk(41, 'Sjelegrus', 61, 41),
+  [43]: blk(43, 'Portalramme', 63, 43),
   [116]: tool(116, 'Trehakkejord', 'hoe', 'wood', 60, 1, 1, 44),
   [117]: tool(117, 'Jernhakkejord', 'hoe', 'iron', 250, 1, 1, 44),
 };

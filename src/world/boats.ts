@@ -48,19 +48,25 @@ export class BoatSystem {
 
       if (this.mounted && this.boats[0] === b || (this.mounted && Math.hypot(b.x - player.x, b.z - player.z) < 1.5)) {
         // drive
-        const speed = inWater ? 4.5 : 0.5;
-        const s = Math.sin(player.yaw), c = Math.cos(player.yaw);
-        let fx = 0, fz = 0;
-        if (inputForward || wishZ < -0.1) { fx -= s; fz -= c; }
-        if (wishZ > 0.1) { fx += s; fz += c; }
-        if (wishX > 0.1) { fx += c; fz -= s; }
-        if (wishX < -0.1) { fx -= c; fz += s; }
-        const len = Math.hypot(fx, fz) || 1;
-        b.vx = (fx / len) * speed;
-        b.vz = (fz / len) * speed;
-        b.yaw = player.yaw;
+        const speed = inWater ? 5.2 : 0.35;
+        // steer toward look yaw with inertia
+        let dyaw = player.yaw - b.yaw;
+        while (dyaw > Math.PI) dyaw -= Math.PI * 2;
+        while (dyaw < -Math.PI) dyaw += Math.PI * 2;
+        b.yaw += dyaw * Math.min(1, 4 * dt);
+        const s = Math.sin(b.yaw), c = Math.cos(b.yaw);
+        let throttle = 0;
+        if (inputForward || wishZ < -0.1) throttle += 1;
+        if (wishZ > 0.1) throttle -= 0.45;
+        // strafe gently
+        const strafe = (wishX > 0.1 ? 1 : 0) + (wishX < -0.1 ? -1 : 0);
+        const tx = (-s * throttle + c * strafe * 0.35) * speed;
+        const tz = (-c * throttle - s * strafe * 0.35) * speed;
+        b.vx += (tx - b.vx) * Math.min(1, 3 * dt);
+        b.vz += (tz - b.vz) * Math.min(1, 3 * dt);
         b.x += b.vx * dt; b.z += b.vz * dt;
-        player.x = b.x; player.y = b.y + 0.6; player.z = b.z;
+        player.x = b.x; player.y = b.y + 0.55; player.z = b.z;
+        player.yaw = b.yaw;
         player.vx = player.vz = 0; player.vy = 0;
       } else {
         b.vx *= 0.9; b.vz *= 0.9;

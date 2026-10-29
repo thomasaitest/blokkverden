@@ -1,4 +1,4 @@
-import { BlockId, isSolid } from '../blocks/types';
+import { BlockId, collidesBlock } from '../blocks/types';
 import type { World } from '../world/world';
 
 export const PLAYER_WIDTH = 0.6;
@@ -19,6 +19,8 @@ export interface PlayerState {
   fallStartY: number | null;
   inWater: boolean;
   air: number; // 0–20
+  creative: boolean;
+  flying: boolean;
 }
 
 export interface MoveResult {
@@ -29,22 +31,24 @@ export function createPlayer(x: number, y: number, z: number): PlayerState {
   return {
     x, y, z, vx: 0, vy: 0, vz: 0, yaw: 0, pitch: 0,
     onGround: false, sneaking: false, sprinting: false,
-    health: 20, hunger: 20, fallStartY: null, inWater: false, air: 20,
+    health: 20, hunger: 20, fallStartY: null, inWater: false, air: 20, creative: false, flying: false,
   };
 }
 
 function collidesAt(world: World, x: number, y: number, z: number, h: number): boolean {
   const hw = PLAYER_WIDTH / 2;
-  const minX = Math.floor(x - hw);
-  const maxX = Math.floor(x + hw);
-  const minY = Math.floor(y);
-  const maxY = Math.floor(y + h - 0.001);
-  const minZ = Math.floor(z - hw);
-  const maxZ = Math.floor(z + hw);
+  const minXf = x - hw, maxXf = x + hw;
+  const minYf = y, maxYf = y + h - 0.001;
+  const minZf = z - hw, maxZf = z + hw;
+  const minX = Math.floor(minXf), maxX = Math.floor(maxXf);
+  const minY = Math.floor(minYf), maxY = Math.floor(maxYf);
+  const minZ = Math.floor(minZf), maxZ = Math.floor(maxZf);
   for (let by = minY; by <= maxY; by++) {
     for (let bz = minZ; bz <= maxZ; bz++) {
       for (let bx = minX; bx <= maxX; bx++) {
-        if (isSolid(world.getBlock(bx, by, bz))) return true;
+        const id = world.getBlock(bx, by, bz);
+        const meta = world.getWaterLevel(bx, by, bz);
+        if (collidesBlock(id, bx, by, bz, minXf, minYf, maxXf, maxYf, minZf, maxZf, meta)) return true;
       }
     }
   }
@@ -87,7 +91,34 @@ export function movePlayer(
   const feetWater = waterAt(world, p.x, p.y + 0.4, p.z);
   const headWater = waterAt(world, p.x, p.y + EYE_HEIGHT, p.z);
   p.inWater = feetWater || waterAt(world, p.x, p.y + 1.0, p.z);
+  const onLadder = world.getBlock(Math.floor(p.x), Math.floor(p.y), Math.floor(p.z)) === BlockId.Ladder
+    || world.getBlock(Math.floor(p.x), Math.floor(p.y + 1), Math.floor(p.z)) === BlockId.Ladder;
 
+  if (onLadder && !p.flying) {
+    p.vy = jump ? 4.2 : (p.sneaking ? -3.5 : -0.6);
+    const sin = Math.sin(p.yaw), cos = Math.cos(p.yaw);
+    p.vx = (wishX * cos - wishZ * sin) * 2.5;
+    p.vz = (wishX * sin + wishZ * cos) * 2.5;
+    tryAxis(world, p, h, 'x', p.vx * dt);
+    tryAxis(world, p, h, 'z', p.vz * dt);
+    p.y += p.vy * dt;
+    if (collidesAt(world, p.x, p.y, p.z, h)) { p.y -= p.vy * dt; p.vy = 0; }
+    p.onGround = false;
+    return { fallDamage: 0 };
+  }
+
+  if (p.creative && p.flying) {
+    const flySpeed = p.sprinting ? 12 : 6.5;
+    const sin = Math.sin(p.yaw), cos = Math.cos(p.yaw);
+    p.vx = (wishX * cos - wishZ * sin) * flySpeed;
+    p.vz = (wishX * sin + wishZ * cos) * flySpeed;
+    p.vy = 0;
+    if (jump) p.vy = flySpeed;
+    if (p.sneaking) p.vy = -flySpeed;
+    p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
+    p.onGround = false;
+    return { fallDamage: 0 };
+  }
   const speed = p.inWater
     ? (p.sprinting ? 2.4 : 1.8)
     : p.sneaking ? 1.3 : p.sprinting ? 5.612 : 4.317;

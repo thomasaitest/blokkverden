@@ -1,54 +1,15 @@
 import { chromium } from 'playwright';
-import { mkdirSync, copyFileSync, writeFileSync, statSync, readdirSync, unlinkSync } from 'node:fs';
+import { mkdirSync, copyFileSync, writeFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { createServer } from 'node:net';
 
-const IT = Number(process.env.IT || 6);
+const IT = Number(process.env.IT || 7);
 const OUT_PUBLIC = join(process.cwd(), 'public', 'progress', `it${IT}`);
 const OUT_SHOTS = join('/workspace/blokkverden-shots', `it${IT}`);
 mkdirSync(OUT_PUBLIC, { recursive: true });
 mkdirSync(OUT_SHOTS, { recursive: true });
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-type BV = {
-  getState: () => { fps: number; chunks: number; meshes: number; dayTime: number; mobs: number; x: number; y: number; z: number; level: number };
-  buildPlatform: (n?: number) => { x: number; y: number; z: number };
-  waitForMeshes: (ms?: number) => Promise<boolean>;
-  setTime: (t: number) => void;
-  look: (y: number, p: number) => void;
-  lookAt: (x: number, y: number, z: number) => void;
-  clearMobs: () => void;
-  spawnMob: (k: string, ox?: number, oy?: number, oz?: number) => { x: number; y: number; z: number };
-  attack: () => boolean;
-  shootBow: (c?: number) => void;
-  give: (id: number, n?: number) => void;
-  placeBedFront: () => { x: number; y: number; z: number };
-  sleep: () => boolean;
-  kill: () => void;
-  respawn: () => void;
-  stageFarm: () => void;
-  placeBoatFront: () => unknown;
-  placeEnchant: () => void;
-  equipArmor: () => void;
-  showPause: () => void;
-  hidePause: () => void;
-  teleport: (x: number, y: number, z: number) => void;
-  input: { forward: boolean; sprint: boolean };
-  player: { yaw: number; pitch: number; health: number };
-  world: { setBlock: (x:number,y:number,z:number,id:number)=>boolean };
-  forceRemeshAround: () => Promise<void>;
-  stageMobs: () => void;
-  stageVillage: () => { x: number; y: number; z: number };
-  stageDungeon: () => { x: number; y: number; z: number };
-  setWeather: (k: string, i?: number) => void;
-  castFish: () => boolean;
-  reelFish: () => unknown;
-  openMap: () => void;
-  closeMap: () => void;
-  openTrade: () => void;
-  getPerf: () => { drawCalls: number; triangles: number };
-};
 
 function freePort(): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -71,12 +32,10 @@ async function main() {
     try { if ((await fetch(BASE + '/')).ok) break; } catch {}
     await sleep(250);
   }
-
   const browser = await chromium.launch({
     headless: true,
     args: ['--use-gl=angle', '--enable-webgl', '--ignore-gpu-blocklist'],
   });
-
   const saveShot = async (page: import('playwright').Page, name: string) => {
     const p1 = join(OUT_PUBLIC, name);
     await page.screenshot({ path: p1, type: 'png' });
@@ -92,377 +51,213 @@ async function main() {
     const page = await context.newPage();
     page.on('pageerror', (e) => console.error('PAGEERROR', e.message));
     await page.goto(BASE + '/?test=1', { waitUntil: 'networkidle', timeout: 90000 });
-    await page.waitForFunction(() => !!(window as unknown as { __bv?: unknown }).__bv, { timeout: 60000 });
+    await page.waitForFunction(() => !!(window as any).__bv, { timeout: 60000 });
     await page.evaluate(async () => {
-      const bv = (window as unknown as { __bv: BV }).__bv;
+      const bv = (window as any).__bv;
       await bv.waitForMeshes(5000);
-      bv.buildPlatform(10);
+      bv.buildPlatform(12);
       await bv.waitForMeshes(4000);
       bv.setTime(0.32);
-      bv.look(0.5, -0.3);
-      // drain remesh queue
-      for (let i = 0; i < 40; i++) {
-        await bv.waitForMeshes(200);
-      }
+      bv.look(0.3, -0.25);
     });
-    await sleep(800);
+    await sleep(600);
+    // verify hint hidden
+    const hintDisp = await page.evaluate(() => {
+      const h = document.getElementById('hint');
+      return h ? getComputedStyle(h).display : 'missing';
+    });
+    console.log('hint_display', hintDisp);
     return { context, page };
   };
 
-
-  // Title screen (no test mode)
   {
     const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
     const page = await context.newPage();
     await page.goto(BASE + '/', { waitUntil: 'networkidle', timeout: 60000 });
     await page.waitForSelector('#title-screen', { timeout: 15000 });
-    await sleep(400);
+    await sleep(300);
     await saveShot(page, '00-tittel.png');
     await context.close();
   }
 
-  const fpsBefore = 56; // it4 walk
-  let fpsWalk = 0;
+  const { context, page } = await openGame(false);
 
-  {
-    const { context, page } = await openGame(false);
-
-    // FPS walk on platform
-    fpsWalk = await page.evaluate(async () => {
-      const bv = (window as unknown as { __bv: BV }).__bv;
-      bv.setTime(0.3);
-      bv.look(0.2, -0.25);
-      // let remesh catch up before measuring
-      await bv.waitForMeshes(3000);
-      await new Promise((r) => setTimeout(r, 1000));
-      bv.input.forward = true;
-      bv.input.sprint = true;
-      const samples: number[] = [];
+  // Perf before (merge off) / after (merge on)
+  const perf = await page.evaluate(`(async () => {
+    const bv = window.__bv;
+    async function sample() {
+      bv.input.forward = true; bv.input.sprint = true;
+      const samples = [];
+      let lastPerf = bv.getPerf();
       for (let i = 0; i < 6; i++) {
-        await new Promise((r) => setTimeout(r, 500));
+        await new Promise((r) => setTimeout(r, 400));
         samples.push(bv.getState().fps);
+        lastPerf = bv.getPerf();
       }
-      bv.input.forward = false;
-      bv.input.sprint = false;
+      bv.input.forward = false; bv.input.sprint = false;
       samples.sort((a, b) => a - b);
-      return samples[Math.floor(samples.length / 2)]; // median
-    });
-    console.log('fps_after_walk', fpsWalk);
-
-    // 01 spawn / landscape day
-    await page.evaluate(async () => {
-      const bv = (window as unknown as { __bv: BV }).__bv;
-      bv.setTime(0.32);
-      bv.look(0.6, -0.28);
-      await bv.waitForMeshes(1500);
-    });
-    await sleep(400);
-    await saveShot(page, '01-spawn.png');
-
-    // 02 articulated mob lineup a few blocks away
-    await page.evaluate(async () => {
-      const bv = (window as unknown as { __bv: BV }).__bv;
-      bv.clearMobs();
-      bv.setTime(0.32);
-      bv.buildPlatform(12);
-      await bv.waitForMeshes(2500);
-      const st = bv.getState();
-      for (let z = -10; z <= -1; z++) for (let x = -6; x <= 6; x++) for (let y = 0; y < 6; y++) {
-        bv.world.setBlock(Math.floor(st.x) + x, Math.floor(st.y) + y, Math.floor(st.z) + z, 0);
-      }
-      await bv.waitForMeshes(2000);
-      (bv as unknown as { stageMobs: () => void }).stageMobs();
-      // nudge camera back to see full bodies
-      bv.player.pitch = -0.2;
-      bv.look(0.15, -0.22);
-      await new Promise((r) => setTimeout(r, 600));
-    });
-    await sleep(500);
-    await saveShot(page, '02-mobs-modeller.png');
-
-    // 03 combat hurt flash from ~3 blocks
-    await page.evaluate(async () => {
-      const bv = (window as unknown as { __bv: BV }).__bv;
-      bv.clearMobs();
-      bv.setTime(0.35);
-      bv.give(111, 1);
-      const m = bv.spawnMob('vandrer', 0, 0, -3.5);
-      bv.spawnMob('gris', 2.2, 0, -4);
-      bv.spawnMob('knallbolle', -2.2, 0, -4.2);
-      bv.lookAt(m.x, m.y + 1.0, m.z);
-      for (let i = 0; i < 4; i++) { bv.attack(); await new Promise((r) => setTimeout(r, 120)); }
-      await new Promise((r) => setTimeout(r, 80));
-    });
-    await sleep(300);
-    await saveShot(page, '03-kamp.png');
-
-    // 04 bow — arrows flying
-    await page.evaluate(async () => {
-      const bv = (window as unknown as { __bv: BV }).__bv;
-      bv.clearMobs();
-      bv.setTime(0.3);
-      bv.give(62, 1); bv.give(61, 32);
-      const m = bv.spawnMob('vever', 0, 0, -6);
-      bv.lookAt(m.x, m.y + 0.4, m.z);
-      bv.shootBow(1);
-      await new Promise((r) => setTimeout(r, 80));
-      bv.shootBow(1);
-      await new Promise((r) => setTimeout(r, 60));
-    });
-    await sleep(250);
-    await saveShot(page, '04-bue.png');
-
-    // 05 bed + sleep (night -> morning)
-    let sleepOk = false;
-    await page.evaluate(async () => {
-      const bv = (window as unknown as { __bv: BV }).__bv;
-      bv.clearMobs();
-      bv.setTime(0.9);
-      bv.buildPlatform(6);
-      await bv.waitForMeshes(1500);
-      const bed = bv.placeBedFront();
-      bv.lookAt(bed.x + 0.5, bed.y + 0.5, bed.z + 0.5);
-      await new Promise((r) => setTimeout(r, 200));
-    });
-    await sleep(300);
-    await saveShot(page, '05-seng-natt.png');
-    sleepOk = await page.evaluate(() => {
-      const bv = (window as unknown as { __bv: BV }).__bv;
-      return bv.sleep();
-    });
-    console.log('sleep_ok', sleepOk);
-    await sleep(400);
-    await saveShot(page, '06-seng-morgen.png');
-
-    // 07 farm
-    await page.evaluate(async () => {
-      const bv = (window as unknown as { __bv: BV }).__bv;
-      bv.setTime(0.35);
-      bv.buildPlatform(6);
-      await bv.waitForMeshes(1500);
-      bv.stageFarm();
-      await bv.waitForMeshes(2000);
-      const st = bv.getState();
-      bv.lookAt(st.x - Math.sin(bv.player.yaw) * 2.5, st.y + 0.3, st.z - Math.cos(bv.player.yaw) * 2.5);
-    });
-    await sleep(400);
-    await saveShot(page, '07-jordbruk.png');
-
-    // 08 boat
-    await page.evaluate(async () => {
-      const bv = (window as unknown as { __bv: BV }).__bv;
-      bv.setTime(0.35);
-      bv.buildPlatform(6);
-      await bv.waitForMeshes(1500);
-      const b = bv.placeBoatFront() as { x: number; y: number; z: number };
-      await bv.waitForMeshes(2000);
-            bv.lookAt(b.x, b.y + 0.3, b.z);
-      await new Promise((r) => setTimeout(r, 200));
-    });
-    await sleep(400);
-    await saveShot(page, '08-bat.png');
-
-    // 08b weather rain
-    await page.evaluate(async () => {
-      const bv = (window as unknown as { __bv: BV }).__bv;
-      bv.setTime(0.4);
-      bv.buildPlatform(8);
-      await bv.waitForMeshes(1500);
-      (bv as unknown as { setWeather: (k: string, i?: number) => void }).setWeather('rain', 0.9);
-      bv.look(0.4, -0.35);
-      await new Promise((r) => setTimeout(r, 400));
-    });
-    await sleep(400);
-    await saveShot(page, '08b-regn.png');
-
-    // 08c village + byttebonde
-    await page.evaluate(async () => {
-      const bv = (window as unknown as { __bv: BV }).__bv;
-      (bv as unknown as { setWeather: (k: string) => void }).setWeather('clear');
-      bv.setTime(0.33);
-      bv.buildPlatform(10);
-      await bv.waitForMeshes(2000);
-      const v = (bv as unknown as { stageVillage: () => { x: number; y: number; z: number } }).stageVillage();
-      await bv.waitForMeshes(2500);
-      bv.lookAt(v.x + 2.5, v.y + 2.2, v.z + 2.5);
-      await new Promise((r) => setTimeout(r, 300));
-    });
-    await sleep(400);
-    await saveShot(page, '08c-landsby.png');
-
-    // 08d dungeon
-    await page.evaluate(async () => {
-      const bv = (window as unknown as { __bv: BV }).__bv;
-      const d = (bv as unknown as { stageDungeon: () => { x: number; y: number; z: number } }).stageDungeon();
-      await bv.waitForMeshes(2500);
-      bv.lookAt(d.x + 3.5, d.y + 2, d.z + 3.5);
-      await new Promise((r) => setTimeout(r, 300));
-    });
-    await sleep(400);
-    await saveShot(page, '08d-hule.png');
-
-    // 08e map
-    await page.evaluate(async () => {
-      const bv = (window as unknown as { __bv: BV }).__bv;
-      bv.buildPlatform(6);
-      await bv.waitForMeshes(1500);
-      bv.setTime(0.35);
-      bv.look(0.5, -0.3);
-      (bv as unknown as { openMap: () => void }).openMap();
-      await new Promise((r) => setTimeout(r, 200));
-    });
-    await sleep(300);
-    await saveShot(page, '08e-kart.png');
-    await page.evaluate(() => (window as unknown as { __bv: { closeMap: () => void } }).__bv.closeMap());
-
-    // 09 enchant + armor
-    await page.evaluate(async () => {
-      const bv = (window as unknown as { __bv: BV }).__bv;
-      bv.setTime(0.32);
-      bv.buildPlatform(8);
-      await bv.waitForMeshes(2500);
-      bv.look(0.5, -0.3);
-      const st = bv.getState();
-      const fx = -Math.sin(0.5), fz = -Math.cos(0.5);
-      const tx = Math.floor(st.x + fx * 3);
-      const tz = Math.floor(st.z + fz * 3);
-      const ty = Math.floor(st.y);
-      bv.world.setBlock(tx, ty - 1, tz, 3);
-      bv.world.setBlock(tx, ty, tz, 24);
-      bv.world.setBlock(tx - 1, ty, tz, 6);
-      bv.world.setBlock(tx + 1, ty, tz, 6);
-      bv.give(115, 1);
-      bv.equipArmor();
-      bv.look(0.5, -0.35);
-    });
-    await sleep(2000);
-    await saveShot(page, '09-enchant-rustning.png');
-
-    // 10 pause menu
-    await page.evaluate(async () => {
-      const bv = (window as unknown as { __bv: BV }).__bv;
-      bv.buildPlatform(8);
-      await bv.waitForMeshes(2500);
-      bv.setTime(0.35);
-            bv.look(0.3, -0.35);
-      await new Promise((r) => setTimeout(r, 300));
-      bv.showPause();
-    });
-    await sleep(400);
-    await saveShot(page, '10-pause.png');
-    await page.evaluate(() => {
-      (window as unknown as { __bv: BV }).__bv.hidePause();
-    });
-
-    // 11 death
-    await page.evaluate(async () => {
-      const bv = (window as unknown as { __bv: BV }).__bv;
-      bv.buildPlatform(6);
-      await bv.waitForMeshes(2000);
-            bv.setTime(0.35);
-      bv.look(0.4, -0.3);
-      await new Promise((r) => setTimeout(r, 200));
-      bv.kill();
-    });
-    await sleep(400);
-    await saveShot(page, '11-dod.png');
-    await page.click('#btn-respawn');
-    await sleep(600);
-    await page.evaluate(async () => {
-      const bv = (window as unknown as { __bv: BV }).__bv;
-      bv.buildPlatform(8);
-      await bv.waitForMeshes(3000);
-            await new Promise((r) => setTimeout(r, 600));
-      bv.setTime(0.35);
-      bv.look(0.6, -0.4);
-      await new Promise((r) => setTimeout(r, 400));
-    });
-    await sleep(700);
-    await saveShot(page, '12-respawn.png');
-
-    const state = await page.evaluate(() => {
-      const bv = (window as unknown as { __bv: BV }).__bv;
-      return { ...bv.getState(), perf: (bv as unknown as { getPerf: () => unknown }).getPerf() };
-    });
-    writeFileSync(join(OUT_PUBLIC, 'playtest-state.json'), JSON.stringify({
-      fpsBefore, fpsWalk, sleepOk, state,
-    }, null, 2));
-    console.log('state', state);
-    await context.close();
-  }
-
-  // Video: mobs + combat
-  {
-    const { context, page } = await openGame(true);
-    await page.evaluate(async () => {
-      const bv = (window as unknown as { __bv: BV }).__bv;
-      bv.setTime(0.05);
-      bv.buildPlatform(8);
-      await bv.waitForMeshes(2000);
-      bv.clearMobs();
-      bv.spawnMob('vandrer', 1, 0, -4);
-      bv.spawnMob('gris', -2, 0, -3);
-      bv.spawnMob('vever', 3, 0, -5);
-      bv.look(0.1, -0.2);
-      bv.input.forward = true;
-      for (let i = 0; i < 40; i++) {
-        if (i % 8 === 0) bv.attack();
-        if (i % 12 === 0) bv.shootBow(0.7);
-        await new Promise((r) => setTimeout(r, 100));
-      }
-      bv.input.forward = false;
-    });
-    await sleep(400);
-    const video = page.video();
-    await page.close(); await context.close();
-    if (video) {
-      const raw = await video.path();
-      copyFileSync(raw, join(OUT_PUBLIC, 'clip-mobs-kamp.webm'));
-      copyFileSync(raw, join(OUT_SHOTS, 'clip-mobs-kamp.webm'));
-      console.log('video1', statSync(join(OUT_PUBLIC, 'clip-mobs-kamp.webm')).size);
+      return { fps: samples[Math.floor(samples.length / 2)], perf: lastPerf };
     }
-  }
+    bv.setSectorMerge(false);
+    await bv.waitForMeshes(2000);
+    await new Promise((r) => setTimeout(r, 800));
+    const before = await sample();
+    bv.setSectorMerge(true);
+    await new Promise((r) => setTimeout(r, 2500));
+    const after = await sample();
+    return { before, after };
+  })()`);
+  console.log('perf', JSON.stringify(perf));
 
-  // Video: farm / boat / explore
-  {
-    const { context, page } = await openGame(true);
-    await page.evaluate(async () => {
-      const bv = (window as unknown as { __bv: BV }).__bv;
-      bv.setTime(0.35);
-      bv.buildPlatform(6);
-      await bv.waitForMeshes(1500);
-      bv.stageFarm();
-      bv.placeBoatFront();
-      await bv.waitForMeshes(1500);
-      bv.look(0.8, -0.3);
-      bv.input.forward = true;
-      for (let i = 0; i < 30; i++) {
-        bv.player.yaw += 0.04;
-        await new Promise((r) => setTimeout(r, 100));
-      }
-      bv.input.forward = false;
-      bv.setTime(0.9);
-      bv.placeBedFront();
-      bv.sleep();
-      await new Promise((r) => setTimeout(r, 600));
-    });
-    await sleep(300);
-    const video = page.video();
-    await page.close(); await context.close();
-    if (video) {
-      const raw = await video.path();
-      copyFileSync(raw, join(OUT_PUBLIC, 'clip-farm-bat-seng.webm'));
-      copyFileSync(raw, join(OUT_SHOTS, 'clip-farm-bat-seng.webm'));
-      console.log('video2', statSync(join(OUT_PUBLIC, 'clip-farm-bat-seng.webm')).size);
+  // 01 spawn no hint
+  await page.evaluate(async () => {
+    const bv = (window as any).__bv;
+    bv.setTime(0.32); bv.look(0.5, -0.3);
+    await bv.waitForMeshes(1000);
+  });
+  await sleep(300);
+  await saveShot(page, '01-spawn.png');
+
+  // 02 detailed mob skins
+  await page.evaluate(async () => {
+    const bv = (window as any).__bv;
+    bv.clearMobs();
+    bv.buildPlatform(12);
+    await bv.waitForMeshes(2000);
+    const st = bv.getState();
+    for (let z = -10; z <= -1; z++) for (let x = -8; x <= 8; x++) for (let y = 0; y < 6; y++)
+      bv.world.setBlock(Math.floor(st.x) + x, Math.floor(st.y) + y, Math.floor(st.z) + z, 0);
+    await bv.waitForMeshes(2000);
+    bv.look(0, -0.15);
+    bv.stageMobs();
+    await new Promise((r) => setTimeout(r, 700));
+  });
+  await sleep(400);
+  await saveShot(page, '02-mobs-skins.png');
+
+  // 03 combat
+  await page.evaluate(async () => {
+    const bv = (window as any).__bv;
+    bv.clearMobs();
+    bv.give(111, 1);
+    const m = bv.spawnMob('vandrer', 0, 0, -4);
+    bv.spawnMob('gris', 2.2, 0, -4.5);
+    bv.lookAt(m.x, m.y + 1, m.z);
+    for (let i = 0; i < 4; i++) { bv.attack(); await new Promise((r) => setTimeout(r, 100)); }
+  });
+  await sleep(250);
+  await saveShot(page, '03-kamp.png');
+
+  // 04 boat framed
+  await page.evaluate(async () => {
+    const bv = (window as any).__bv;
+    bv.clearMobs();
+    bv.buildPlatform(8);
+    await bv.waitForMeshes(1500);
+    const b = bv.stageBoat();
+    await bv.waitForMeshes(2000);
+    await new Promise((r) => setTimeout(r, 400));
+  });
+  await sleep(400);
+  await saveShot(page, '04-bat.png');
+
+  // 05 redstone
+  await page.evaluate(async () => {
+    const bv = (window as any).__bv;
+    bv.buildPlatform(8);
+    await bv.waitForMeshes(1500);
+    bv.stageRedstone();
+    await bv.waitForMeshes(2000);
+  });
+  await sleep(400);
+  await saveShot(page, '05-rodtrad.png');
+
+  // 06 build blocks
+  await page.evaluate(async () => {
+    const bv = (window as any).__bv;
+    bv.stageBuild();
+    await bv.waitForMeshes(2000);
+  });
+  await sleep(400);
+  await saveShot(page, '06-byggeklosser.png');
+
+  // 07 helvete portal
+  await page.evaluate(async () => {
+    const bv = (window as any).__bv;
+    bv.buildPlatform(10);
+    await bv.waitForMeshes(1500);
+    bv.stageHelvetePortal();
+    await bv.waitForMeshes(2500);
+  });
+  await sleep(400);
+  await saveShot(page, '07-helvete-portal.png');
+
+  // 08 creative
+  await page.evaluate(async () => {
+    const bv = (window as any).__bv;
+    bv.setCreative(true);
+    bv.setTime(0.35);
+    bv.look(0.4, -0.3);
+  });
+  await sleep(300);
+  await saveShot(page, '08-kreativ.png');
+
+  // 09 weather + toast
+  await page.evaluate(async () => {
+    const bv = (window as any).__bv;
+    bv.setCreative(false);
+    bv.setWeather('rain', 1);
+    bv.toast('first_block');
+    await new Promise((r) => setTimeout(r, 400));
+  });
+  await sleep(400);
+  await saveShot(page, '09-regn-toast.png');
+
+  // 10 pause
+  await page.evaluate(() => (window as any).__bv.showPause());
+  await sleep(300);
+  await saveShot(page, '10-pause.png');
+  await page.evaluate(() => (window as any).__bv.hidePause());
+
+  writeFileSync(join(OUT_PUBLIC, 'playtest-state.json'), JSON.stringify({ perf, hint: 'checked' }, null, 2));
+
+  // video
+  const vctx = await browser.newContext({
+    viewport: { width: 1280, height: 720 },
+    recordVideo: { dir: OUT_PUBLIC, size: { width: 1280, height: 720 } },
+  });
+  const vp = await vctx.newPage();
+  await vp.goto(BASE + '/?test=1', { waitUntil: 'networkidle', timeout: 90000 });
+  await vp.waitForFunction(() => !!(window as any).__bv, { timeout: 60000 });
+  await vp.evaluate(async () => {
+    const bv = (window as any).__bv;
+    await bv.waitForMeshes(4000);
+    bv.buildPlatform(10);
+    await bv.waitForMeshes(3000);
+    bv.stageMobs();
+    bv.setWeather('rain', 0.8);
+    bv.input.forward = true;
+    for (let i = 0; i < 35; i++) {
+      if (i % 10 === 0) bv.attack();
+      bv.player.yaw += 0.03;
+      await new Promise((r) => setTimeout(r, 100));
     }
+    bv.input.forward = false;
+    bv.stageBoat();
+  });
+  await sleep(500);
+  const video = vp.video();
+  await vp.close(); await vctx.close();
+  if (video) {
+    const raw = await video.path();
+    copyFileSync(raw, join(OUT_PUBLIC, 'clip-it7.webm'));
+    copyFileSync(raw, join(OUT_SHOTS, 'clip-it7.webm'));
+    console.log('video', statSync(join(OUT_PUBLIC, 'clip-it7.webm')).size);
   }
 
+  await context.close();
   await browser.close();
-  preview.kill('SIGTERM');
-  for (const f of readdirSync(OUT_PUBLIC)) {
-    if (f.startsWith('page@')) try { unlinkSync(join(OUT_PUBLIC, f)); } catch {}
-  }
-  console.log('done', readdirSync(OUT_PUBLIC).join(','));
-  process.exit(0);
+  preview.kill();
+  console.log('done');
 }
 main().catch((e) => { console.error(e); process.exit(1); });

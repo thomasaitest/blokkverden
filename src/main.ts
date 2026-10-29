@@ -30,6 +30,11 @@ import { tryPlaceStructures } from './world/structures';
 import { createByttebonde, createTraderRig, tryTrade, type Byttebonde } from './mobs/trader';
 import { renderMapCanvas } from './world/mapitem';
 import { MusicBus } from './audio/music';
+import { RedstoneSystem } from './world/redstone';
+import { ParticleSystem } from './world/particles';
+import { AchievementBus } from './ui/achievements';
+import { openCreativeInventory } from './ui/creative';
+import { lightPortal, generateHelveteChunk, type DimId } from './world/helvete';
 
 const DAY_LEN = 900; // ~15 min day cycle (MC is 20)
 
@@ -43,7 +48,7 @@ async function boot(): Promise<void> {
   const testMode = qs().get('test') === '1' || qs().get('test') === 'true';
   let settings = loadSettings();
 
-  const startGame = async (worldName: string, seed?: number, fresh = false) => {
+  const startGame = async (worldName: string, seed?: number, fresh = false, creative = false) => {
     title.hide();
     app.querySelector('#game-root')?.remove();
     const root = document.createElement('div');
@@ -56,11 +61,11 @@ async function boot(): Promise<void> {
     }, () => {
       root.remove();
       void title.show();
-    });
+    }, creative);
   };
 
   const title = createTitleMenu(app, {
-    onPlay: (name, seed, fresh) => { void startGame(name, seed, !!fresh); },
+    onPlay: (name, seed, fresh, creative) => { void startGame(name, seed, !!fresh, !!creative); },
     onSettingsChange: (s) => { settings = s; },
   });
 
@@ -84,6 +89,7 @@ async function runGame(
   settings: GameSettings,
   onSettings: (s: GameSettings) => void,
   onQuit: () => void,
+  creativeMode = false,
 ): Promise<void> {
   setViewRadius(settings.renderDistance);
   const world = new World(seed);
@@ -117,10 +123,18 @@ async function runGame(
   tradeUi.style.cssText = 'display:none;position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);background:rgba(20,20,20,0.92);color:#eee;padding:16px;border:2px solid #8b5a2b;z-index:40;min-width:280px';
   app.appendChild(tradeUi);
   const hud = createHud(app, inv, renderer.getAtlas());
-  if (!settings.showHints || testMode) hud.setHintVisible(false);
+  if (testMode) hud.setHintVisible(false);
+  else hud.setHintVisible(!!settings.showHints);
+  const redstone = new RedstoneSystem();
+  const particles = new ParticleSystem(renderer.scene);
+  const achieve = new AchievementBus(app);
+  let dimension: DimId = 'overworld';
+  let creativeOpen: { close: () => void } | null = null;
+  // creative applied after player create
   const input = createInput();
 
   let player = createPlayer(8.5, 40, 8.5);
+  if (creativeMode) { player.creative = true; player.flying = true; }
   let dayTime = 0.28;
   let breakAcc = 0;
   let breakTarget: string | null = null;
@@ -131,6 +145,7 @@ async function runGame(
   let dead = false;
   let attackCool = 0;
   let bowCharge = 0;
+  let flyTap = 0;
   let meshesDirty = true;
   let lastMeshRev = -1;
   let paused = false;
@@ -164,7 +179,8 @@ async function runGame(
     sound.setVolume(s.volume);
     music.setVolume(s.volume);
     if (s.music) music.start(); else music.stop();
-    hud.setHintVisible(s.showHints);
+    if (testMode) hud.setHintVisible(false);
+    else hud.setHintVisible(!!s.showHints);
     sens = 0.0022 * s.sensitivity;
     onSettings(s);
   };
@@ -217,8 +233,14 @@ async function runGame(
   });
   const toggleInv = () => {
     if (dead || paused) return;
-    if (invUi.isOpen()) { invUi.close(); input.inventoryOpen = false; }
-    else { invUi.openPlayer(); input.inventoryOpen = true; input.breakHeld = false; }
+    if (creativeOpen) { creativeOpen.close(); creativeOpen = null; input.inventoryOpen = false; return; }
+    if (invUi.isOpen()) { invUi.close(); input.inventoryOpen = false; return; }
+    if (player.creative) {
+      creativeOpen = openCreativeInventory(app, inv, renderer.getAtlas(), () => { hud.markDirty(); hud.refreshHotbar(); });
+      input.inventoryOpen = true; input.breakHeld = false;
+      return;
+    }
+    invUi.openPlayer(); input.inventoryOpen = true; input.breakHeld = false;
   };
   const togglePause = () => {
     if (dead) return;
@@ -453,7 +475,29 @@ async function runGame(
       player.x = cx + 0.5; player.y = y + 1.05; player.z = cz + 0.5;
       player.vx = player.vy = player.vz = 0;
       player.inWater = false;
-      world.updateAround(player.x, player.z);
+      // Helvete portal transit
+    if (world.getBlock(Math.floor(player.x), Math.floor(player.y), Math.floor(player.z)) === BlockId.Portal
+      || world.getBlock(Math.floor(player.x), Math.floor(player.y + 1), Math.floor(player.z)) === BlockId.Portal) {
+      if (dimension === 'overworld') {
+        dimension = 'helvete';
+        achieve.grant('enter_helvete');
+        // generate helvete chunks around scaled coords
+        const hx = player.x / 8, hz = player.z / 8;
+        player.x = hx; player.z = hz;
+        const noise = world.noise;
+        for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
+          const cx = Math.floor(hx / 16) + dx, cz = Math.floor(hz / 16) + dz;
+          generateHelveteChunk((x, y, z, id) => { world.setBlock(x, y, z, id); }, noise, cx, cz);
+        }
+        player.y = 40;
+        for (let y = 70; y > 0; y--) {
+          if (world.getBlock(Math.floor(player.x), y, Math.floor(player.z)) !== BlockId.Air) { player.y = y + 1; break; }
+        }
+        markMesh();
+      }
+    }
+
+    world.updateAround(player.x, player.z);
       markMesh();
       return { x: player.x, y: player.y, z: player.z, platformY: y };
     },
@@ -604,10 +648,62 @@ async function runGame(
     closeMap: () => { mapOpen = false; mapOverlay.style.display = 'none'; },
     openTrade: () => { if (traders[0]) openTrade(traders[0]); },
     getPerf: () => renderer.getPerfStats(),
+    setSectorMerge: (on: boolean) => renderer.setSectorMerge(on),
+    setCreative: (on: boolean) => { player.creative = on; player.flying = on; },
+    stageBoat: () => {
+      const b = api.placeBoatFront();
+      return b;
+    },
+    stageRedstone: () => {
+      const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw);
+      const bx = Math.floor(player.x + fx * 2), bz = Math.floor(player.z + fz * 2);
+      const by = Math.floor(player.y);
+      world.setBlock(bx, by, bz, BlockId.Lever);
+      for (let i = 1; i <= 5; i++) world.setBlock(bx + Math.round(fx * i), by, bz + Math.round(fz * i), BlockId.RedDust);
+      world.setBlock(bx + Math.round(fx * 6), by, bz + Math.round(fz * 6), BlockId.Lamp);
+      world.setBlock(bx + Math.round(fx * 7), by, bz + Math.round(fz * 7), BlockId.Door);
+      markMesh();
+      api.lookAt(bx + fx * 3, by + 0.5, bz + fz * 3);
+    },
+    stageBuild: () => {
+      const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw);
+      const ox = Math.floor(player.x + fx * 3), oz = Math.floor(player.z + fz * 3);
+      const oy = Math.floor(player.y);
+      world.setBlock(ox, oy, oz, BlockId.Stairs);
+      world.setBlock(ox + 1, oy, oz, BlockId.Slab);
+      world.setBlock(ox + 2, oy, oz, BlockId.Fence);
+      world.setBlock(ox + 3, oy, oz, BlockId.GlassPane);
+      world.setBlock(ox + 4, oy, oz, BlockId.Ladder);
+      world.setBlock(ox + 5, oy, oz, BlockId.Door);
+      world.setBlock(ox + 6, oy, oz, BlockId.Sign);
+      markMesh();
+      api.lookAt(ox + 3, oy + 0.5, oz);
+    },
+    stageHelvetePortal: () => {
+      const ox = Math.floor(player.x) + 3, oz = Math.floor(player.z);
+      const oy = Math.floor(player.y);
+      for (let h = 0; h < 5; h++) {
+        world.setBlock(ox, oy + h, oz, BlockId.PortalFrame);
+        world.setBlock(ox + 3, oy + h, oz, BlockId.PortalFrame);
+      }
+      for (let w = 0; w < 4; w++) {
+        world.setBlock(ox + w, oy - 1, oz, BlockId.PortalFrame);
+        world.setBlock(ox + w, oy + 4, oz, BlockId.PortalFrame);
+      }
+      for (let h = 0; h < 3; h++) for (let w = 1; w <= 2; w++) world.setBlock(ox + w, oy + h, oz, BlockId.Air);
+      lightPortal(world, ox + 1, oy, oz);
+      markMesh();
+      api.lookAt(ox + 1.5, oy + 1.5, oz);
+      return { x: ox, y: oy, z: oz };
+    },
+    toast: (id: string) => achieve.grant(id as 'first_block'),
     weather,
     fishing,
     traders,
     music,
+    achieve,
+    redstone,
+    dimension: () => dimension,
   };
   (window as unknown as { __bv: typeof api; __BV: typeof api }).__bv = api;
   (window as unknown as { __BV: typeof api }).__BV = api;
@@ -624,7 +720,8 @@ async function runGame(
       const crit = !player.onGround && player.vy < -0.05 ? 1.5 : 1;
       sound.swing();
       const hit = mobs.hitAt(player.x, player.y + EYE_HEIGHT, player.z, 3.2, player.yaw, player.pitch, atk * crit, sound);
-      if (hit && held && ITEMS[held.id]?.tool === 'sword') inv.setHeld(damageTool(held));
+      if (hit) achieve.grant('first_kill');
+      if (hit && held && ITEMS[held.id]?.tool === 'sword' && !player.creative) inv.setHeld(damageTool(held));
     }
   });
 
@@ -655,7 +752,7 @@ async function runGame(
         player.pitch -= look.dy * sens; // -pitch looks down in this camera setup
         app.classList.add('playing');
         document.getElementById('game-root')?.classList.add('playing');
-        hud.setHintVisible(false);
+        hud.hideHintNow();
       }
       let wishX = 0, wishZ = 0;
       if (input.right) wishX += 1;
@@ -668,6 +765,13 @@ async function runGame(
       }
       player.sneaking = input.sneak;
       player.sprinting = input.sprint && !input.sneak && !!input.forward;
+      if (player.creative && input.jump) {
+        if (flyTap > 0 && flyTap < 0.35) { player.flying = !player.flying; flyTap = -1; }
+        else if (flyTap <= 0) flyTap = 0.001;
+      }
+      if (flyTap > 0) flyTap += dt;
+      if (!input.jump && flyTap > 0.35) flyTap = 0;
+      if (!input.jump && flyTap < 0) flyTap = 0;
 
       const held = inv.held();
       if (input.breakHeld && ITEMS[held?.id ?? -1]?.tool === 'bow') {
@@ -695,7 +799,16 @@ async function runGame(
       if (player.onGround && (wishX || wishZ) && !boats.mounted) {
         const feet = world.getBlock(Math.floor(player.x), Math.floor(player.y - 0.1), Math.floor(player.z));
         const mat = blockMaterial(feet);
-        sound.step(true, player.sprinting, dt, mat === 'stone' || mat === 'wood' || mat === 'ground' || mat === 'plant' ? (mat === 'ground' ? 'grass' : mat === 'wood' ? 'wood' : mat === 'stone' ? 'stone' : 'other') : 'other');
+        const stepMat = mat === 'ground' ? 'grass' : mat === 'wood' ? 'wood' : mat === 'stone' ? 'stone' : mat === 'plant' ? 'grass' : feet === BlockId.Sand || feet === BlockId.Sjelegrus ? 'sand' : 'other';
+        sound.step(true, player.sprinting, dt, stepMat as 'grass' | 'stone' | 'sand' | 'wood' | 'other');
+        if (player.sprinting && Math.random() < dt * 8) {
+          const col = feet === BlockId.Sand ? 0xc2b280 : feet === BlockId.Stone || feet === BlockId.Cobble ? 0x888888 : 0x5a8f3a;
+          particles.burst(player.x, player.y + 0.1, player.z, col, 3, 'sprint');
+        }
+      }
+      // creative double-space fly toggle
+      if (player.creative && input.jump && !(input as { _jumpWas?: boolean })._jumpWas) {
+        /* edge handled below */
       }
 
       hungerAcc += dt * (player.sprinting ? 0.04 : (player.vx || player.vz) ? 0.008 : 0.001);
@@ -705,6 +818,28 @@ async function runGame(
         else hurtPlayer(0.5);
       }
       if (player.hunger > 17 && player.health < 20) player.health = Math.min(20, player.health + dt * 0.25);
+    }
+
+    // Helvete portal transit
+    if (world.getBlock(Math.floor(player.x), Math.floor(player.y), Math.floor(player.z)) === BlockId.Portal
+      || world.getBlock(Math.floor(player.x), Math.floor(player.y + 1), Math.floor(player.z)) === BlockId.Portal) {
+      if (dimension === 'overworld') {
+        dimension = 'helvete';
+        achieve.grant('enter_helvete');
+        // generate helvete chunks around scaled coords
+        const hx = player.x / 8, hz = player.z / 8;
+        player.x = hx; player.z = hz;
+        const noise = world.noise;
+        for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
+          const cx = Math.floor(hx / 16) + dx, cz = Math.floor(hz / 16) + dz;
+          generateHelveteChunk((x, y, z, id) => { world.setBlock(x, y, z, id); }, noise, cx, cz);
+        }
+        player.y = 40;
+        for (let y = 70; y > 0; y--) {
+          if (world.getBlock(Math.floor(player.x), y, Math.floor(player.z)) !== BlockId.Air) { player.y = y + 1; break; }
+        }
+        markMesh();
+      }
     }
 
     world.updateAround(player.x, player.z);
@@ -733,6 +868,10 @@ async function runGame(
       }
     }
     syncTraders();
+    redstone.update(world, player, dt);
+    particles.update(dt);
+    if (boats.mounted) achieve.grant('boat_ride');
+    if (player.creative && player.flying) achieve.grant('fly');
 
     // Remesh budget scales with dirty backlog but capped to avoid spikes
     const dirtyN = world.meshQueue().dirty;
@@ -775,8 +914,10 @@ async function runGame(
             world.setBlock(hit.x, hit.y, hit.z, BlockId.Air);
             if (id === BlockId.Chest || id === BlockId.Furnace) containers.removeAt(hit.x, hit.y, hit.z);
             if (drop) drops.spawn(hit.x, hit.y, hit.z, drop);
-            inv.setHeld(damageTool(inv.held()));
+            if (!player.creative) inv.setHeld(damageTool(inv.held()));
             sound.breakBlock();
+            particles.burst(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5, 0x8b6914, 14, 'break');
+            achieve.grant('first_block');
             markMesh();
             hud.markDirty();
           }
@@ -807,6 +948,20 @@ async function runGame(
             held.count -= 1; if (held.count <= 0) inv.setHeld(null);
             sound.placeBlock(); markMesh(); hud.markDirty();
           }
+        } else if (tid === BlockId.Door || tid === BlockId.Gate || tid === BlockId.Trapdoor) {
+          const meta = world.getWaterLevel(hit.x, hit.y, hit.z);
+          world.setWater(hit.x, hit.y, hit.z, meta ^ 1);
+          sound.placeBlock(); markMesh();
+        } else if (tid === BlockId.Lever) {
+          redstone.toggleLever(world, hit.x, hit.y, hit.z); sound.placeBlock(); markMesh();
+        } else if (tid === BlockId.Button) {
+          redstone.pulseButton(world, hit.x, hit.y, hit.z); sound.placeBlock();
+        } else if (tid === BlockId.Sign) {
+          const txt = prompt('Skilttekst', '') ?? '';
+          (world as unknown as { _signs?: Map<string, string> })._signs ??= new Map();
+          (world as unknown as { _signs: Map<string, string> })._signs.set(`${hit.x},${hit.y},${hit.z}`, txt.slice(0, 48));
+        } else if (tid === BlockId.PortalFrame || tid === BlockId.Portal) {
+          if (lightPortal(world, hit.x, hit.y, hit.z)) { markMesh(); sound.placeBlock(); }
         } else if (held && held.id === ItemId.Boat) {
           const px = hit.x + hit.nx, py = hit.y + hit.ny, pz = hit.z + hit.nz;
           boats.place(px + 0.5, py + 0.4, pz + 0.5);
@@ -814,7 +969,7 @@ async function runGame(
         } else if (held && held.id === ItemId.FishingRod) {
           if (fishing.casting) {
             const got = fishing.reel();
-            if (got) { inv.add(got); sound.placeBlock(); }
+            if (got) { inv.add(got); sound.placeBlock(); if (got.id === ItemId.RawFish) achieve.grant('fish'); }
             inv.setHeld(damageTool(held));
             hud.markDirty();
           } else if (fishing.start(player.x, player.y, player.z, player.yaw, player.pitch, world)) {
@@ -847,8 +1002,12 @@ async function runGame(
               const dest = world.getBlock(px, py, pz);
               if (placeId != null && (dest === BlockId.Air || dest === BlockId.Water)) {
                 world.setBlock(px, py, pz, placeId);
+                if (player.creative) inv.add(taken); // restore
+                if (placeId === BlockId.PortalFrame) lightPortal(world, px, py, pz);
                 sound.placeBlock(); markMesh();
-              } else inv.add(taken);
+                achieve.grant('first_craft');
+              } else if (!player.creative) inv.add(taken);
+              else inv.add(taken);
               hud.markDirty();
             }
           }

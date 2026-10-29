@@ -3,7 +3,7 @@ import { loadSettings, saveSettings } from '../settings';
 import { listWorlds, deleteWorldNamed } from '../storage/save';
 
 export interface MenuCallbacks {
-  onPlay: (worldName: string, seed?: number, fresh?: boolean) => void;
+  onPlay: (worldName: string, seed?: number, fresh?: boolean, creative?: boolean) => void;
   onSettingsChange: (s: GameSettings) => void;
 }
 
@@ -86,8 +86,9 @@ export function createTitleMenu(root: HTMLElement, cb: MenuCallbacks): {
     worldList.querySelector('#btn-new-world')!.addEventListener('click', () => {
       const name = prompt('Navn på verden', `Verden ${worlds.length + 1}`);
       if (!name) return;
+      const creative = confirm('Kreativ modus? (fly, uendelige blokker)\nOK = kreativ, Avbryt = overlevelse');
       const seed = (Math.random() * 1e9) | 0;
-      cb.onPlay(name, seed, true);
+      cb.onPlay(name, seed, true, creative);
     });
     worldList.querySelector('#btn-world-back')!.addEventListener('click', () => {
       worldList.style.display = 'none';

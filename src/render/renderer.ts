@@ -44,7 +44,9 @@ export class GameRenderer {
   private lastDrawCalls = 0;
   private lastTriangles = 0;
   private sectorOpaque = new Map<string, THREE.Mesh>();
-  private useSectorMerge = false;
+  private useSectorMerge = true;
+  private dirtySectors = new Set<string>();
+  private sectorRebuildQueue: string[] = [];
   private needsChunkSync = true;
   private frustum = new THREE.Frustum();
   private projScreen = new THREE.Matrix4();
@@ -61,6 +63,7 @@ export class GameRenderer {
   private _euler = new THREE.Euler(0, 0, 0, 'YXZ');
   private _lookTarget = new THREE.Vector3();
   private _armorOff = new THREE.Vector3();
+  private _playerPos = { x: 0, y: 0, z: 0 };
 
   constructor(container: HTMLElement) {
     this.canvas = document.createElement('canvas');
@@ -170,7 +173,7 @@ export class GameRenderer {
         this.meshVersions.delete(key);
       }
     }
-    this.rebuildSectors();
+    if (this.useSectorMerge) this.markSectorsDirtyFromMeshes();
   }
 
   private removeKey(key: string): void {
@@ -216,6 +219,7 @@ export class GameRenderer {
   }
 
   updateCamera(p: PlayerState): void {
+    this._playerPos.x = p.x; this._playerPos.y = p.y; this._playerPos.z = p.z;
     this.camera.position.set(p.x, p.y + EYE_HEIGHT, p.z);
     this._euler.set(p.pitch, p.yaw, 0, 'YXZ');
     this.camera.quaternion.setFromEuler(this._euler);
@@ -271,7 +275,7 @@ export class GameRenderer {
       root.visible = true;
       root.position.set(m.x, m.y, m.z);
       root.rotation.y = m.yaw;
-      animateMobRig(root, m, dt);
+      animateMobRig(root, m, dt, this._playerPos);
       if (m.deathT != null && m.deathT > 0.35 && m.deathT < 0.35 + dt + 0.02) {
         const poof = createDeathPoof();
         poof.position.set(m.x, m.y + 0.6, m.z);
@@ -425,44 +429,95 @@ export class GameRenderer {
       this.armorVis.position.copy(cam).add(this._armorOff);
       this.armorVis.quaternion.copy(this.camera.quaternion);
     }
+    this.tickSectorMerge(2);
     this.renderer.render(this.scene, this.camera);
     this.lastDrawCalls = this.renderer.info.render.calls;
     this.lastTriangles = this.renderer.info.render.triangles;
   }
 
-  /** Merge opaque chunk meshes into 2×2 sectors to cut draw calls. */
-  rebuildSectors(): void {
-    for (const m of this.sectorOpaque.values()) {
-      this.scene.remove(m);
-      m.geometry.dispose();
+  private sectorKey(cx: number, cz: number): string {
+    return `${cx >> 1},${cz >> 1}`;
+  }
+
+  private markSectorsDirtyFromMeshes(): void {
+    for (const key of this.opaqueMeshes.keys()) {
+      const [cx, cz] = key.split(',').map(Number);
+      const sk = this.sectorKey(cx, cz);
+      if (!this.dirtySectors.has(sk)) {
+        this.dirtySectors.add(sk);
+        this.sectorRebuildQueue.push(sk);
+      }
     }
-    this.sectorOpaque.clear();
+    // also remove sectors with no chunks
+    for (const sk of [...this.sectorOpaque.keys()]) {
+      const [sx, sz] = sk.split(',').map(Number);
+      let any = false;
+      for (let dz = 0; dz < 2; dz++) for (let dx = 0; dx < 2; dx++) {
+        if (this.opaqueMeshes.has(`${(sx << 1) + dx},${(sz << 1) + dz}`)) any = true;
+      }
+      if (!any) {
+        const m = this.sectorOpaque.get(sk);
+        if (m) { this.scene.remove(m); m.geometry.dispose(); this.sectorOpaque.delete(sk); }
+      }
+    }
+  }
+
+  /** Budgeted incremental sector merge — call each frame. */
+  tickSectorMerge(budget = 2): void {
     if (!this.useSectorMerge) {
       for (const mesh of this.opaqueMeshes.values()) mesh.visible = true;
       return;
     }
-    // group by floor(cx/2), floor(cz/2)
-    const groups = new Map<string, THREE.BufferGeometry[]>();
+    let n = 0;
+    while (n < budget && this.sectorRebuildQueue.length) {
+      const sk = this.sectorRebuildQueue.shift()!;
+      this.dirtySectors.delete(sk);
+      this.rebuildOneSector(sk);
+      n++;
+    }
+    // hide per-chunk opaque once sector exists
     for (const [key, mesh] of this.opaqueMeshes) {
       const [cx, cz] = key.split(',').map(Number);
-      const sk = `${cx >> 1},${cz >> 1}`;
-      let arr = groups.get(sk);
-      if (!arr) { arr = []; groups.set(sk, arr); }
-      // clone geometry with world offset already in verts (mesher uses world coords)
-      arr.push(mesh.geometry.clone());
-      mesh.visible = false; // replaced by sector
+      mesh.visible = !this.sectorOpaque.has(this.sectorKey(cx, cz));
     }
-    for (const [sk, geos] of groups) {
-      if (geos.length === 0) continue;
-      const merged = mergeGeometries(geos, false);
-      if (!merged) continue;
-      merged.computeBoundingSphere();
-      const mesh = new THREE.Mesh(merged, this.opaqueMat);
-      mesh.frustumCulled = true;
-      mesh.matrixAutoUpdate = false;
-      mesh.updateMatrix();
-      this.sectorOpaque.set(sk, mesh);
-      this.scene.add(mesh);
+  }
+
+  private rebuildOneSector(sk: string): void {
+    const old = this.sectorOpaque.get(sk);
+    if (old) { this.scene.remove(old); old.geometry.dispose(); this.sectorOpaque.delete(sk); }
+    const [sx, sz] = sk.split(',').map(Number);
+    const geos: THREE.BufferGeometry[] = [];
+    for (let dz = 0; dz < 2; dz++) for (let dx = 0; dx < 2; dx++) {
+      const key = `${(sx << 1) + dx},${(sz << 1) + dz}`;
+      const mesh = this.opaqueMeshes.get(key);
+      if (mesh && mesh.geometry.getAttribute('position')?.count) {
+        geos.push(mesh.geometry.clone());
+      }
+    }
+    if (!geos.length) return;
+    const merged = mergeGeometries(geos, false);
+    if (!merged) return;
+    // dispose clones? mergeGeometries may reuse — dispose sources we cloned
+    for (const g of geos) g.dispose();
+    merged.computeBoundingSphere();
+    const mesh = new THREE.Mesh(merged, this.opaqueMat);
+    mesh.frustumCulled = true;
+    mesh.matrixAutoUpdate = false;
+    mesh.updateMatrix();
+    this.sectorOpaque.set(sk, mesh);
+    this.scene.add(mesh);
+  }
+
+  setSectorMerge(on: boolean): void {
+    this.useSectorMerge = on;
+    if (!on) {
+      for (const m of this.sectorOpaque.values()) { this.scene.remove(m); m.geometry.dispose(); }
+      this.sectorOpaque.clear();
+      this.dirtySectors.clear();
+      this.sectorRebuildQueue.length = 0;
+      for (const mesh of this.opaqueMeshes.values()) mesh.visible = true;
+    } else {
+      this.markSectorsDirtyFromMeshes();
     }
   }
 }

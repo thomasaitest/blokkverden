@@ -224,6 +224,72 @@ export function createAtlasCanvas(): HTMLCanvasElement {
     return [0, 0, 0, 0];
   });
 
+
+  // 52 door
+  fillTile(d, 52, (lx, ly) => {
+    if (lx < 2 || lx > 13) return [90, 60, 30, 255];
+    if (ly > 2 && ly < 7 && lx > 9 && lx < 13) return [180, 200, 220, 200];
+    return [140, 90, 40, 255];
+  });
+  // 53 fence
+  fillTile(d, 53, (lx, ly) => {
+    if ((lx > 5 && lx < 10) || (ly > 4 && ly < 7) || (ly > 10 && ly < 13)) return [140, 90, 40, 255];
+    return [0, 0, 0, 0];
+  });
+  // 54 ladder
+  fillTile(d, 54, (lx, ly) => {
+    if (lx === 2 || lx === 13) return [120, 80, 35, 255];
+    if (ly % 3 === 1 && lx > 2 && lx < 13) return [140, 95, 40, 255];
+    return [0, 0, 0, 0];
+  });
+  // 55 sign
+  fillTile(d, 55, (lx, ly) => {
+    if (ly > 10 && lx > 6 && lx < 9) return [120, 80, 35, 255];
+    if (ly <= 10 && lx > 1 && lx < 14) return [180, 140, 70, 255];
+    return [0, 0, 0, 0];
+  });
+  // 56 red dust
+  fillTile(d, 56, (lx, ly) => {
+    if (Math.abs(lx - 8) < 2 || Math.abs(ly - 8) < 2) return [180, 40, 40, 255];
+    return [0, 0, 0, 0];
+  });
+  // 57 lever/button
+  fillTile(d, 57, (lx, ly) => {
+    if (Math.hypot(lx - 8, ly - 8) < 4) return [100, 100, 100, 255];
+    if (lx > 6 && lx < 10 && ly > 2 && ly < 8) return [140, 90, 40, 255];
+    return [0, 0, 0, 0];
+  });
+  // 58 lamp
+  fillTile(d, 58, (lx, ly, rnd) => {
+    if (lx < 2 || ly < 2 || lx > 13 || ly > 13) return [40, 40, 40, 255];
+    return [255, 220, 100, 255];
+  });
+  // 59 pressure plate
+  fillTile(d, 59, (lx, ly) => {
+    if (ly > 10) return [160, 160, 160, 255];
+    return [0, 0, 0, 0];
+  });
+  // 60 helstein (netherrack-like)
+  fillTile(d, 60, (lx, ly, rnd) => {
+    const v = 80 + (rnd * 40) | 0;
+    return [v, v >> 2, v >> 2, 255];
+  });
+  // 61 sjelegrus
+  fillTile(d, 61, (lx, ly, rnd) => {
+    const v = 30 + (rnd * 25) | 0;
+    return [v, v + 10, v + 20, 255];
+  });
+  // 62 portal
+  fillTile(d, 62, (lx, ly, rnd) => {
+    const v = 80 + ((lx + ly + rnd * 40) % 100) | 0;
+    return [v, 20, v + 40, 200];
+  });
+  // 63 portal frame
+  fillTile(d, 63, (lx, ly) => {
+    if ((lx + ly) % 4 < 2) return [20, 80, 70, 255];
+    return [10, 50, 45, 255];
+  });
+
   ctx.putImageData(img, 0, 0);
   return canvas;
 }

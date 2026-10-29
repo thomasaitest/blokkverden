@@ -22,3 +22,13 @@ Priorities: articulated mobs, draw-call metrics, hint toggle, boat waterline, fi
 ### Notes
 - Headless ANGLE software GL — FPS not GPU-representative; use draw/tris as objective.
 - Sector merge deferred for next polish pass (incremental merge without full rebuild).
+
+## it7 — 2026-10-29 (Europe/Oslo)
+
+~1h. Hint skjult i ?test=1. Detaljerte skins + idle. Inkrementell sektor-merge. Rødtråd. Byggeklosser. Kreativ. Helvete. Fremskritt.
+
+### Perf walk @r7 headless
+- før merge: ~9 fps (kald), draw 83, tris 117k
+- etter merge: **34 fps**, draw **49**, tris 144k
+
+### Shots: 01–10 + clip-it7.webm

@@ -12,6 +12,7 @@ export interface HudApi {
   refreshHotbar: () => void;
   markDirty: () => void;
   setHintVisible: (on: boolean) => void;
+  hideHintNow: () => void;
   showDebug: boolean;
   slot: number;
   el: HTMLElement;
@@ -27,13 +28,18 @@ export function createHud(root: HTMLElement, inv: Inventory, atlas: HTMLCanvasEl
     <div id="vitals"><div id="hearts"></div><div id="hunger"></div><div id="bubbles"></div></div>
     <div id="hotbar"></div>
     <pre id="debug"></pre>
-    <div id="hint">Klikk · WASD · dobbel-W · Space · Shift · E · 1–9 · høyreklikk ovn/kiste/benk<br/>Spis: høyreklikk mat i hotbar · På nettbrett: styrespak</div>
+    <div id="hint" style="display:none">Klikk · WASD · dobbel-W · Space · Shift · E · 1–9 · høyreklikk ovn/kiste/benk<br/>Spis: høyreklikk mat i hotbar · På nettbrett: styrespak</div>
   `;
   root.appendChild(el);
   const hintEl = el.querySelector('#hint') as HTMLElement;
-  let hintVisible = true;
-  const applyHint = () => { hintEl.style.display = hintVisible ? 'block' : 'none'; };
-  setTimeout(() => { hintVisible = false; applyHint(); }, 8000);
+  let hintVisible = false;
+  let hintAllowed = true; // false in test / when user disables
+  let hintTimer: ReturnType<typeof setTimeout> | null = null;
+  const applyHint = () => { hintEl.style.display = hintVisible && hintAllowed ? 'block' : 'none'; };
+  const armHintTimeout = () => {
+    if (hintTimer) clearTimeout(hintTimer);
+    hintTimer = setTimeout(() => { hintVisible = false; applyHint(); }, 8000);
+  };
 
   const hotbarEl = el.querySelector('#hotbar') as HTMLElement;
   let slot = inv.selected;
@@ -104,7 +110,7 @@ export function createHud(root: HTMLElement, inv: Inventory, atlas: HTMLCanvasEl
       const cz = Math.floor(p.z / CHUNK_SIZE);
       const held = inv.held();
       debugEl.textContent = [
-        `Blokkverden it6`,
+        `Blokkverden it7`,
         `${fps.toFixed(0)} fps`,
         `xyz: ${p.x.toFixed(2)} / ${p.y.toFixed(2)} / ${p.z.toFixed(2)}`,
         `chunk: ${cx} ${cz}`,
@@ -117,7 +123,13 @@ export function createHud(root: HTMLElement, inv: Inventory, atlas: HTMLCanvasEl
         extra ?? '',
       ].filter(Boolean).join('\n');
     },
-    setHintVisible: (on) => { hintVisible = on; applyHint(); },
+    setHintVisible: (on) => {
+      hintAllowed = on;
+      if (on) { hintVisible = true; armHintTimeout(); }
+      else { hintVisible = false; if (hintTimer) clearTimeout(hintTimer); }
+      applyHint();
+    },
+    hideHintNow: () => { hintVisible = false; applyHint(); },
     updateBars: (p) => {
       const key = `${p.health|0},${p.hunger|0},${p.air|0},${p.inWater?1:0}`;
       if (key === lastBars) return;

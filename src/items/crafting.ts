@@ -148,6 +148,21 @@ export const RECIPES: Recipe[] = [
     pattern: [ItemId.Cobble, ItemId.Cobble, ItemId.Stick],
     result: stack(ItemId.StoneSword, 1, 132),
   },
+  { w: 2, h: 3, pattern: [ItemId.Planks, ItemId.Planks, ItemId.Planks, ItemId.Planks, ItemId.Planks, ItemId.Planks], result: stack(ItemId.Door, 1) },
+  { w: 2, h: 2, pattern: [ItemId.Planks, ItemId.Planks, ItemId.Planks, ItemId.Planks], result: stack(ItemId.Trapdoor, 1) },
+  { w: 3, h: 2, pattern: [ItemId.Stick, ItemId.Planks, ItemId.Stick, ItemId.Stick, ItemId.Planks, ItemId.Stick], result: stack(ItemId.Fence, 4) },
+  { w: 3, h: 1, pattern: [ItemId.Planks, ItemId.Stick, ItemId.Planks], result: stack(ItemId.Gate, 1) },
+  { w: 3, h: 3, pattern: [ItemId.Planks, 0, 0, ItemId.Planks, ItemId.Planks, 0, ItemId.Planks, ItemId.Planks, ItemId.Planks], result: stack(ItemId.Stairs, 4) },
+  { w: 3, h: 1, pattern: [ItemId.Planks, ItemId.Planks, ItemId.Planks], result: stack(ItemId.Slab, 6) },
+  { w: 3, h: 1, pattern: [ItemId.Glass, ItemId.Glass, ItemId.Glass], result: stack(ItemId.GlassPane, 6) },
+  { w: 1, h: 3, pattern: [ItemId.Stick, ItemId.Stick, ItemId.Stick], result: stack(ItemId.Ladder, 3) },
+  { w: 3, h: 2, pattern: [ItemId.Planks, ItemId.Planks, ItemId.Planks, ItemId.Planks, ItemId.Stick, ItemId.Planks], result: stack(ItemId.Sign, 1) },
+  { w: 3, h: 1, pattern: [ItemId.Cobble, ItemId.Stick, ItemId.Cobble], result: stack(ItemId.Lever, 1) },
+  { w: 1, h: 1, pattern: [ItemId.Stone], result: stack(ItemId.Button, 1) },
+  { w: 3, h: 3, pattern: [ItemId.RedDust, ItemId.RedDust, ItemId.RedDust, ItemId.RedDust, ItemId.Torch, ItemId.RedDust, ItemId.RedDust, ItemId.RedDust, ItemId.RedDust], result: stack(ItemId.Lamp, 1) },
+  { w: 2, h: 1, pattern: [ItemId.Planks, ItemId.Planks], result: stack(ItemId.PressurePlate, 1) },
+  // rødtråd from torch+redstone stand-in: cobble+coal dust-like
+  { w: 1, h: 2, pattern: [ItemId.RedDust, ItemId.RedDust], result: stack(ItemId.RedDust, 4) },
 ];
 
 function gridSize(slots: (ItemStack | null)[]): number {
@@ -208,3 +223,4 @@ export function consumeCraft(slots: (ItemStack | null)[]): void {
     if (s.count <= 0) slots[i] = null;
   }
 }
+

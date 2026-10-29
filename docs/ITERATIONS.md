@@ -209,7 +209,7 @@ Media: https://thomasaitest.github.io/blokkverden/progress/it3/
 
 ## Iterasjon 9 (2026-10-29) — kvalitet, båt/fiske/dør/lampe, Helvete-dimensjon
 
-**Tid:** start 21:12:58 CET → slutt 22:06 CET (kvalitet + ærlig fiske-verifisering).
+**Tid:** start 21:12:58 CET → slutt 22:08 CET (~56 min + CI). Kvalitet over kvantitet.
 
 ### Bugs funnet og fikset
 1. Båt: mount-avstand for stor + styring — mount innen rekkevidde, vannlinje-visning, sneak-avstigning

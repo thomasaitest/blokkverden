@@ -128,7 +128,12 @@ export function createTitleMenu(root: HTMLElement, cb: MenuCallbacks): {
 
   return {
     el,
-    show: async () => { el.style.display = 'flex'; },
+    show: async () => {
+      el.style.display = 'flex';
+      worldList.style.display = 'none';
+      settingsPanel.style.display = 'none';
+      (el.querySelector('.title-btns') as HTMLElement).style.display = 'flex';
+    },
     hide: () => { el.style.display = 'none'; },
   };
 }

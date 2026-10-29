@@ -31,6 +31,8 @@ export interface Mob {
   height: number;
   color: number;
   hurtFlash?: number;
+  /** Seconds of AI-suppressed knockback. */
+  knockBack?: number;
   deathT?: number;
   attacking?: boolean;
   /** Wolf: tamed companion */

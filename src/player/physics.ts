@@ -90,13 +90,19 @@ function tryAxis(world: World, p: PlayerState, h: number, axis: 'x' | 'z', delta
     }
   }
   if (!collidesAt(world, p.x, p.y, p.z, h)) return;
-  if (p.onGround || p.vy <= 0.01 || p.inWater) {
-    for (let step = 0.05; step <= STEP_HEIGHT; step += 0.05) {
-      if (!collidesAt(world, p.x, p.y + step, p.z, h) && collidesAt(world, p.x, p.y + step - 0.1, p.z, h)) {
-        p.y += step;
-        p.y = Math.round(p.y * 1000) / 1000;
-        return;
-      }
+
+  // Auto step-up ≤1 block (MC-like). Prefer raising onto the obstacle then keeping the move.
+  // Allow when on ground or falling/settling — not while jumping hard upward.
+  if (p.onGround || p.vy <= 0.05 || p.inWater) {
+    for (let step = 0.05; step <= STEP_HEIGHT + 1e-6; step += 0.05) {
+      const ny = p.y + step;
+      if (collidesAt(world, p.x, ny, p.z, h)) continue;
+      // Must have solid under the new feet (the step we climbed onto).
+      if (!hasGroundSupport(world, p.x, ny, p.z) && !collidesAt(world, p.x, ny - 0.15, p.z, h)) continue;
+      p.y = Math.round(ny * 1000) / 1000;
+      p.onGround = true;
+      p.vy = 0;
+      return;
     }
   }
   if (axis === 'x') { p.x -= delta; p.vx = 0; }
@@ -123,7 +129,6 @@ export function movePlayer(
   if (onLadder && !p.flying) {
     p.vy = jump ? 4.2 : (p.sneaking ? -3.5 : -0.6);
     const sin = Math.sin(p.yaw), cos = Math.cos(p.yaw);
-    // Match camera/raycast forward (-sin,-cos): wishZ=-1 is forward
     p.vx = (wishX * cos + wishZ * sin) * 2.5;
     p.vz = (-wishX * sin + wishZ * cos) * 2.5;
     tryAxis(world, p, h, 'x', p.vx * dt);
@@ -174,7 +179,6 @@ export function movePlayer(
   if (!p.onGround && p.fallStartY == null && !p.inWater) p.fallStartY = p.y;
   if (p.inWater) p.fallStartY = null;
 
-  // Air / drowning
   if (headWater) {
     p.air = Math.max(0, p.air - dt * 2.5);
     if (p.air <= 0) p.health = Math.max(0, p.health - dt * 2);
@@ -187,7 +191,6 @@ export function movePlayer(
 
   const prevY = p.y;
   p.y += p.vy * dt;
-  const wasGround = p.onGround;
   p.onGround = false;
 
   if (collidesAt(world, p.x, p.y, p.z, h)) {
@@ -207,15 +210,12 @@ export function movePlayer(
       p.vy = 0;
       p.onGround = true;
       p.fallStartY = null;
-      if (fallDist > 3.5 && !wasGround && !p.inWater) {
-        fallDamage = Math.min(20, Math.floor(fallDist - 3));
-      }
+      if (fallDist > 3.5) fallDamage = Math.min(20, Math.floor(fallDist - 3));
     } else {
       p.y = prevY;
       p.vy = 0;
     }
   }
 
-  p.pitch = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, p.pitch));
   return { fallDamage };
 }

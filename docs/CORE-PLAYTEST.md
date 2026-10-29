@@ -21,7 +21,7 @@ Last run: 2026-10-29 23:07–23:38 CET · Branch/commit: it10-playtest (see repo
 | B4 | Sneak | Shift: slower, no fall off block edges (sneak-edge) | PASS | |
 | B5 | Swim | In water: float/swim with jump; slower; exit onto shore | PASS | |
 | B6 | No clip | Cannot walk through solid blocks/walls | PASS | |
-| B7 | Step-up | Auto step-up ≤1 block without jump (MC does); >1 needs jump | PARTIAL | Often walks past step; needs more reliable auto-step |
+| B7 | Step-up | Auto step-up ≤1 block without jump (MC does); >1 needs jump | PASS | foothold step-up; unit+e2e |
 
 ## C. Mining & drops
 | # | Check | Minecraft-expected | Status | Notes |
@@ -67,13 +67,13 @@ Last run: 2026-10-29 23:07–23:38 CET · Branch/commit: it10-playtest (see repo
 |---|--------|-------------------|--------|-------|
 | G1 | Smelt | Ore/food + fuel → result after time | PASS | iron ore→ingot |
 | G2 | Fuel | Coal/wood consume as fuel | PASS | |
-| G3 | Chest persist | Items in chest survive save/reload | PARTIAL | reload UI flaky in e2e; save path exists |
+| G3 | Chest persist | Items in chest survive save/reload | PASS | forceSave await + title show reset; e2e |
 
 ## H. Survival vitals
 | # | Check | Minecraft-expected | Status | Notes |
 |---|--------|-------------------|--------|-------|
 | H1 | Health | Hearts; damage reduces HP | PASS | |
-| H2 | Hunger | Hunger drains; eating restores | PARTIAL | drain works; eat path present |
+| H2 | Hunger | Hunger drains; eating restores | PASS | eat without hit; e2e apple restores |
 | H3 | Fall damage | Fall from height deals damage | PASS | |
 | H4 | Drown | Underwater air bar; then HP loss | PASS | (prior run) / retest interrupted |
 | H5 | Death/respawn | Death screen; respawn at bed/world spawn | PASS | death-screen can block canvas until Respawn |
@@ -82,15 +82,15 @@ Last run: 2026-10-29 23:07–23:38 CET · Branch/commit: it10-playtest (see repo
 | # | Check | Minecraft-expected | Status | Notes |
 |---|--------|-------------------|--------|-------|
 | I1 | Day/night | Sky/lighting cycle | PASS | setDay |
-| I2 | Hostiles at night | Zombies/skeletons/etc. spawn/hostile at night | PARTIAL | spawn API; natural night spawn not fully timed |
-| I3 | Passive drops | Animals drop items when killed | PARTIAL | code path |
-| I4 | Combat KB | Melee hits mob with knockback | PARTIAL | hitAt |
+| I2 | Hostiles at night | Zombies/skeletons/etc. spawn/hostile at night | PASS | night uses block light; natural spawn e2e |
+| I3 | Passive drops | Animals drop items when killed | PASS | gris→kjøtt e2e |
+| I4 | Combat KB | Melee hits mob with knockback | PASS | knockBack timer preserves impulse; e2e |
 | I5 | Torches light | Torch brightens nearby blocks | PASS | lightEmit=14 |
 
 ## J. Persistence & UI
 | # | Check | Minecraft-expected | Status | Notes |
 |---|--------|-------------------|--------|-------|
-| J1 | Save/reload | Reload page: same world blocks, inventory, position | PARTIAL | forceSave; e2e reopen flaky |
+| J1 | Save/reload | Reload page: same world blocks, inventory, position | PASS | chest+inv+pos after reopen e2e |
 | J2 | Pause/settings | Pause menu; mouse sensitivity; render distance | PASS | |
 | J3 | FPS | Playable FPS near spawn (target ≥30 headless/desktop) | PASS | ≈30–50 headless |
 
@@ -99,11 +99,11 @@ Last run: 2026-10-29 23:07–23:38 CET · Branch/commit: it10-playtest (see repo
 |---|--------|-------------------|--------|-------|
 | K1 | Punch tree → logs | | PASS | clip + playtest |
 | K2 | Craft planks + table | | PASS | E4/F4 |
-| K3 | Craft wooden pickaxe | | PARTIAL | recipe OK; full UI session interrupted after G |
+| K3 | Craft wooden pickaxe | | PASS | survival session e2e |
 | K4 | Mine stone → cobble | | PASS | C3 |
-| K5 | Stone tools + furnace | | PARTIAL | recipes+G1 |
-| K6 | Shelter + torch before night | | PARTIAL | staged in script |
-| K7 | Survive night | | PARTIAL | short window |
+| K5 | Stone tools + furnace | | PASS | survival session e2e |
+| K6 | Shelter + torch before night | | PASS | shelter+torch e2e |
+| K7 | Survive night | | PASS | survived night in shelter e2e |
 
 ## Method rules
 1. **Real input:** synthesized keyboard/mouse via pointer lock. `__bv` may set up a scenario only — never perform the action under test.

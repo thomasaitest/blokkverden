@@ -1153,7 +1153,26 @@ async function runGame(
       breakAcc = 0; breakTarget = null; hud.setBreakProgress(0);
     }
 
-    if (!invUi.isOpen() && consumePlace(input) && hit) {
+    if (!invUi.isOpen() && consumePlace(input)) {
+      let ateThisClick = false;
+      {
+        const heldFood = inv.held();
+        if (heldFood && ITEMS[heldFood.id]?.food && !ITEMS[heldFood.id]?.placeBlock && player.hunger < 20) {
+          const tid0 = hit ? world.getBlock(hit.x, hit.y, hit.z) : BlockId.Air;
+          const useable = tid0 === BlockId.CraftingTable || tid0 === BlockId.Chest || tid0 === BlockId.Furnace
+            || tid0 === BlockId.Bed || tid0 === BlockId.Door || tid0 === BlockId.Gate || tid0 === BlockId.Trapdoor
+            || tid0 === BlockId.Lever || tid0 === BlockId.Button || tid0 === BlockId.Sign || tid0 === BlockId.EnchantTable;
+          if (!useable) {
+            player.hunger = Math.min(20, player.hunger + (ITEMS[heldFood.id].food ?? 0));
+            heldFood.count -= 1;
+            if (heldFood.count <= 0) inv.setHeld(null);
+            sound.eat(); hud.markDirty();
+            ateThisClick = true;
+          }
+        }
+      }
+      if (!hit || ateThisClick) { /* eaten or nothing to interact with */ }
+      else {
       const tid = world.getBlock(hit.x, hit.y, hit.z);
       if (tid === BlockId.CraftingTable) { invUi.openTable(); input.inventoryOpen = true; }
       else if (tid === BlockId.Chest) { invUi.openChest(containers.getChest(hit.x, hit.y, hit.z)); input.inventoryOpen = true; }
@@ -1251,6 +1270,7 @@ async function runGame(
             }
           }
         }
+      }
       }
     }
 

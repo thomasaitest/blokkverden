@@ -48,7 +48,7 @@ export class MobSystem {
       id: this.nextId++, kind, x, y, z,
       yaw: Math.random() * Math.PI * 2,
       vx: 0, vy: 0, vz: 0,
-      hp: d.hp, maxHp: d.hp, hostile: d.hostile,
+      hp: d.hp, maxHp: d.hp, hostile: d.hostile, knockBack: 0,
       age: 0, attackCool: 1, fuse: 0, onGround: false,
       width: d.w, height: d.h, color: d.color,
     };
@@ -99,7 +99,10 @@ export class MobSystem {
       const kinds: MobKind[] = ['vandrer', 'bueskytt', 'vever', 'knallbolle'];
       const kind = kinds[(Math.random() * kinds.length) | 0];
       const y = this.surfaceY(world, x, z);
-      if (y > 2 && world.getLight(Math.floor(x), y, Math.floor(z)) < 8) {
+      // Skylight is stored at daytime brightness; at night only block light blocks spawns.
+      const bx = Math.floor(x), bz = Math.floor(z);
+      const blockLit = world.getBlockLight(bx, y, bz);
+      if (y > 2 && blockLit < 8) {
         this.spawn(kind, x, y, z);
       }
     }
@@ -121,6 +124,7 @@ export class MobSystem {
     for (const m of this.mobs) {
       m.age += dt;
       m.attackCool -= dt;
+      if (m.knockBack && m.knockBack > 0) m.knockBack -= dt;
       const def = MOB_DEFS[m.kind];
       let tx = 0, tz = 0;
       const distP = Math.hypot(m.x - player.x, m.z - player.z);
@@ -188,8 +192,14 @@ export class MobSystem {
       const sitStop = m.kind === 'ulv' && m.tamed && m.sitting;
       const speed = sitStop ? 0 : def.speed * (m.fuse > 0 ? 0.35 : 1) * (feetWater(world, m.x, m.y, m.z) ? 0.4 : 1)
         * ((m.kind === 'ulv' && m.tamed && distP > 8) ? 1.35 : 1);
-      m.vx = ndx * speed;
-      m.vz = ndz * speed;
+      if (m.knockBack && m.knockBack > 0) {
+        // Preserve hurt impulse; damp so it settles.
+        m.vx *= Math.pow(0.15, dt);
+        m.vz *= Math.pow(0.15, dt);
+      } else {
+        m.vx = ndx * speed;
+        m.vz = ndz * speed;
+      }
       m.vy -= 28 * dt;
 
       // Move X with step-up
@@ -289,10 +299,11 @@ export class MobSystem {
   hurtMob(m: Mob, dmg: number, kx: number, kz: number): void {
     m.hp -= dmg;
     m.hurtFlash = 0.25;
+    m.knockBack = 0.35;
     const len = Math.hypot(kx, kz) || 1;
-    m.vx += (kx / len) * 8;
-    m.vz += (kz / len) * 8;
-    m.vy += 4;
+    m.vx = (kx / len) * 10;
+    m.vz = (kz / len) * 10;
+    m.vy = 5;
   }
 
   hitAt(x: number, y: number, z: number, reach: number, yaw: number, pitch: number, dmg: number, sound: SoundBus): boolean {

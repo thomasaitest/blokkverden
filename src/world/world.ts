@@ -268,6 +268,15 @@ export class World {
     return c.getLight(lx, y, lz);
   }
 
+  /** Block (torch etc.) light only — ignores skylight. */
+  getBlockLight(wx: number, y: number, wz: number): number {
+    if (y < 0 || y >= CHUNK_HEIGHT) return 0;
+    const { cx, cz, lx, lz } = this.worldToChunk(wx, wz);
+    const c = this.chunks.get(chunkKey(cx, cz));
+    if (!c) return 0;
+    return c.blockLight[c.index(lx, y, lz)] ?? 0;
+  }
+
   getWaterLevel(wx: number, y: number, wz: number): number {
     const { cx, cz, lx, lz } = this.worldToChunk(wx, wz);
     const c = this.chunks.get(chunkKey(cx, cz));

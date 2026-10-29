@@ -130,3 +130,24 @@ Media: https://thomasaitest.github.io/blokkverden/progress/it2/
 10. feat: achievements / første hub-lenke
 
 Media: https://thomasaitest.github.io/blokkverden/progress/it3/
+
+## Iterasjon 4 — ytelse, lys, lyd, mobber, kamp, seng, vannnivå
+
+**FPS:** før ~38 (it3, radius 4) → etter walk ~56 (radius 6, ~147 chunks). Mål 60@6–8 delvis nådd; ytterligere atlas/frustum-finpuss står.
+
+### Levert
+- Ytelse: VIEW_RADIUS 6, delt atlas/materiale, meshesDirty + meshRevision, remesh/lys-budsjett, pixelRatio=1, fog nærmere
+- Lys over chunk-grenser (flood til lastede naboer)
+- WebAudio SoundBus: steg per materiale, break/place, hurt, eat, ambient
+- Passive: gris, ku, sau, høne (+ drops); fiender natt: vandrer, bueskytt, vever, knallbolle (eksplosiv, original)
+- Kamp: melee, knockback, krits; bue/piler; rustning reduserer skade
+- Jern-/diamantverktøy + rustningsplasser
+- Seng: søvn hopper natt + respawn; dødsskjerm + respawn
+- Vannmesh med waterLevel (flate/flow)
+- Save v4 (respawn, armor)
+
+### Media
+`public/progress/it4/` — 01-spawn … 06-respawn, clip-mobs-kamp.webm, clip-utforsk-seng.webm
+
+### Tester
+22 vitest grønne; Playwright headless playtest

@@ -130,6 +130,22 @@ export function createAtlasCanvas(): HTMLCanvasElement {
     return [0, 0, 0, 0];
   });
   fillTile(d, 31, (_x, _y, rnd) => { const v = 100 + rnd * 30; return [v, v, v, 255]; });
+  // 32 bed
+  fillTile(d, 32, (lx, ly, rnd) => {
+    if (ly < 4) return [220, 50, 50, 255];
+    if (ly < 8) return [240, 240, 245, 255];
+    return [140 + rnd * 20, 90, 40, 255];
+  });
+  // 33 wool
+  fillTile(d, 33, (_x, _y, rnd) => {
+    const v = 220 + rnd * 30;
+    return [v, v, v, 255];
+  });
+  // 34 iron block-ish / armor icon
+  fillTile(d, 34, (_x, _y, rnd) => { const v = 180 + rnd * 40; return [v, v, v + 10, 255]; });
+  // 35 diamond icon
+  fillTile(d, 35, (lx, ly) => (Math.abs(lx - 8) + Math.abs(ly - 8) < 6 ? [80, 230, 240, 255] : [0, 0, 0, 0]));
+
 
   ctx.putImageData(img, 0, 0);
   return canvas;

@@ -76,15 +76,27 @@ function buildMesh(
         if (transparentPass !== def.transparent) continue;
         const wx = ox + lx;
         const wz = oz + lz;
+        const wLevel = id === BlockId.Water ? (chunk.waterLevel[chunk.index(lx, y, lz)] || 7) : 7;
+        const hTop = id === BlockId.Water ? Math.max(0.125, wLevel / 7) : 1;
+        // Cull water top against fuller water above
+        const skipTop = id === BlockId.Water && getWorld(wx, y + 1, wz) === BlockId.Water;
 
         for (const face of FACES) {
+          if (skipTop && face.dir[1] === 1) continue;
+          if (id === BlockId.Water && face.dir[1] === -1 && getWorld(wx, y - 1, wz) === BlockId.Water) continue;
           const nx = wx + face.dir[0];
           const ny = y + face.dir[1];
           const nz = wz + face.dir[2];
           const neighbor = getWorld(nx, ny, nz);
           const nDef = BLOCKS[neighbor];
           if (nDef?.opaque) continue;
-          if (def.liquid && neighbor === id) continue;
+          if (def.liquid && neighbor === id) {
+            // still draw side if neighbor lower
+            const nl = 7; // approximate — full cull for same water
+            if (face.dir[1] === 0) continue;
+            void nl;
+            continue;
+          }
           if (def.transparent && neighbor === id && id !== BlockId.Torch) continue;
           if (!def.transparent && nDef && !nDef.transparent && !nDef.liquid) continue;
 
@@ -104,7 +116,8 @@ function buildMesh(
               ao = aoCorner(getWorld, wx + c[0], y + c[1], wz + face.dir[2], c[0] === 0 ? -1 : 1, c[1] === 0 ? -1 : 1, 0);
             }
             aos.push(ao / 3);
-            positions.push(wx + c[0], y + c[1], wz + c[2]);
+            const cy = c[1] === 1 ? hTop : c[1];
+            positions.push(wx + c[0], y + cy, wz + c[2]);
             normals.push(face.normal[0], face.normal[1], face.normal[2]);
           }
           uvs.push(uv.u0, uv.v1, uv.u1, uv.v1, uv.u1, uv.v0, uv.u0, uv.v0);

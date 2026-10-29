@@ -6,7 +6,7 @@ import { SeededNoise } from './noise';
 import { generateTerrain, placeTreesForChunk } from './terrain';
 import { relightChunk } from './light';
 
-export const VIEW_RADIUS = 4;
+export const VIEW_RADIUS = 6;
 
 export class World {
   readonly seed: number;
@@ -18,6 +18,7 @@ export class World {
   private worker: Worker | null = null;
   private meshing = new Set<string>();
   private useWorker = true;
+  meshRevision = 0;
 
   constructor(seed = 42) {
     this.seed = seed;
@@ -29,6 +30,7 @@ export class World {
         this.meshing.delete(key);
         if (!this.chunks.has(key)) return;
         this.meshes.set(key, meshFromTransferables(meshes));
+        this.meshRevision++;
         const c = this.chunks.get(key);
         if (c) {
           c.dirty = false;
@@ -174,7 +176,8 @@ export class World {
   }
 
   private relight(c: Chunk): void {
-    relightChunk(c, (x, y, z) => this.getBlock(x, y, z));
+    relightChunk(c, (x, y, z) => this.getBlock(x, y, z), (cx, cz) => this.chunks.get(chunkKey(cx, cz)));
+    // Light values updated in-place; remesh only this chunk unless torch border (handled by setBlock)
     c.dirty = true;
     this.dirtyMeshes.add(chunkKey(c.cx, c.cz));
   }
@@ -198,9 +201,12 @@ export class World {
         this.meshing.delete(key);
       }
     }
-    // Relight dirty
+    // Relight dirty (budgeted)
+    let lit = 0;
     for (const c of this.chunks.values()) {
-      if (c.lightDirty) this.relight(c);
+      if (!c.lightDirty) continue;
+      this.relight(c);
+      if (++lit >= 2) break;
     }
   }
 
@@ -231,7 +237,7 @@ export class World {
     return { blocks, light };
   }
 
-  remeshDirty(budget = 3): string[] {
+  remeshDirty(budget = 2): string[] {
     const done: string[] = [];
     for (const key of [...this.dirtyMeshes]) {
       if (done.length >= budget) break;
@@ -254,6 +260,7 @@ export class World {
         const blocks = c.blocks.slice();
         const skyLight = c.skyLight.slice();
         const blockLight = c.blockLight.slice();
+        const waterLevel = c.waterLevel.slice();
         this.meshing.add(key);
         this.dirtyMeshes.delete(key);
         this.worker.postMessage(
@@ -264,12 +271,13 @@ export class World {
             blocks,
             skyLight,
             blockLight,
+            waterLevel,
             edges: {
               negX: negX.blocks, posX: posX.blocks, negZ: negZ.blocks, posZ: posZ.blocks,
               negXLight: negX.light, posXLight: posX.light, negZLight: negZ.light, posZLight: posZ.light,
             },
           },
-          [blocks.buffer, skyLight.buffer, blockLight.buffer,
+          [blocks.buffer, skyLight.buffer, blockLight.buffer, waterLevel.buffer,
             negX.blocks.buffer, posX.blocks.buffer, negZ.blocks.buffer, posZ.blocks.buffer,
             negX.light.buffer, posX.light.buffer, negZ.light.buffer, posZ.light.buffer],
         );

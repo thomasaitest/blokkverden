@@ -11,6 +11,27 @@ export interface Recipe {
 }
 
 export const RECIPES: Recipe[] = [
+  // bed
+  { w: 3, h: 2, pattern: [ItemId.WoolItem, ItemId.WoolItem, ItemId.WoolItem, ItemId.Planks, ItemId.Planks, ItemId.Planks], result: stack(ItemId.Bed, 1) },
+  // bow
+  { w: 3, h: 3, pattern: [0, ItemId.Stick, ItemId.Leather, ItemId.Stick, 0, ItemId.Leather, 0, ItemId.Stick, ItemId.Leather], result: stack(ItemId.Bow, 1, 200) },
+  // arrow
+  { w: 1, h: 3, pattern: [ItemId.Cobble, ItemId.Stick, ItemId.Feather], result: stack(ItemId.Arrow, 4) },
+  // iron tools
+  { w: 3, h: 3, pattern: [ItemId.IronIngot, ItemId.IronIngot, ItemId.IronIngot, 0, ItemId.Stick, 0, 0, ItemId.Stick, 0], result: stack(ItemId.IronPickaxe, 1, 250) },
+  { w: 3, h: 3, pattern: [ItemId.IronIngot, ItemId.IronIngot, 0, ItemId.IronIngot, ItemId.Stick, 0, 0, ItemId.Stick, 0], result: stack(ItemId.IronAxe, 1, 250) },
+  { w: 1, h: 3, pattern: [ItemId.IronIngot, ItemId.Stick, ItemId.Stick], result: stack(ItemId.IronShovel, 1, 250) },
+  { w: 1, h: 3, pattern: [ItemId.IronIngot, ItemId.IronIngot, ItemId.Stick], result: stack(ItemId.IronSword, 1, 250) },
+  // diamond
+  { w: 3, h: 3, pattern: [ItemId.Diamond, ItemId.Diamond, ItemId.Diamond, 0, ItemId.Stick, 0, 0, ItemId.Stick, 0], result: stack(ItemId.DiamondPickaxe, 1, 1561) },
+  { w: 1, h: 3, pattern: [ItemId.Diamond, ItemId.Diamond, ItemId.Stick], result: stack(ItemId.DiamondSword, 1, 1561) },
+  // leather armor
+  { w: 3, h: 2, pattern: [ItemId.Leather, ItemId.Leather, ItemId.Leather, ItemId.Leather, 0, ItemId.Leather], result: stack(ItemId.LeatherHelmet, 1, 55) },
+  { w: 3, h: 3, pattern: [ItemId.Leather, 0, ItemId.Leather, ItemId.Leather, ItemId.Leather, ItemId.Leather, ItemId.Leather, ItemId.Leather, ItemId.Leather], result: stack(ItemId.LeatherChest, 1, 80) },
+  // iron armor
+  { w: 3, h: 2, pattern: [ItemId.IronIngot, ItemId.IronIngot, ItemId.IronIngot, ItemId.IronIngot, 0, ItemId.IronIngot], result: stack(ItemId.IronHelmet, 1, 165) },
+  { w: 3, h: 3, pattern: [ItemId.IronIngot, 0, ItemId.IronIngot, ItemId.IronIngot, ItemId.IronIngot, ItemId.IronIngot, ItemId.IronIngot, ItemId.IronIngot, ItemId.IronIngot], result: stack(ItemId.IronChest, 1, 240) },
+
   // torch: coal + stick
   { w: 1, h: 2, pattern: [ItemId.Coal, ItemId.Stick], result: stack(ItemId.Torch, 4) },
   // chest

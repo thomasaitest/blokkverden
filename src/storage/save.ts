@@ -11,15 +11,16 @@ const STORE = 'worlds';
 const KEY = 'default';
 
 export interface SaveData {
-  version: 3;
+  version: 4;
   seed: number;
   player: {
     x: number; y: number; z: number; yaw: number; pitch: number;
     health: number; hunger: number; air: number;
   };
+  respawn?: { x: number; y: number; z: number };
   hotbarSlot: number;
   dayTime: number;
-  inventory: (ItemStack | null)[];
+  inventory: ReturnType<Inventory['toJSON']>;
   drops: { x: number; y: number; z: number; stack: ItemStack; age: number }[];
   containers: {
     chests: { k: string; slots: (ItemStack | null)[] }[];
@@ -31,7 +32,7 @@ export interface SaveData {
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 3);
+    const req = indexedDB.open(DB_NAME, 4);
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
@@ -48,14 +49,16 @@ export async function saveWorld(
   drops: DropSystem,
   containers: ContainerStore,
   dayTime: number,
+  respawn: { x: number; y: number; z: number } | null,
 ): Promise<void> {
   const data: SaveData = {
-    version: 3,
+    version: 4,
     seed: world.seed,
     player: {
       x: player.x, y: player.y, z: player.z, yaw: player.yaw, pitch: player.pitch,
       health: player.health, hunger: player.hunger, air: player.air,
     },
+    respawn: respawn ?? undefined,
     hotbarSlot: inv.selected,
     dayTime,
     inventory: inv.toJSON(),

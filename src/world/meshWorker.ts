@@ -9,6 +9,7 @@ export interface MeshJob {
   blocks: Uint8Array;
   skyLight: Uint8Array;
   blockLight: Uint8Array;
+  waterLevel: Uint8Array;
   /** Neighbor edge strips for face culling: -X,+X,-Z,+Z as packed blocks+light */
   edges: {
     negX: Uint8Array; posX: Uint8Array; negZ: Uint8Array; posZ: Uint8Array;
@@ -21,6 +22,7 @@ function buildGetters(job: MeshJob) {
   chunk.blocks.set(job.blocks);
   chunk.skyLight.set(job.skyLight);
   chunk.blockLight.set(job.blockLight);
+  chunk.waterLevel.set(job.waterLevel);
   chunk.generated = true;
 
   const ox = job.cx * CHUNK_SIZE;

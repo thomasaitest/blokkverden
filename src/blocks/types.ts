@@ -20,6 +20,8 @@ export const BlockId = {
   GoldOre: 17,
   DiamondOre: 18,
   SnowGrass: 19,
+  Bed: 20,
+  Wool: 21,
 } as const;
 
 export type BlockId = (typeof BlockId)[keyof typeof BlockId];
@@ -33,41 +35,41 @@ export interface BlockDef {
   liquid: boolean;
   breakTime: number;
   lightEmit?: number;
+  /** If set, mesh as partial height 0–1 (water uses waterLevel) */
   tiles: { top: number; bottom: number; side: number };
 }
 
+const B = (
+  id: number, name: string, solid: boolean, opaque: boolean, transparent: boolean,
+  liquid: boolean, breakTime: number, tiles: BlockDef['tiles'], lightEmit?: number,
+): BlockDef => ({ id: id as BlockId, name, solid, opaque, transparent, liquid, breakTime, tiles, lightEmit });
+
 export const BLOCKS: Record<number, BlockDef> = {
-  [BlockId.Air]: { id: 0 as BlockId, name: 'Luft', solid: false, opaque: false, transparent: true, liquid: false, breakTime: 0, tiles: { top: 0, bottom: 0, side: 0 } },
-  [BlockId.Grass]: { id: 1 as BlockId, name: 'Gress', solid: true, opaque: true, transparent: false, liquid: false, breakTime: 0.6, tiles: { top: 0, bottom: 1, side: 2 } },
-  [BlockId.Dirt]: { id: 2 as BlockId, name: 'Jord', solid: true, opaque: true, transparent: false, liquid: false, breakTime: 0.5, tiles: { top: 1, bottom: 1, side: 1 } },
-  [BlockId.Stone]: { id: 3 as BlockId, name: 'Stein', solid: true, opaque: true, transparent: false, liquid: false, breakTime: 1.5, tiles: { top: 3, bottom: 3, side: 3 } },
-  [BlockId.Cobble]: { id: 4 as BlockId, name: 'Brostein', solid: true, opaque: true, transparent: false, liquid: false, breakTime: 1.5, tiles: { top: 4, bottom: 4, side: 4 } },
-  [BlockId.Log]: { id: 5 as BlockId, name: 'Tømmer', solid: true, opaque: true, transparent: false, liquid: false, breakTime: 1.0, tiles: { top: 5, bottom: 5, side: 6 } },
-  [BlockId.Planks]: { id: 6 as BlockId, name: 'Planker', solid: true, opaque: true, transparent: false, liquid: false, breakTime: 0.8, tiles: { top: 7, bottom: 7, side: 7 } },
-  [BlockId.Leaves]: { id: 7 as BlockId, name: 'Løv', solid: true, opaque: false, transparent: true, liquid: false, breakTime: 0.3, tiles: { top: 8, bottom: 8, side: 8 } },
-  [BlockId.Sand]: { id: 8 as BlockId, name: 'Sand', solid: true, opaque: true, transparent: false, liquid: false, breakTime: 0.5, tiles: { top: 9, bottom: 9, side: 9 } },
-  [BlockId.Glass]: { id: 9 as BlockId, name: 'Glass', solid: true, opaque: false, transparent: true, liquid: false, breakTime: 0.4, tiles: { top: 10, bottom: 10, side: 10 } },
-  [BlockId.Water]: { id: 10 as BlockId, name: 'Vann', solid: false, opaque: false, transparent: true, liquid: true, breakTime: 0, tiles: { top: 11, bottom: 11, side: 11 } },
-  [BlockId.CraftingTable]: { id: 11 as BlockId, name: 'Arbeidsbenk', solid: true, opaque: true, transparent: false, liquid: false, breakTime: 0.8, tiles: { top: 12, bottom: 7, side: 12 } },
-  [BlockId.Torch]: { id: 12 as BlockId, name: 'Fakkel', solid: false, opaque: false, transparent: true, liquid: false, breakTime: 0.05, lightEmit: 14, tiles: { top: 16, bottom: 16, side: 16 } },
-  [BlockId.Chest]: { id: 13 as BlockId, name: 'Kiste', solid: true, opaque: true, transparent: false, liquid: false, breakTime: 1.0, tiles: { top: 17, bottom: 17, side: 17 } },
-  [BlockId.Furnace]: { id: 14 as BlockId, name: 'Ovn', solid: true, opaque: true, transparent: false, liquid: false, breakTime: 1.5, tiles: { top: 31, bottom: 3, side: 18 } },
-  [BlockId.CoalOre]: { id: 15 as BlockId, name: 'Kullmalm', solid: true, opaque: true, transparent: false, liquid: false, breakTime: 1.8, tiles: { top: 20, bottom: 20, side: 20 } },
-  [BlockId.IronOre]: { id: 16 as BlockId, name: 'Jernmalm', solid: true, opaque: true, transparent: false, liquid: false, breakTime: 2.0, tiles: { top: 21, bottom: 21, side: 21 } },
-  [BlockId.GoldOre]: { id: 17 as BlockId, name: 'Gullmalm', solid: true, opaque: true, transparent: false, liquid: false, breakTime: 2.0, tiles: { top: 22, bottom: 22, side: 22 } },
-  [BlockId.DiamondOre]: { id: 18 as BlockId, name: 'Diamantmalm', solid: true, opaque: true, transparent: false, liquid: false, breakTime: 2.5, tiles: { top: 23, bottom: 23, side: 23 } },
-  [BlockId.SnowGrass]: { id: 19 as BlockId, name: 'Snøgress', solid: true, opaque: true, transparent: false, liquid: false, breakTime: 0.6, tiles: { top: 24, bottom: 1, side: 25 } },
+  [0]: B(0, 'Luft', false, false, true, false, 0, { top: 0, bottom: 0, side: 0 }),
+  [1]: B(1, 'Gress', true, true, false, false, 0.6, { top: 0, bottom: 1, side: 2 }),
+  [2]: B(2, 'Jord', true, true, false, false, 0.5, { top: 1, bottom: 1, side: 1 }),
+  [3]: B(3, 'Stein', true, true, false, false, 1.5, { top: 3, bottom: 3, side: 3 }),
+  [4]: B(4, 'Brostein', true, true, false, false, 1.5, { top: 4, bottom: 4, side: 4 }),
+  [5]: B(5, 'Tømmer', true, true, false, false, 1.0, { top: 5, bottom: 5, side: 6 }),
+  [6]: B(6, 'Planker', true, true, false, false, 0.8, { top: 7, bottom: 7, side: 7 }),
+  [7]: B(7, 'Løv', true, false, true, false, 0.3, { top: 8, bottom: 8, side: 8 }),
+  [8]: B(8, 'Sand', true, true, false, false, 0.5, { top: 9, bottom: 9, side: 9 }),
+  [9]: B(9, 'Glass', true, false, true, false, 0.4, { top: 10, bottom: 10, side: 10 }),
+  [10]: B(10, 'Vann', false, false, true, true, 0, { top: 11, bottom: 11, side: 11 }),
+  [11]: B(11, 'Arbeidsbenk', true, true, false, false, 0.8, { top: 12, bottom: 7, side: 12 }),
+  [12]: B(12, 'Fakkel', false, false, true, false, 0.05, { top: 16, bottom: 16, side: 16 }, 14),
+  [13]: B(13, 'Kiste', true, true, false, false, 1.0, { top: 17, bottom: 17, side: 17 }),
+  [14]: B(14, 'Ovn', true, true, false, false, 1.5, { top: 31, bottom: 3, side: 18 }),
+  [15]: B(15, 'Kullmalm', true, true, false, false, 1.8, { top: 20, bottom: 20, side: 20 }),
+  [16]: B(16, 'Jernmalm', true, true, false, false, 2.0, { top: 21, bottom: 21, side: 21 }),
+  [17]: B(17, 'Gullmalm', true, true, false, false, 2.0, { top: 22, bottom: 22, side: 22 }),
+  [18]: B(18, 'Diamantmalm', true, true, false, false, 2.5, { top: 23, bottom: 23, side: 23 }),
+  [19]: B(19, 'Snøgress', true, true, false, false, 0.6, { top: 24, bottom: 1, side: 25 }),
+  [20]: B(20, 'Seng', true, false, true, false, 0.4, { top: 32, bottom: 7, side: 32 }),
+  [21]: B(21, 'Ull', true, true, false, false, 0.4, { top: 33, bottom: 33, side: 33 }),
 };
 
-export function isSolid(id: number): boolean {
-  return BLOCKS[id]?.solid ?? false;
-}
-export function isOpaque(id: number): boolean {
-  return BLOCKS[id]?.opaque ?? false;
-}
-export function isTransparent(id: number): boolean {
-  return BLOCKS[id]?.transparent ?? true;
-}
-export function lightEmission(id: number): number {
-  return BLOCKS[id]?.lightEmit ?? 0;
-}
+export function isSolid(id: number): boolean { return BLOCKS[id]?.solid ?? false; }
+export function isOpaque(id: number): boolean { return BLOCKS[id]?.opaque ?? false; }
+export function isTransparent(id: number): boolean { return BLOCKS[id]?.transparent ?? true; }
+export function lightEmission(id: number): number { return BLOCKS[id]?.lightEmit ?? 0; }

@@ -305,3 +305,13 @@ canvas#game {
   height: 6px; background: #e65; margin: 4px 0; width: 0%;
 }
 #fu-cook { background: #fc5; }
+#death-screen {
+  position: fixed; inset: 0; background: rgba(80,0,0,0.72);
+  display: none; align-items: center; justify-content: center;
+  z-index: 100; color: #fff; text-align: center;
+}
+#death-screen h1 { font-size: 42px; margin-bottom: 16px; }
+#btn-respawn {
+  padding: 12px 28px; font-size: 18px; font-weight: 700;
+  border: none; border-radius: 8px; cursor: pointer; background: #eee;
+}

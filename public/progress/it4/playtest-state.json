@@ -1,0 +1,18 @@
+{
+  "fpsWalk": 56.13627564847073,
+  "state": {
+    "x": 2.5,
+    "y": 36.005,
+    "z": 2.5,
+    "fps": 27.10027100271001,
+    "chunks": 147,
+    "meshes": 147,
+    "health": 20,
+    "hunger": 20,
+    "dayTime": 0.9036661666666662,
+    "mobs": 6,
+    "dead": false,
+    "view": 6
+  },
+  "fpsBefore": 38
+}

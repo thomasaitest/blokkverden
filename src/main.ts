@@ -125,6 +125,11 @@ async function runGame(
   const hud = createHud(app, inv, renderer.getAtlas());
   if (testMode) hud.setHintVisible(false);
   else hud.setHintVisible(!!settings.showHints);
+  const clickLook = document.createElement('div');
+  clickLook.id = 'click-look';
+  clickLook.textContent = 'Klikk for å se rundt · WASD for å gå · Esc = pause';
+  clickLook.style.cssText = 'display:none;position:fixed;left:50%;top:18%;transform:translateX(-50%);background:rgba(0,0,0,0.55);color:#fff;padding:10px 16px;border-radius:8px;z-index:25;pointer-events:none;font-size:14px;text-align:center;';
+  app.appendChild(clickLook);
   const redstone = new RedstoneSystem();
   const particles = new ParticleSystem(renderer.scene);
   const achieve = new AchievementBus(app);
@@ -227,7 +232,13 @@ async function runGame(
   };
 
   const pause = createPauseMenu(app, {
-    onResume: () => { paused = false; pause.hide(); },
+    onResume: () => {
+      paused = false;
+      pause.hide();
+      try { renderer.canvas.focus({ preventScroll: true }); } catch { renderer.canvas.focus(); }
+      // Re-acquire look immediately from the resume click (user gesture).
+      try { renderer.canvas.requestPointerLock(); } catch { /* drag-look fallback in controls */ }
+    },
     onSettingsChange: applySettings,
     onQuit: () => { void doSave(); onQuit(); },
   });
@@ -257,8 +268,9 @@ async function runGame(
   setupTouchControls(app, input, { onInventory: toggleInv, onPause: togglePause });
   bindDesktopControls(renderer.canvas, input, (s) => hud.setSlot(s), toggleInv);
   renderer.canvas.addEventListener('pointerdown', () => sound.unlock());
+  try { renderer.canvas.focus({ preventScroll: true }); } catch { renderer.canvas.focus(); }
   window.addEventListener('keydown', (e) => {
-    if (e.code === 'Escape') togglePause();
+    if (e.code === 'Escape') { e.preventDefault(); togglePause(); }
   });
 
   // Load / fresh
@@ -870,6 +882,7 @@ async function runGame(
     if (now - fpsT >= 500) { fps = (frames * 1000) / (now - fpsT); frames = 0; fpsT = now; }
     attackCool -= dt;
 
+    clickLook.style.display = (!paused && !dead && !input.pointerLocked && !input.inventoryOpen) ? 'block' : 'none';
     if (paused || dead) {
       renderer.setDayTime(dayTime);
       renderer.updateCamera(player);
@@ -883,7 +896,7 @@ async function runGame(
 
     if (!invUi.isOpen()) {
       const look = consumeLook(input);
-      if (input.pointerLocked || input.touchLookActive || Math.abs(look.dx) + Math.abs(look.dy) > 0) {
+      if (input.pointerLocked || input.touchLookActive || input.dragLookFallback || Math.abs(look.dx) + Math.abs(look.dy) > 0) {
         player.yaw -= look.dx * sens;
         player.pitch -= look.dy * sens; // -pitch looks down in this camera setup
         app.classList.add('playing');

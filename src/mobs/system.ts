@@ -86,7 +86,7 @@ export class MobSystem {
       const dist = 14 + Math.random() * 16;
       const x = player.x + Math.cos(ang) * dist;
       const z = player.z + Math.sin(ang) * dist;
-      const kinds: MobKind[] = ['gris', 'ku', 'sau', 'høne', 'ulv'];
+      const kinds: MobKind[] = ['gris', 'ku', 'sau', 'høne']; // ulv: not shipped — core playtest first
       const kind = kinds[(Math.random() * kinds.length) | 0];
       const y = this.surfaceY(world, x, z);
       if (y > 2) this.spawn(kind, x, y, z);

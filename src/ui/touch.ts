@@ -20,7 +20,10 @@ export function setupTouchControls(root: HTMLElement, input: InputState, hooks?:
   `;
   root.appendChild(overlay);
 
-  const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  // Only show on coarse pointers (phones/tablets). Mac trackpads often report
+  // maxTouchPoints > 0; enabling the overlay there steals mouse look / clicks.
+  const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+  const isTouch = coarse && (('ontouchstart' in window) || navigator.maxTouchPoints > 0);
   overlay.style.display = isTouch ? 'block' : 'none';
 
   // Joystick
@@ -48,7 +51,7 @@ export function setupTouchControls(root: HTMLElement, input: InputState, hooks?:
     joyId = null;
     input.touchMoveX = 0;
     input.touchMoveY = 0;
-    input.forward = input.back = input.left = input.right = false;
+    // Do NOT clear keyboard WASD flags — that races desktop key sync on hybrid devices.
     knob.style.transform = 'translate(-50%,-50%)';
   };
   const moveJoy = (cx: number, cy: number) => {

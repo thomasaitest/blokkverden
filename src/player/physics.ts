@@ -59,10 +59,36 @@ function waterAt(world: World, x: number, y: number, z: number): boolean {
   return world.getBlock(Math.floor(x), Math.floor(y), Math.floor(z)) === BlockId.Water;
 }
 
+/** True if a solid block supports the player near (x,z) at feet. */
+function hasGroundSupport(world: World, x: number, y: number, z: number): boolean {
+  const hw = PLAYER_WIDTH / 2 * 0.9;
+  const samples = [
+    [x, z], [x - hw, z - hw], [x + hw, z - hw], [x - hw, z + hw], [x + hw, z + hw],
+  ];
+  for (const [sx, sz] of samples) {
+    const bx = Math.floor(sx), by = Math.floor(y - 0.05), bz = Math.floor(sz);
+    const id = world.getBlock(bx, by, bz);
+    if (id !== BlockId.Air && id !== BlockId.Water && id !== BlockId.Lava && id !== BlockId.Torch
+      && id !== BlockId.Crop && id !== BlockId.RedDust && id !== BlockId.Portal) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function tryAxis(world: World, p: PlayerState, h: number, axis: 'x' | 'z', delta: number): void {
   if (Math.abs(delta) < 1e-8) return;
+  const ox = p.x, oz = p.z;
   if (axis === 'x') p.x += delta;
   else p.z += delta;
+  // Sneak-edge: do not walk off solid ledges while sneaking (Minecraft)
+  if (p.sneaking && p.onGround && !p.inWater && !p.flying) {
+    if (!hasGroundSupport(world, p.x, p.y, p.z)) {
+      p.x = ox; p.z = oz;
+      if (axis === 'x') p.vx = 0; else p.vz = 0;
+      return;
+    }
+  }
   if (!collidesAt(world, p.x, p.y, p.z, h)) return;
   if (p.onGround || p.vy <= 0.01 || p.inWater) {
     for (let step = 0.05; step <= STEP_HEIGHT; step += 0.05) {

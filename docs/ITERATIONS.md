@@ -269,3 +269,15 @@ Media: https://thomasaitest.github.io/blokkverden/progress/it9/
 31 vitest grønne
 
 Media: https://thomasaitest.github.io/blokkverden/progress/it10/
+
+## Iterasjon 10 (pågår) — navigasjon-blokker + core playtest
+
+**Navigasjon-hotfix (Chrome):** Thomas: «navigation didn't work at all» på live.
+Rotårsaker adressert:
+1. Pointer lock uten drag-to-look-fallback → ingen muse-look hvis lock nektes/etter Esc
+2. Etter pause: canvas ikke fokusokusert / lock ikke re-hentet fra Fortsett-klikket
+3. Touch-overlay kunne aktiveres på fine-pointer (Mac maxTouchPoints) og nullstille WASD
+4. Space/piltaster kunne aktivere fokususet knapp / scrolle — preventDefault under spill
+
+E2E: `scripts/nav-chrome-e2e.ts` (Chromium) — WASD-retninger, piltaster, hopp, drag-look, pause→resume.
+Wolf-taming er i branch men spawn av. `docs/CORE-PLAYTEST.md` er acceptance-sjekklisten.

@@ -7,10 +7,11 @@ import { drawItemIcon } from '../render/renderer';
 export interface HudApi {
   setSlot: (s: number) => void;
   setBreakProgress: (t: number) => void;
-  updateDebug: (p: PlayerState, fps: number, chunks: number, day: number) => void;
+  updateDebug: (p: PlayerState, fps: number, chunks: number, day: number, extra?: string) => void;
   updateBars: (p: PlayerState) => void;
   refreshHotbar: () => void;
   markDirty: () => void;
+  setHintVisible: (on: boolean) => void;
   showDebug: boolean;
   slot: number;
   el: HTMLElement;
@@ -29,7 +30,10 @@ export function createHud(root: HTMLElement, inv: Inventory, atlas: HTMLCanvasEl
     <div id="hint">Klikk · WASD · dobbel-W · Space · Shift · E · 1–9 · høyreklikk ovn/kiste/benk<br/>Spis: høyreklikk mat i hotbar · På nettbrett: styrespak</div>
   `;
   root.appendChild(el);
-  setTimeout(() => { const h = el.querySelector('#hint') as HTMLElement | null; if (h) h.style.display = 'none'; }, 8000);
+  const hintEl = el.querySelector('#hint') as HTMLElement;
+  let hintVisible = true;
+  const applyHint = () => { hintEl.style.display = hintVisible ? 'block' : 'none'; };
+  setTimeout(() => { hintVisible = false; applyHint(); }, 8000);
 
   const hotbarEl = el.querySelector('#hotbar') as HTMLElement;
   let slot = inv.selected;
@@ -94,13 +98,13 @@ export function createHud(root: HTMLElement, inv: Inventory, atlas: HTMLCanvasEl
       breakFill.style.width = `${Math.max(0, Math.min(1, t)) * 100}%`;
       (el.querySelector('#break-bar') as HTMLElement).style.opacity = t > 0 ? '1' : '0';
     },
-    updateDebug: (p, fps, chunks, day) => {
+    updateDebug: (p, fps, chunks, day, extra) => {
       if (!showDebug) return;
       const cx = Math.floor(p.x / CHUNK_SIZE);
       const cz = Math.floor(p.z / CHUNK_SIZE);
       const held = inv.held();
       debugEl.textContent = [
-        `Blokkverden it5`,
+        `Blokkverden it6`,
         `${fps.toFixed(0)} fps`,
         `xyz: ${p.x.toFixed(2)} / ${p.y.toFixed(2)} / ${p.z.toFixed(2)}`,
         `chunk: ${cx} ${cz}`,
@@ -110,8 +114,10 @@ export function createHud(root: HTMLElement, inv: Inventory, atlas: HTMLCanvasEl
         `hp: ${p.health.toFixed(0)} hunger: ${p.hunger.toFixed(1)} air: ${p.air.toFixed(0)}`,
         held ? `hold: ${ITEMS[held.id]?.name ?? held.id}` : `hold: —`,
         p.inWater ? 'i vann' : '',
+        extra ?? '',
       ].filter(Boolean).join('\n');
     },
+    setHintVisible: (on) => { hintVisible = on; applyHint(); },
     updateBars: (p) => {
       const key = `${p.health|0},${p.hunger|0},${p.air|0},${p.inWater?1:0}`;
       if (key === lastBars) return;

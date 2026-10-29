@@ -1,0 +1,10 @@
+{
+  "fpsBefore": 38,
+  "fpsWalk": 37,
+  "sleepOk": true,
+  "note": "fpsWalk from dedicated probe after disabling sector-merge rebuild; headless software GL",
+  "state": {
+    "view": 7,
+    "perf": { "drawCalls": 90, "triangles": 127918, "programs": 3 }
+  }
+}

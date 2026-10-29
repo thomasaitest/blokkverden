@@ -192,6 +192,38 @@ export function createAtlasCanvas(): HTMLCanvasElement {
   // 45 wheat item
   fillTile(d, 45, (lx, ly) => (ly > 4 && Math.abs(lx - 8) < 2 ? [220, 190, 50, 255] : [0, 0, 0, 0]));
 
+
+  // 46 mob spawner
+  fillTile(d, 46, (lx, ly) => {
+    if (lx < 2 || ly < 2 || lx > 13 || ly > 13) return [40, 40, 50, 255];
+    if ((lx + ly) % 3 === 0) return [80, 180, 80, 255];
+    return [30, 30, 40, 255];
+  });
+  // 47 fishing rod
+  fillTile(d, 47, (lx, ly) => {
+    if (lx === 4 && ly >= 2 && ly <= 13) return [120, 80, 40, 255];
+    if (ly === 3 && lx >= 4 && lx <= 11) return [180, 180, 190, 255];
+    if (lx === 11 && ly >= 3 && ly <= 6) return [180, 180, 190, 255];
+    return [0, 0, 0, 0];
+  });
+  // 48 map
+  fillTile(d, 48, (lx, ly) => {
+    if (lx < 1 || ly < 1 || lx > 14 || ly > 14) return [140, 100, 50, 255];
+    if (ly > 9) return [60, 140, 60, 255];
+    if (ly > 6) return [80, 160, 80, 255];
+    return [70, 140, 200, 255];
+  });
+  // 49 raw fish
+  fillTile(d, 49, (lx, ly) => (Math.hypot(lx - 8, ly - 8) < 4 && ly > 5 ? [100, 150, 200, 255] : [0, 0, 0, 0]));
+  // 50 cooked fish
+  fillTile(d, 50, (lx, ly) => (Math.hypot(lx - 8, ly - 8) < 4 && ly > 5 ? [200, 140, 60, 255] : [0, 0, 0, 0]));
+  // 51 trader marker (unused block)
+  fillTile(d, 51, (lx, ly) => {
+    if (Math.abs(lx - 8) < 3 && ly > 4) return [120, 70, 40, 255];
+    if (ly <= 5 && Math.hypot(lx - 8, ly - 4) < 3) return [200, 160, 120, 255];
+    return [0, 0, 0, 0];
+  });
+
   ctx.putImageData(img, 0, 0);
   return canvas;
 }

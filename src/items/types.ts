@@ -15,7 +15,7 @@ export const ItemId = {
   LeatherHelmet: 120, LeatherChest: 121, LeatherLegs: 122, LeatherBoots: 123,
   IronHelmet: 124, IronChest: 125, IronLegs: 126, IronBoots: 127,
   DiamondHelmet: 128, DiamondChest: 129, DiamondLegs: 130, DiamondBoots: 131,
-  Seeds: 63, Wheat: 64, Bread: 65, Boat: 66,
+  Seeds: 63, Wheat: 64, Bread: 65, Boat: 66, FishingRod: 67, MapItem: 68, RawFish: 69, CookedFish: 70,
   WoodHoe: 116, IronHoe: 117, EnchantTable: 24,
 } as const;
 
@@ -105,6 +105,11 @@ export const ITEMS: Record<number, ItemDef> = {
   [64]: { id: 64, name: 'Hvete', stackable: true, maxStack: 64, iconTile: 45 },
   [65]: { id: 65, name: 'Brød', stackable: true, maxStack: 64, iconTile: 41, food: 5 },
   [66]: { id: 66, name: 'Båt', stackable: false, maxStack: 1, iconTile: 40 },
+  [67]: { id: 67, name: 'Fiskestang', stackable: false, maxStack: 1, maxDurability: 64, iconTile: 47 },
+  [68]: { id: 68, name: 'Kart', stackable: false, maxStack: 1, iconTile: 48 },
+  [69]: { id: 69, name: 'Råfisk', stackable: true, maxStack: 64, iconTile: 49, food: 2 },
+  [70]: { id: 70, name: 'Stekt fisk', stackable: true, maxStack: 64, iconTile: 50, food: 5 },
+  [25]: blk(25, 'Fremkaller', 46, 25),
   [116]: tool(116, 'Trehakkejord', 'hoe', 'wood', 60, 1, 1, 44),
   [117]: tool(117, 'Jernhakkejord', 'hoe', 'iron', 250, 1, 1, 44),
 };

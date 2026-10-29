@@ -3,10 +3,12 @@ export interface GameSettings {
   fov: number;
   sensitivity: number;
   volume: number;
+  showHints: boolean;
+  music: boolean;
 }
 
 const KEY = 'bv-settings';
-const DEFAULTS: GameSettings = { renderDistance: 7, fov: 70, sensitivity: 1, volume: 0.7 };
+const DEFAULTS: GameSettings = { renderDistance: 7, fov: 70, sensitivity: 1, volume: 0.7, showHints: true, music: true };
 
 export function loadSettings(): GameSettings {
   try {

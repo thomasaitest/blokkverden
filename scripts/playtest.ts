@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { createServer } from 'node:net';
 
-const IT = Number(process.env.IT || 5);
+const IT = Number(process.env.IT || 6);
 const OUT_PUBLIC = join(process.cwd(), 'public', 'progress', `it${IT}`);
 const OUT_SHOTS = join('/workspace/blokkverden-shots', `it${IT}`);
 mkdirSync(OUT_PUBLIC, { recursive: true });
@@ -38,6 +38,16 @@ type BV = {
   player: { yaw: number; pitch: number; health: number };
   world: { setBlock: (x:number,y:number,z:number,id:number)=>boolean };
   forceRemeshAround: () => Promise<void>;
+  stageMobs: () => void;
+  stageVillage: () => { x: number; y: number; z: number };
+  stageDungeon: () => { x: number; y: number; z: number };
+  setWeather: (k: string, i?: number) => void;
+  castFish: () => boolean;
+  reelFish: () => unknown;
+  openMap: () => void;
+  closeMap: () => void;
+  openTrade: () => void;
+  getPerf: () => { drawCalls: number; triangles: number };
 };
 
 function freePort(): Promise<number> {
@@ -149,41 +159,41 @@ async function main() {
     await sleep(400);
     await saveShot(page, '01-spawn.png');
 
-    // 02 mobs night — spawn in front and lookAt
+    // 02 articulated mob lineup a few blocks away
     await page.evaluate(async () => {
       const bv = (window as unknown as { __bv: BV }).__bv;
       bv.clearMobs();
-      bv.setTime(0.02);
-      bv.buildPlatform(10);
+      bv.setTime(0.32);
+      bv.buildPlatform(12);
       await bv.waitForMeshes(2500);
-      // flatten trees in view by air-carving ahead
       const st = bv.getState();
-      for (let z = -8; z <= -1; z++) for (let x = -4; x <= 4; x++) for (let y = 0; y < 5; y++) {
+      for (let z = -10; z <= -1; z++) for (let x = -6; x <= 6; x++) for (let y = 0; y < 6; y++) {
         bv.world.setBlock(Math.floor(st.x) + x, Math.floor(st.y) + y, Math.floor(st.z) + z, 0);
       }
       await bv.waitForMeshes(2000);
-      const a = bv.spawnMob('vandrer', 0, 0, -4);
-      bv.spawnMob('gris', 2.5, 0, -3.5);
-      bv.spawnMob('knallbolle', -2.5, 0, -4.5);
-      bv.lookAt(a.x, a.y + 1.2, a.z);
-      await new Promise((r) => setTimeout(r, 400));
+      (bv as unknown as { stageMobs: () => void }).stageMobs();
+      // nudge camera back to see full bodies
+      bv.player.pitch = -0.2;
+      bv.look(0.15, -0.22);
+      await new Promise((r) => setTimeout(r, 600));
     });
     await sleep(500);
-    await saveShot(page, '02-mobs-natt.png');
+    await saveShot(page, '02-mobs-modeller.png');
 
-    // 03 combat — mob close, sword, attack
+    // 03 combat hurt flash from ~3 blocks
     await page.evaluate(async () => {
       const bv = (window as unknown as { __bv: BV }).__bv;
       bv.clearMobs();
       bv.setTime(0.35);
-      bv.give(111, 1); // iron sword
-      // select sword - put in slot 0
-      const m = bv.spawnMob('vandrer', 0, 0, -3.2);
+      bv.give(111, 1);
+      const m = bv.spawnMob('vandrer', 0, 0, -3.5);
+      bv.spawnMob('gris', 2.2, 0, -4);
+      bv.spawnMob('knallbolle', -2.2, 0, -4.2);
       bv.lookAt(m.x, m.y + 1.0, m.z);
-      for (let i = 0; i < 3; i++) { bv.attack(); await new Promise((r) => setTimeout(r, 150)); }
-      await new Promise((r) => setTimeout(r, 200));
+      for (let i = 0; i < 4; i++) { bv.attack(); await new Promise((r) => setTimeout(r, 120)); }
+      await new Promise((r) => setTimeout(r, 80));
     });
-    await sleep(400);
+    await sleep(300);
     await saveShot(page, '03-kamp.png');
 
     // 04 bow — arrows flying
@@ -252,6 +262,59 @@ async function main() {
     await sleep(400);
     await saveShot(page, '08-bat.png');
 
+    // 08b weather rain
+    await page.evaluate(async () => {
+      const bv = (window as unknown as { __bv: BV }).__bv;
+      bv.setTime(0.4);
+      bv.buildPlatform(8);
+      await bv.waitForMeshes(1500);
+      (bv as unknown as { setWeather: (k: string, i?: number) => void }).setWeather('rain', 0.9);
+      bv.look(0.4, -0.35);
+      await new Promise((r) => setTimeout(r, 400));
+    });
+    await sleep(400);
+    await saveShot(page, '08b-regn.png');
+
+    // 08c village + byttebonde
+    await page.evaluate(async () => {
+      const bv = (window as unknown as { __bv: BV }).__bv;
+      (bv as unknown as { setWeather: (k: string) => void }).setWeather('clear');
+      bv.setTime(0.33);
+      bv.buildPlatform(10);
+      await bv.waitForMeshes(2000);
+      const v = (bv as unknown as { stageVillage: () => { x: number; y: number; z: number } }).stageVillage();
+      await bv.waitForMeshes(2500);
+      bv.lookAt(v.x + 2.5, v.y + 2.2, v.z + 2.5);
+      await new Promise((r) => setTimeout(r, 300));
+    });
+    await sleep(400);
+    await saveShot(page, '08c-landsby.png');
+
+    // 08d dungeon
+    await page.evaluate(async () => {
+      const bv = (window as unknown as { __bv: BV }).__bv;
+      const d = (bv as unknown as { stageDungeon: () => { x: number; y: number; z: number } }).stageDungeon();
+      await bv.waitForMeshes(2500);
+      bv.lookAt(d.x + 3.5, d.y + 2, d.z + 3.5);
+      await new Promise((r) => setTimeout(r, 300));
+    });
+    await sleep(400);
+    await saveShot(page, '08d-hule.png');
+
+    // 08e map
+    await page.evaluate(async () => {
+      const bv = (window as unknown as { __bv: BV }).__bv;
+      bv.buildPlatform(6);
+      await bv.waitForMeshes(1500);
+      bv.setTime(0.35);
+      bv.look(0.5, -0.3);
+      (bv as unknown as { openMap: () => void }).openMap();
+      await new Promise((r) => setTimeout(r, 200));
+    });
+    await sleep(300);
+    await saveShot(page, '08e-kart.png');
+    await page.evaluate(() => (window as unknown as { __bv: { closeMap: () => void } }).__bv.closeMap());
+
     // 09 enchant + armor
     await page.evaluate(async () => {
       const bv = (window as unknown as { __bv: BV }).__bv;
@@ -317,7 +380,10 @@ async function main() {
     await sleep(700);
     await saveShot(page, '12-respawn.png');
 
-    const state = await page.evaluate(() => (window as unknown as { __bv: BV }).__bv.getState());
+    const state = await page.evaluate(() => {
+      const bv = (window as unknown as { __bv: BV }).__bv;
+      return { ...bv.getState(), perf: (bv as unknown as { getPerf: () => unknown }).getPerf() };
+    });
     writeFileSync(join(OUT_PUBLIC, 'playtest-state.json'), JSON.stringify({
       fpsBefore, fpsWalk, sleepOk, state,
     }, null, 2));

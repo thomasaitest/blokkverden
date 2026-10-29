@@ -29,9 +29,21 @@ export class BoatSystem {
 
   update(dt: number, world: World, player: PlayerState, wishX: number, wishZ: number, inputForward: boolean): void {
     for (const b of this.boats) {
-      const under = world.getBlock(Math.floor(b.x), Math.floor(b.y - 0.2), Math.floor(b.z));
-      const inWater = under === BlockId.Water || world.getBlock(Math.floor(b.x), Math.floor(b.y), Math.floor(b.z)) === BlockId.Water;
-      if (inWater) b.y = Math.floor(b.y) + 0.4;
+      const bx = Math.floor(b.x), bz = Math.floor(b.z);
+      let surface: number | null = null;
+      for (let y = Math.min(70, Math.floor(b.y) + 3); y >= Math.max(1, Math.floor(b.y) - 4); y--) {
+        if (world.getBlock(bx, y, bz) === BlockId.Water) {
+          const above = world.getBlock(bx, y + 1, bz);
+          if (above !== BlockId.Water) {
+            const lvl = world.getWaterLevel(bx, y, bz) || 7;
+            surface = y + Math.max(0.125, lvl / 7);
+            break;
+          }
+        }
+      }
+      const under = world.getBlock(bx, Math.floor(b.y - 0.2), bz);
+      const inWater = surface != null;
+      if (inWater && surface != null) b.y = surface - 0.12; // hull sits just under surface
       else if (!isSolid(under)) b.y -= 4 * dt;
 
       if (this.mounted && this.boats[0] === b || (this.mounted && Math.hypot(b.x - player.x, b.z - player.z) < 1.5)) {

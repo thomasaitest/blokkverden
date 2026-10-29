@@ -39,6 +39,8 @@ export function createTitleMenu(root: HTMLElement, cb: MenuCallbacks): {
       <label>FOV <input type="range" id="s-fov" min="50" max="100" value="${s.fov}"/> <span id="s-fov-v">${s.fov}</span></label>
       <label>Musefølsomhet <input type="range" id="s-sens" min="20" max="200" value="${(s.sensitivity * 100) | 0}"/> <span id="s-sens-v">${s.sensitivity.toFixed(2)}</span></label>
       <label>Volum <input type="range" id="s-vol" min="0" max="100" value="${(s.volume * 100) | 0}"/> <span id="s-vol-v">${(s.volume * 100) | 0}%</span></label>
+      <label><input type="checkbox" id="s-hints" ${s.showHints ? 'checked' : ''}/> Vis hint-banner</label>
+      <label><input type="checkbox" id="s-music" ${s.music ? 'checked' : ''}/> Musikk</label>
       <button type="button" id="s-back">Tilbake</button>
     `;
     const bind = (id: string, fn: (v: number) => void) => {
@@ -53,6 +55,12 @@ export function createTitleMenu(root: HTMLElement, cb: MenuCallbacks): {
     bind('#s-fov', (v) => { const s = loadSettings(); s.fov = v; saveSettings(s); (settingsPanel.querySelector('#s-fov-v') as HTMLElement).textContent = String(v); cb.onSettingsChange(s); });
     bind('#s-sens', (v) => { const s = loadSettings(); s.sensitivity = v / 100; saveSettings(s); (settingsPanel.querySelector('#s-sens-v') as HTMLElement).textContent = (v / 100).toFixed(2); cb.onSettingsChange(s); });
     bind('#s-vol', (v) => { const s = loadSettings(); s.volume = v / 100; saveSettings(s); (settingsPanel.querySelector('#s-vol-v') as HTMLElement).textContent = `${v}%`; cb.onSettingsChange(s); });
+    settingsPanel.querySelector('#s-hints')!.addEventListener('change', (e) => {
+      const s = loadSettings(); s.showHints = (e.target as HTMLInputElement).checked; saveSettings(s); cb.onSettingsChange(s);
+    });
+    settingsPanel.querySelector('#s-music')!.addEventListener('change', (e) => {
+      const s = loadSettings(); s.music = (e.target as HTMLInputElement).checked; saveSettings(s); cb.onSettingsChange(s);
+    });
     settingsPanel.querySelector('#s-back')!.addEventListener('click', () => {
       settingsPanel.style.display = 'none';
       el.querySelector('.title-btns')!.setAttribute('style', '');
@@ -136,7 +144,9 @@ export function createPauseMenu(root: HTMLElement, cb: {
       <label>Renderavstand <input type="range" id="p-rd" min="3" max="10" value="${s.renderDistance}"/> <span>${s.renderDistance}</span></label>
       <label>FOV <input type="range" id="p-fov" min="50" max="100" value="${s.fov}"/> <span>${s.fov}</span></label>
       <label>Følsomhet <input type="range" id="p-sens" min="20" max="200" value="${(s.sensitivity*100)|0}"/> <span>${s.sensitivity.toFixed(2)}</span></label>
-      <label>Volum <input type="range" id="p-vol" min="0" max="100" value="${(s.volume*100)|0}"/> <span>${(s.volume*100)|0}%</span></label>`;
+      <label>Volum <input type="range" id="p-vol" min="0" max="100" value="${(s.volume*100)|0}"/> <span>${(s.volume*100)|0}%</span></label>
+      <label><input type="checkbox" id="p-hints" ${s.showHints?'checked':''}/> Vis hint-banner</label>
+      <label><input type="checkbox" id="p-music" ${s.music?'checked':''}/> Musikk</label>`;
     const wire = (id: string, apply: (v: number, s: GameSettings) => void) => {
       box.querySelector(id)!.addEventListener('input', (e) => {
         const v = Number((e.target as HTMLInputElement).value);
@@ -151,6 +161,12 @@ export function createPauseMenu(root: HTMLElement, cb: {
     wire('#p-fov', (v, s) => { s.fov = v; });
     wire('#p-sens', (v, s) => { s.sensitivity = v / 100; });
     wire('#p-vol', (v, s) => { s.volume = v / 100; });
+    box.querySelector('#p-hints')!.addEventListener('change', (e) => {
+      const cur = loadSettings(); cur.showHints = (e.target as HTMLInputElement).checked; saveSettings(cur); cb.onSettingsChange(cur);
+    });
+    box.querySelector('#p-music')!.addEventListener('change', (e) => {
+      const cur = loadSettings(); cur.music = (e.target as HTMLInputElement).checked; saveSettings(cur); cb.onSettingsChange(cur);
+    });
   };
   el.querySelector('#p-resume')!.addEventListener('click', () => cb.onResume());
   el.querySelector('#p-quit')!.addEventListener('click', () => cb.onQuit());

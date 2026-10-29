@@ -223,10 +223,17 @@ export class MobSystem {
     const keep: Mob[] = [];
     for (const m of this.mobs) {
       if (m.hp <= 0) {
-        this.dropLoot(m, drops);
-        xp?.spawn(m.x, m.y + 0.5, m.z, m.hostile ? 5 : 2);
+        if (m.deathT == null) {
+          m.deathT = 0.01;
+          this.dropLoot(m, drops);
+          xp?.spawn(m.x, m.y + 0.5, m.z, m.hostile ? 5 : 2);
+        } else {
+          m.deathT += dt;
+        }
+        if (m.deathT < 0.45) keep.push(m);
         continue;
       }
+      if (m.hurtFlash && m.hurtFlash > 0) m.hurtFlash -= dt;
       keep.push(m);
     }
     this.mobs = keep;
@@ -243,6 +250,7 @@ export class MobSystem {
 
   hurtMob(m: Mob, dmg: number, kx: number, kz: number): void {
     m.hp -= dmg;
+    m.hurtFlash = 0.25;
     const len = Math.hypot(kx, kz) || 1;
     m.vx += (kx / len) * 8;
     m.vz += (kz / len) * 8;

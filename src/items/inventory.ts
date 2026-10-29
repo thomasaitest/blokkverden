@@ -81,6 +81,8 @@ export class Inventory {
     this.add(stack(ItemId.Seeds, 16));
     this.add(stack(ItemId.WoodHoe, 1, 60));
     this.add(stack(ItemId.Boat, 1));
+    this.add(stack(ItemId.FishingRod, 1, 64));
+    this.add(stack(ItemId.MapItem, 1));
     this.add(stack(ItemId.Bread, 8));
     this.add(stack(ItemId.IronHelmet, 1, 165));
     this.add(stack(ItemId.IronChest, 1, 240));

@@ -14,7 +14,7 @@ import { createTitleMenu, createPauseMenu } from './ui/menus';
 import { DropSystem } from './world/drops';
 import { ContainerStore } from './world/containers';
 import { World, setViewRadius, VIEW_RADIUS } from './world/world';
-import { CHUNK_HEIGHT } from './world/chunk';
+import { CHUNK_HEIGHT, CHUNK_SIZE } from './world/chunk';
 import { tickWater } from './world/water';
 import { SoundBus } from './audio/sound';
 import { MobSystem } from './mobs/system';
@@ -24,6 +24,12 @@ import { BoatSystem } from './world/boats';
 import { plantCrop, harvestCrop, hoeDirt, setCropStage, tickCrops } from './world/crops';
 import { loadSettings, saveSettings, type GameSettings } from './settings';
 import type { MobKind } from './mobs/types';
+import { WeatherSystem } from './world/weather';
+import { FishingSystem } from './world/fishing';
+import { tryPlaceStructures } from './world/structures';
+import { createByttebonde, createTraderRig, tryTrade, type Byttebonde } from './mobs/trader';
+import { renderMapCanvas } from './world/mapitem';
+import { MusicBus } from './audio/music';
 
 const DAY_LEN = 900; // ~15 min day cycle (MC is 20)
 
@@ -92,7 +98,26 @@ async function runGame(
   const xp = new XpSystem();
   const projectiles = new ProjectileSystem();
   const boats = new BoatSystem();
+  const weather = new WeatherSystem();
+  const fishing = new FishingSystem();
+  const music = new MusicBus();
+  music.setVolume(settings.volume);
+  if (settings.music) music.start();
+  const traders: Byttebonde[] = [];
+  const traderMeshes: ReturnType<typeof createTraderRig>[] = [];
+  let structuresAcc = 0;
+  let mapOpen = false;
+  const mapOverlay = document.createElement('canvas');
+  mapOverlay.width = 256; mapOverlay.height = 256;
+  mapOverlay.id = 'map-overlay';
+  mapOverlay.style.cssText = 'display:none;position:absolute;right:16px;top:16px;width:220px;height:220px;border:3px solid #5a3a1a;image-rendering:pixelated;z-index:30;background:#222';
+  app.appendChild(mapOverlay);
+  const tradeUi = document.createElement('div');
+  tradeUi.id = 'trade-ui';
+  tradeUi.style.cssText = 'display:none;position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);background:rgba(20,20,20,0.92);color:#eee;padding:16px;border:2px solid #8b5a2b;z-index:40;min-width:280px';
+  app.appendChild(tradeUi);
   const hud = createHud(app, inv, renderer.getAtlas());
+  if (!settings.showHints || testMode) hud.setHintVisible(false);
   const input = createInput();
 
   let player = createPlayer(8.5, 40, 8.5);
@@ -137,8 +162,48 @@ async function runGame(
     setViewRadius(s.renderDistance);
     renderer.applySettings(s.renderDistance, s.fov);
     sound.setVolume(s.volume);
+    music.setVolume(s.volume);
+    if (s.music) music.start(); else music.stop();
+    hud.setHintVisible(s.showHints);
     sens = 0.0022 * s.sensitivity;
     onSettings(s);
+  };
+
+  const openTrade = (tr: Byttebonde) => {
+    tradeUi.style.display = 'block';
+    tradeUi.innerHTML = '<h3>Byttebonde</h3>';
+    for (const o of tr.offers) {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.style.cssText = 'display:block;width:100%;margin:6px 0;padding:8px;text-align:left';
+      const wn = ITEMS[o.want.id]?.name ?? o.want.id;
+      const gn = ITEMS[o.give.id]?.name ?? o.give.id;
+      row.textContent = `${o.want.count}× ${wn} → ${o.give.count}× ${gn}`;
+      row.onclick = () => {
+        if (tryTrade(inv, o.want, o.give)) { hud.markDirty(); hud.refreshHotbar(); sound.placeBlock(); }
+      };
+      tradeUi.appendChild(row);
+    }
+    const close = document.createElement('button');
+    close.textContent = 'Lukk';
+    close.onclick = () => { tradeUi.style.display = 'none'; };
+    tradeUi.appendChild(close);
+  };
+
+  const syncTraders = () => {
+    while (traderMeshes.length < traders.length) {
+      const g = createTraderRig();
+      renderer.scene.add(g);
+      traderMeshes.push(g);
+    }
+    for (let i = 0; i < traderMeshes.length; i++) {
+      const g = traderMeshes[i];
+      if (i >= traders.length) { g.visible = false; continue; }
+      const tr = traders[i];
+      g.visible = true;
+      g.position.set(tr.x, tr.y, tr.z);
+      g.rotation.y = tr.yaw;
+    }
   };
 
   const pause = createPauseMenu(app, {
@@ -427,10 +492,14 @@ async function runGame(
         world.setBlock(x, y + 2, z, BlockId.Air);
       }
       const bx = x0 + fx * 2 + 0.5, bz = z0 + fz * 2 + 0.5;
-      const b = boats.place(bx, y + 1.55, bz);
+      // water block at y+1, full level → surface at y+2; hull sits just under
+      const b = boats.place(bx, y + 1.88, bz);
       b.yaw = player.yaw;
+      // snap to water surface (full water top = y+2)
+      b.y = (y + 1) + 1.0 - 0.12;
       player.pitch = -0.35;
-      api.lookAt(bx, y + 1.7, bz);
+      player.x = bx - fx * 3.2; player.z = bz - fz * 3.2; player.y = y + 2.5;
+      api.lookAt(bx, b.y + 0.25, bz);
       markMesh();
       return b;
     },
@@ -463,6 +532,82 @@ async function runGame(
     showPause: () => { paused = true; pause.show(); },
     hidePause: () => { paused = false; pause.hide(); },
     showTitle: () => {},
+    setWeather: (kind: 'clear' | 'rain' | 'snow' | 'thunder', intensity = 0.8) => { weather.set(kind, intensity); },
+    stageMobs: () => {
+      api.clearMobs();
+      const kinds: MobKind[] = ['gris', 'ku', 'sau', 'høne', 'vandrer', 'bueskytt', 'vever', 'knallbolle'];
+      const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw);
+      const rx = -fz, rz = fx;
+      kinds.forEach((k, i) => {
+        const side = (i - (kinds.length - 1) / 2) * 1.35;
+        api.spawnMob(k, fx * 5 + rx * side, 0, fz * 5 + rz * side);
+      });
+      player.pitch = -0.18;
+    },
+    stageVillage: () => {
+      const cx = Math.floor(player.x / CHUNK_SIZE), cz = Math.floor(player.z / CHUNK_SIZE);
+      tryPlaceStructures(world, containers, cx, cz);
+      tryPlaceStructures(world, containers, cx + 1, cz);
+      const ox = Math.floor(player.x) + 4, oz = Math.floor(player.z) + 4;
+      let y = 40;
+      for (let yy = 70; yy > 20; yy--) {
+        const id = world.getBlock(ox, yy, oz);
+        if (id === BlockId.Grass || id === BlockId.Sand || id === BlockId.Dirt || id === BlockId.SnowGrass) { y = yy; break; }
+      }
+      for (let dx = 0; dx < 5; dx++) for (let dz = 0; dz < 5; dz++) {
+        world.setBlock(ox + dx, y, oz + dz, BlockId.Cobble);
+        for (let dy = 1; dy <= 3; dy++) {
+          const wall = dx === 0 || dx === 4 || dz === 0 || dz === 4;
+          world.setBlock(ox + dx, y + dy, oz + dz, wall ? BlockId.Planks : BlockId.Air);
+        }
+        world.setBlock(ox + dx, y + 4, oz + dz, BlockId.Log);
+      }
+      world.setBlock(ox + 2, y + 1, oz, BlockId.Air);
+      world.setBlock(ox + 2, y + 2, oz, BlockId.Air);
+      world.setBlock(ox, y + 2, oz + 2, BlockId.Glass);
+      if (traders.length === 0) traders.push(createByttebonde(ox + 2.5, y + 1, oz + 2.5));
+      markMesh();
+      api.lookAt(ox + 2.5, y + 2, oz + 2.5);
+      return { x: ox, y, z: oz };
+    },
+    stageDungeon: () => {
+      const ox = Math.floor(player.x) + 6, oz = Math.floor(player.z) + 2;
+      const y = Math.max(12, Math.floor(player.y) - 8);
+      for (let dx = 0; dx < 7; dx++) for (let dy = 0; dy < 5; dy++) for (let dz = 0; dz < 7; dz++) {
+        const wall = dx === 0 || dy === 0 || dz === 0 || dx === 6 || dy === 4 || dz === 6;
+        world.setBlock(ox + dx, y + dy, oz + dz, wall ? BlockId.Cobble : BlockId.Air);
+      }
+      world.setBlock(ox + 3, y + 1, oz + 3, BlockId.MobSpawner);
+      world.setBlock(ox + 1, y + 1, oz + 1, BlockId.Chest);
+      const chest = containers.getChest(ox + 1, y + 1, oz + 1);
+      chest[0] = { id: ItemId.GoldIngot, count: 2 };
+      chest[1] = { id: ItemId.Diamond, count: 1 };
+      chest[2] = { id: ItemId.IronSword, count: 1, durability: 250 };
+      world.setBlock(ox + 3, y + 1, oz + 5, BlockId.Torch);
+      for (let i = 0; i < 8; i++) world.setBlock(ox + 3, y + 1 + i, oz - 1 - i, BlockId.Cobble);
+      markMesh();
+      player.x = ox + 3.5; player.y = y + 1.1; player.z = oz + 3.5;
+      api.lookAt(ox + 3.5, y + 1.5, oz + 3.5);
+      return { x: ox, y, z: oz };
+    },
+    castFish: () => fishing.start(player.x, player.y, player.z, player.yaw, player.pitch, world),
+    reelFish: () => {
+      const got = fishing.reel();
+      if (got) { inv.add(got); hud.markDirty(); hud.refreshHotbar(); }
+      return got;
+    },
+    openMap: () => {
+      mapOpen = true;
+      mapOverlay.style.display = 'block';
+      renderMapCanvas(mapOverlay, world, world.noise, player.x, player.z);
+    },
+    closeMap: () => { mapOpen = false; mapOverlay.style.display = 'none'; },
+    openTrade: () => { if (traders[0]) openTrade(traders[0]); },
+    getPerf: () => renderer.getPerfStats(),
+    weather,
+    fishing,
+    traders,
+    music,
   };
   (window as unknown as { __bv: typeof api; __BV: typeof api }).__bv = api;
   (window as unknown as { __BV: typeof api }).__BV = api;
@@ -496,7 +641,10 @@ async function runGame(
       renderer.setDayTime(dayTime);
       renderer.updateCamera(player);
       renderer.render();
-      hud.updateDebug(player, fps, world.chunks.size, dayTime);
+      {
+        const perf = renderer.getPerfStats();
+        hud.updateDebug(player, fps, world.chunks.size, dayTime, `draw: ${perf.drawCalls} tris: ${perf.triangles}`);
+      }
       return;
     }
 
@@ -507,8 +655,7 @@ async function runGame(
         player.pitch -= look.dy * sens; // -pitch looks down in this camera setup
         app.classList.add('playing');
         document.getElementById('game-root')?.classList.add('playing');
-        const hint = document.getElementById('hint');
-        if (hint) hint.style.display = 'none';
+        hud.setHintVisible(false);
       }
       let wishX = 0, wishZ = 0;
       if (input.right) wishX += 1;
@@ -572,6 +719,20 @@ async function runGame(
     xp.update(dt, player);
     updateXpUi();
     sound.ambient(dayTime, dt);
+    weather.update(dt, world.noise, player.x, player.z);
+    if ((weather.kind === 'rain' || weather.kind === 'thunder') && Math.random() < dt * 2) music.rain();
+    if (weather.flash > 0.8) music.thunder();
+    music.update(dayTime);
+    fishing.update(dt);
+    structuresAcc += dt;
+    if (structuresAcc > 2) {
+      structuresAcc = 0;
+      const pcx = Math.floor(player.x / CHUNK_SIZE), pcz = Math.floor(player.z / CHUNK_SIZE);
+      for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
+        tryPlaceStructures(world, containers, pcx + dx, pcz + dz);
+      }
+    }
+    syncTraders();
 
     // Remesh budget scales with dirty backlog but capped to avoid spikes
     const dirtyN = world.meshQueue().dirty;
@@ -586,7 +747,8 @@ async function runGame(
 
     drops.update(dt, player, inv, groundY);
     renderer.syncDrops(drops.drops);
-    renderer.syncMobs(mobs.mobs);
+    renderer.syncMobs(mobs.mobs, dt);
+    renderer.syncWeather(weather.kind, weather.intensity, renderer.camera.position, weather.flash);
     renderer.syncProjectiles(projectiles.list);
     renderer.syncBoats(boats.boats);
     renderer.syncXp(xp.orbs);
@@ -649,6 +811,19 @@ async function runGame(
           const px = hit.x + hit.nx, py = hit.y + hit.ny, pz = hit.z + hit.nz;
           boats.place(px + 0.5, py + 0.4, pz + 0.5);
           inv.setHeld(null); hud.markDirty(); sound.placeBlock();
+        } else if (held && held.id === ItemId.FishingRod) {
+          if (fishing.casting) {
+            const got = fishing.reel();
+            if (got) { inv.add(got); sound.placeBlock(); }
+            inv.setHeld(damageTool(held));
+            hud.markDirty();
+          } else if (fishing.start(player.x, player.y, player.z, player.yaw, player.pitch, world)) {
+            sound.swing();
+          }
+        } else if (held && held.id === ItemId.MapItem) {
+          mapOpen = !mapOpen;
+          mapOverlay.style.display = mapOpen ? 'block' : 'none';
+          if (mapOpen) renderMapCanvas(mapOverlay, world, world.noise, player.x, player.z);
         } else if (held && ITEMS[held.id]?.armorSlot) {
           const left = inv.tryEquip(held);
           inv.setHeld(left);
@@ -659,8 +834,10 @@ async function runGame(
           if (held.count <= 0) inv.setHeld(null);
           sound.eat(); hud.markDirty();
         } else {
-          // Mount boat if near
-          if (boats.nearest(player.x, player.y, player.z, 2.2)) {
+          const nearTrader = traders.find((tr) => Math.hypot(tr.x - player.x, tr.y - player.y, tr.z - player.z) < 3);
+          if (nearTrader) {
+            openTrade(nearTrader);
+          } else if (boats.nearest(player.x, player.y, player.z, 2.2)) {
             boats.tryMount(player);
           } else {
             const px = hit.x + hit.nx, py = hit.y + hit.ny, pz = hit.z + hit.nz;
@@ -683,8 +860,13 @@ async function runGame(
     renderer.setDayTime(dayTime);
     renderer.updateCamera(player);
     renderer.render();
-    hud.updateDebug(player, fps, world.chunks.size, dayTime);
+    {
+      const perf = renderer.getPerfStats();
+      hud.updateDebug(player, fps, world.chunks.size, dayTime,
+        `draw: ${perf.drawCalls} tris: ${perf.triangles} | vær: ${weather.kind}`);
+    }
     hud.updateBars(player);
+    if (mapOpen) renderMapCanvas(mapOverlay, world, world.noise, player.x, player.z);
 
     if (now - lastSave > 20000) { lastSave = now; void doSave(); }
   };

@@ -29,7 +29,13 @@ export interface Mob {
   width: number;
   height: number;
   color: number;
+  hurtFlash?: number;
+  deathT?: number;
+  attacking?: boolean;
 }
+
+export type TraderKind = 'byttebonde';
+
 
 export const MOB_DEFS: Record<
   MobKind,

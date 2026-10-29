@@ -1,0 +1,53 @@
+{
+  "checks": [
+    {
+      "area": "dør",
+      "ok": true,
+      "detail": "{\"ox\":4,\"oy\":30,\"oz\":7,\"closed\":0}"
+    },
+    {
+      "area": "portal ramme",
+      "ok": true,
+      "detail": "{\"portals\":6,\"frames\":14,\"origin\":{\"x\":5,\"y\":30,\"z\":6}}"
+    },
+    {
+      "area": "Helvete lava+glow+dim",
+      "ok": true,
+      "detail": "{\"ent\":{\"ok\":true,\"dim\":\"helvete\",\"x\":7.5,\"y\":32.05,\"z\":7.5},\"lava\":24938,\"glow\":262,\"helstein\":15405,\"dim\":\"helvete\"}"
+    },
+    {
+      "area": "Helvete round-trip",
+      "ok": true,
+      "detail": "{\"ok\":true,\"before\":17,\"after\":17,\"peekOw\":17,\"helveteBlock\":46,\"same\":true,\"enter\":{\"ok\":true,\"dim\":\"helvete\",\"x\":8.5,\"y\":30.05,\"z\":8.5},\"exit\":{\"ok\":true,\"dim\":\"overworld\",\"x\":2.5,\"y\":30.05,\"z\":8.5}}"
+    },
+    {
+      "area": "båt",
+      "ok": true,
+      "detail": "{\"mounted\":true,\"after\":true,\"steered\":true}"
+    },
+    {
+      "area": "fiske naturlig 3/3",
+      "ok": true,
+      "detail": "{\"results\":[true,true,true],\"ok\":true}"
+    },
+    {
+      "area": "lampe",
+      "ok": true,
+      "detail": "{\"power\":12,\"meta\":1}"
+    },
+    {
+      "area": "skilt",
+      "ok": true
+    },
+    {
+      "area": "ulv tame/follow/sit",
+      "ok": true,
+      "detail": "{\"t1\":\"tamed\",\"st1\":{\"id\":5,\"tamed\":true,\"sitting\":false,\"x\":2.5,\"y\":30,\"z\":5.5},\"distFollow\":2.483170024238576,\"t2\":\"sat\",\"stSit\":{\"id\":5,\"tamed\":true,\"sitting\":true,\"x\":4.850616176248951,\"y\":30,\"z\":5.891769362708159},\"stayed\":true,\"stSit2\":{\"id\":5,\"tamed\":true,\"sitting\":true,\"x\":4.850616176248951,\"y\":30,\"z\":5.891769362708159}}"
+    },
+    {
+      "area": "seng",
+      "ok": true
+    }
+  ],
+  "allOk": true
+}

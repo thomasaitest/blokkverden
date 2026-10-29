@@ -273,7 +273,7 @@ export class MobSystem {
 
   /** Bone on wild ulv → tame; empty hand / bone on tamed → toggle sit. */
   interactWolf(player: { x: number; y: number; z: number }, hasBone: boolean): 'tamed' | 'sat' | 'stood' | 'none' {
-    const w = this.nearest('ulv', player.x, player.y, player.z, 3.2);
+    const w = this.nearest('ulv', player.x, player.y, player.z, 4.5);
     if (!w) return 'none';
     if (!w.tamed) {
       if (!hasBone) return 'none';

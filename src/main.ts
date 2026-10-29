@@ -695,6 +695,11 @@ async function runGame(
     },
     tameWolf: () => {
       api.give(ItemId.Bone, 1);
+      const w = mobs.nearest('ulv', player.x, player.y, player.z, 16);
+      if (w) {
+        player.x = w.x + 0.8; player.y = w.y; player.z = w.z + 0.8;
+        player.vx = player.vy = player.vz = 0;
+      }
       return mobs.interactWolf(player, true);
     },
     wolfState: () => {
@@ -737,22 +742,19 @@ async function runGame(
       api.lookAt(ox + 3, oy + 0.5, oz);
     },
     stageHelvetePortal: () => {
-      api.buildPlatform(10);
-      const ox = Math.floor(player.x) + 2, oz = Math.floor(player.z) - 2;
+      api.buildPlatform(12);
+      const ox = Math.floor(player.x) + 3, oz = Math.floor(player.z) - 2;
       const oy = Math.floor(player.y);
-      // wide pad + clear sky behind so full 4×5 lit frame reads clearly
-      for (let w = -2; w <= 5; w++) for (let d = -1; d <= 1; d++) {
-        world.setBlock(ox + w, oy - 1, oz + d, BlockId.Helstein);
-        for (let yy = 0; yy <= 6; yy++) {
-          if (d !== 0 || w < 0 || w > 3) world.setBlock(ox + w, oy + yy, oz + d, BlockId.Air);
-        }
+      // Flat pad, clear volume, THEN place lit frame
+      for (let w = -2; w <= 5; w++) for (let d = -2; d <= 2; d++) {
+        world.setBlock(ox + w, oy - 1, oz + d, BlockId.Cobble);
+        for (let yy = 0; yy <= 6; yy++) world.setBlock(ox + w, oy + yy, oz + d, BlockId.Air);
       }
       const origin = buildPortalFrame(world, ox, oy, oz);
       markMesh();
-      // Centered 3/4 view of entire frame
-      player.x = ox + 1.5; player.y = oy + 2.2; player.z = oz + 8.0;
+      player.x = ox + 1.5; player.y = oy + 2.4; player.z = oz + 9.0;
       player.vx = player.vy = player.vz = 0;
-      player.pitch = -0.15;
+      player.pitch = -0.12;
       api.lookAt(ox + 1.5, oy + 2.2, oz);
       return origin;
     },

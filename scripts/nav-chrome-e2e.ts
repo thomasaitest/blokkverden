@@ -43,7 +43,7 @@ async function main() {
 
   const browser = await chromium.launch({
     headless: true,
-    args: ['--use-gl=angle', '--enable-webgl', '--ignore-gpu-blocklist'],
+    args: ['--use-angle=swiftshader', '--use-gl=angle', '--enable-webgl', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader'],
   });
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, hasTouch: false });
   const page = await context.newPage();

@@ -79,15 +79,29 @@ export class GameRenderer {
     this.canvas.tabIndex = 0;
     container.appendChild(this.canvas);
 
-    this.renderer = new THREE.WebGLRenderer({
-      canvas: this.canvas,
-      antialias: false,
-      powerPreference: 'high-performance',
-      stencil: false,
-      alpha: false,
-      premultipliedAlpha: false,
-      preserveDrawingBuffer: true, // reliable screenshots
-    });
+    const mk = (opts: ConstructorParameters<typeof THREE.WebGLRenderer>[0]) =>
+      new THREE.WebGLRenderer(opts);
+    try {
+      this.renderer = mk({
+        canvas: this.canvas,
+        antialias: false,
+        powerPreference: 'default',
+        failIfMajorPerformanceCaveat: false,
+        stencil: false,
+        alpha: false,
+        premultipliedAlpha: false,
+        preserveDrawingBuffer: true, // reliable screenshots
+      });
+    } catch (e1) {
+      // Headless / flaky GPU: retry with softest options
+      this.renderer = mk({
+        canvas: this.canvas,
+        antialias: false,
+        powerPreference: 'low-power',
+        failIfMajorPerformanceCaveat: false,
+        preserveDrawingBuffer: true,
+      });
+    }
     this.renderer.setPixelRatio(1); // perf
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;

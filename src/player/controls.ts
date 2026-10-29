@@ -59,6 +59,7 @@ export function bindDesktopControls(
   let draggingLook = false;
   let lastDragX = 0;
   let lastDragY = 0;
+  let wantBreak = false;
 
   const sync = () => {
     input.forward = down.has('KeyW') || down.has('ArrowUp');
@@ -154,6 +155,12 @@ export function bindDesktopControls(
       draggingLook = true;
       lastDragX = e.clientX;
       lastDragY = e.clientY;
+      // Dig/place must work even if pointer lock is denied (headless / some browsers).
+      if (e.button === 0) {
+        wantBreak = true;
+        input.breakHeld = true;
+      }
+      if (e.button === 2) input.placePressed = true;
       return;
     }
     if (e.button === 0) input.breakHeld = true;
@@ -164,6 +171,7 @@ export function bindDesktopControls(
     if (e.button === 0) {
       input.breakHeld = false;
       draggingLook = false;
+      wantBreak = false;
     }
   };
 
@@ -172,8 +180,11 @@ export function bindDesktopControls(
   const onMove = (e: MouseEvent) => {
     if (input.inventoryOpen) return;
     if (input.pointerLocked) {
-      input.lookDX += e.movementX;
-      input.lookDY += e.movementY;
+      // Clamp one-frame spikes (Playwright / OS warps) so dig aim is not thrown skyward.
+      const mx = Math.max(-40, Math.min(40, e.movementX));
+      const my = Math.max(-40, Math.min(40, e.movementY));
+      input.lookDX += mx;
+      input.lookDY += my;
       return;
     }
     // Drag-to-look fallback (pointer lock denied / unavailable / not yet acquired).
@@ -192,6 +203,10 @@ export function bindDesktopControls(
     if (input.pointerLocked) {
       input.dragLookFallback = false;
       draggingLook = false;
+      if (wantBreak) {
+        input.breakHeld = true;
+        wantBreak = false;
+      }
     }
   };
 

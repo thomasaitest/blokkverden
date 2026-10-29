@@ -61,14 +61,36 @@ async function boot(page: Page, base: string, name: string) {
   await sleep(300);
   await page.locator('#btn-new-world').click();
   await page.waitForSelector('canvas#game', { timeout: 90000 });
-  await sleep(2000);
+  for (let i = 0; i < 80; i++) {
+    if (await page.evaluate(() => !!(window as any).__bv)) break;
+    await sleep(250);
+  }
+  if (!(await page.evaluate(() => !!(window as any).__bv))) throw new Error('__bv not ready (WebGL boot failed?)');
+  await sleep(500);
 }
 
 /** One center click to acquire lock; do NOT move mouse afterward before dig/place. */
+
+async function focusGame(page: Page) {
+  await page.bringToFront();
+  await page.evaluate(() => {
+    const c = document.getElementById('game') as HTMLElement | null;
+    c?.focus();
+  });
+  await sleep(50);
+}
+
 async function acquireLock(page: Page) {
+  await focusGame(page);
   await page.mouse.move(640, 360);
   await page.locator('canvas#game').click({ position: { x: 640, y: 360 }, force: true });
-  await sleep(200);
+  await sleep(250);
+  const locked = await page.evaluate(() => (window as any).__bv?.input?.pointerLocked);
+  if (!locked) {
+    await page.mouse.move(640, 360);
+    await page.mouse.down(); await sleep(50); await page.mouse.up();
+    await sleep(200);
+  }
 }
 
 async function aim(page: Page, x: number, y: number, z: number, tx: number, ty: number, tz: number) {
@@ -191,7 +213,7 @@ async function main() {
   const { base, child } = await startPreview();
   const browser = await chromium.launch({
     headless: true,
-    args: ['--use-gl=angle', '--enable-webgl', '--ignore-gpu-blocklist'],
+    args: ['--use-angle=swiftshader', '--use-gl=angle', '--enable-webgl', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader'],
   });
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
   page.on('pageerror', (e) => console.error('PAGEERROR', e.message));
@@ -214,6 +236,7 @@ async function main() {
   await flatPad(page, 45);
   await page.evaluate(() => { (window as any).__bv.look(0, 0); });
   await sleep(50);
+  await focusGame(page);
   let s = await st(page);
   await page.keyboard.down('KeyW'); await sleep(600); await page.keyboard.up('KeyW');
   let s2 = await st(page);
@@ -300,25 +323,26 @@ async function main() {
   // C — mining: aim AFTER lock (already locked)
   await page.evaluate(() => {
     const bv = (window as any).__bv;
-    for (let x = 50; x <= 56; x++) for (let z = 50; z <= 56; z++) {
+    for (let x = 120; x <= 126; x++) for (let z = 120; z <= 126; z++) {
       bv.world.setBlock(x, 48, z, 1);
       for (let y = 49; y <= 54; y++) bv.world.setBlock(x, y, z, 0);
     }
-    bv.world.setBlock(53, 49, 52, 5);
+    bv.world.setBlock(123, 50, 122, 5); // eye-height log so ray does not hit floor first
     bv.inv.slots.fill(null);
     bv.hud?.refreshHotbar?.();
   });
-  await aim(page, 53.5, 49.05, 54.5, 53.5, 49.5, 52.5);
+  await acquireLock(page);
+  await aim(page, 123.5, 49.05, 124.5, 123.5, 50.5, 122.5);
   const hitInfo = await page.evaluate(() => {
     const bv = (window as any).__bv;
-    // soft check via looking at block
-    return { yaw: bv.player.yaw, pitch: bv.player.pitch, block: bv.world.getBlock(53, 49, 52) };
+    return { yaw: bv.player.yaw, pitch: bv.player.pitch, block: bv.world.getBlock(123, 50, 122), hit: bv.targetHit?.() };
   });
   await page.mouse.down();
   let broke = false;
   for (let i = 0; i < 20; i++) {
+    await page.evaluate(() => (window as any).__bv.lookAt(123.5, 50.5, 122.5));
     await sleep(150);
-    if ((await page.evaluate(() => (window as any).__bv.world.getBlock(53, 49, 52))) === 0) { broke = true; break; }
+    if ((await page.evaluate(() => (window as any).__bv.world.getBlock(123, 50, 122))) === 0) { broke = true; break; }
   }
   await page.mouse.up();
   await page.keyboard.down('KeyW'); await sleep(400); await page.keyboard.up('KeyW');
@@ -332,34 +356,36 @@ async function main() {
   // stone bare vs pick
   await page.evaluate(() => {
     const bv = (window as any).__bv;
-    bv.world.setBlock(53, 49, 51, 3);
+    bv.world.setBlock(123, 50, 121, 3);
     bv.inv.slots.fill(null);
   });
-  await aim(page, 53.5, 49.05, 53.5, 53.5, 49.5, 51.5);
+  await aim(page, 123.5, 49.05, 123.5, 123.5, 50.5, 121.5);
   const t0 = Date.now();
   await page.mouse.down();
   let bareBroke = false;
   for (let i = 0; i < 50; i++) {
+    await page.evaluate(() => (window as any).__bv.lookAt(123.5, 50.5, 121.5));
     await sleep(200);
-    if ((await page.evaluate(() => (window as any).__bv.world.getBlock(53, 49, 51))) === 0) { bareBroke = true; break; }
+    if ((await page.evaluate(() => (window as any).__bv.world.getBlock(123, 50, 121))) === 0) { bareBroke = true; break; }
   }
   await page.mouse.up();
   const bareMs = Date.now() - t0;
   const cobbleBare = await countItem(page, 4);
   await page.evaluate(() => {
     const bv = (window as any).__bv;
-    bv.world.setBlock(53, 49, 51, 3);
+    bv.world.setBlock(123, 50, 121, 3);
     bv.inv.slots[0] = { id: 100, count: 1, durability: 60 };
     bv.inv.selected = 0;
     bv.hud.refreshHotbar();
   });
-  await aim(page, 53.5, 49.05, 53.5, 53.5, 49.5, 51.5);
+  await aim(page, 123.5, 49.05, 123.5, 123.5, 50.5, 121.5);
   const t1 = Date.now();
   await page.mouse.down();
   let pickBroke = false;
   for (let i = 0; i < 25; i++) {
+    await page.evaluate(() => (window as any).__bv.lookAt(123.5, 50.5, 121.5));
     await sleep(120);
-    if ((await page.evaluate(() => (window as any).__bv.world.getBlock(53, 49, 51))) === 0) { pickBroke = true; break; }
+    if ((await page.evaluate(() => (window as any).__bv.world.getBlock(123, 50, 121))) === 0) { pickBroke = true; break; }
   }
   await page.mouse.up();
   const pickMs = Date.now() - t1;
@@ -378,15 +404,15 @@ async function main() {
     bv.inv.slots[0] = { id: 6, count: 16 };
     bv.inv.selected = 0;
     bv.hud.refreshHotbar();
-    bv.world.setBlock(53, 49, 51, 3);
-    bv.world.setBlock(53, 49, 50, 0);
+    bv.world.setBlock(123, 50, 121, 3);
+    bv.world.setBlock(123, 49, 120, 0);
   });
-  await aim(page, 53.5, 49.05, 53.5, 53.5, 49.5, 51.5);
+  await aim(page, 123.5, 49.05, 123.5, 123.5, 50.5, 121.5);
   await page.mouse.down({ button: 'right' }); await page.mouse.up({ button: 'right' });
   await sleep(200);
   const placed = await page.evaluate(() => {
     let n = 0;
-    for (let z = 49; z <= 52; z++) if ((window as any).__bv.world.getBlock(53, 49, z) === 6) n++;
+    for (let z = 119; z <= 122; z++) if ((window as any).__bv.world.getBlock(123, 50, z) === 6) n++;
     return n;
   });
   record('D1', placed > 0 ? 'PASS' : 'FAIL', `planks=${placed}`);
@@ -471,13 +497,13 @@ async function main() {
     bv.inv.selected = 0;
     bv.hud.refreshHotbar();
     // place table
-    for (let x = 50; x <= 56; x++) for (let z = 50; z <= 56; z++) {
+    for (let x = 120; x <= 126; x++) for (let z = 120; z <= 126; z++) {
       bv.world.setBlock(x, 48, z, 1);
       for (let y = 49; y <= 52; y++) bv.world.setBlock(x, y, z, 0);
     }
-    bv.world.setBlock(53, 49, 52, 11); // crafting table
+    bv.world.setBlock(123, 49, 122, 11); // crafting table
   });
-  await aim(page, 53.5, 49.05, 54.5, 53.5, 49.5, 52.5);
+  await aim(page, 123.5, 49.05, 124.5, 123.5, 49.5, 122.5);
   await page.mouse.down({ button: 'right' }); await page.mouse.up({ button: 'right' });
   await sleep(400);
   const tableOpen = await page.evaluate(() => (window as any).__bv.input.inventoryOpen);
@@ -489,7 +515,7 @@ async function main() {
     // reopen table if needed
     let open = await page.evaluate(() => (window as any).__bv.input.inventoryOpen);
     if (!open) {
-      await aim(page, 53.5, 49.05, 54.5, 53.5, 49.5, 52.5);
+      await aim(page, 123.5, 49.05, 124.5, 123.5, 49.5, 122.5);
       await page.mouse.down({ button: 'right' }); await page.mouse.up({ button: 'right' });
       await sleep(300);
     }
@@ -517,12 +543,12 @@ async function main() {
   // G furnace
   await page.evaluate(() => {
     const bv = (window as any).__bv;
-    bv.world.setBlock(53, 49, 50, 14);
+    bv.world.setBlock(123, 49, 120, 14);
     bv.inv.slots[5] = { id: 16, count: 4 }; // iron ore
     bv.inv.slots[6] = { id: 51, count: 8 };
     bv.hud.refreshHotbar();
   });
-  await aim(page, 53.5, 49.05, 52.5, 53.5, 49.5, 50.5);
+  await aim(page, 123.5, 49.05, 122.5, 123.5, 49.5, 120.5);
   await page.mouse.down({ button: 'right' }); await page.mouse.up({ button: 'right' });
   await sleep(300);
   // Put ore in input, coal in fuel via UI — furnace slots fu-in fu-fuel
@@ -554,7 +580,7 @@ async function main() {
       const out = await page.evaluate(() => {
         // furnace state via containers
         const bv = (window as any).__bv;
-        const f = bv.containers?.getFurnace?.(53, 49, 50);
+        const f = bv.containers?.getFurnace?.(123, 49, 120);
         return f?.output?.id ?? null;
       });
       if (out === 53) { smelted = true; break; } // iron ingot
@@ -572,8 +598,8 @@ async function main() {
   // Chest persist
   await page.evaluate(() => {
     const bv = (window as any).__bv;
-    bv.world.setBlock(54, 49, 52, 13);
-    const ch = bv.containers.getChest(54, 49, 52);
+    bv.world.setBlock(124, 49, 122, 13);
+    const ch = bv.containers.getChest(124, 49, 122);
     ch[0] = { id: 6, count: 12 };
     bv.forceSave();
   });
@@ -595,7 +621,7 @@ async function main() {
   const chestItem = await page.evaluate(() => {
     const bv = (window as any).__bv;
     // find chest
-    for (let x = 50; x <= 56; x++) for (let z = 50; z <= 56; z++) {
+    for (let x = 120; x <= 126; x++) for (let z = 120; z <= 126; z++) {
       if (bv.world.getBlock(x, 49, z) === 13) {
         const ch = bv.containers.getChest(x, 49, z);
         return ch?.[0]?.count ?? 0;

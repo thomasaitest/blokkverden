@@ -18,7 +18,8 @@ export function tryPlaceStructures(world: World, containers: ContainerStore, cx:
 }
 
 function surfaceY(world: World, x: number, z: number): number {
-  for (let y = 70; y > 20; y--) {
+  // World columns are 0..CHUNK_HEIGHT-1 (64); scanning from 70 never saw terrain.
+  for (let y = 63; y > 20; y--) {
     const id = world.getBlock(x, y, z);
     if (id === BlockId.Grass || id === BlockId.Sand || id === BlockId.SnowGrass || id === BlockId.Dirt) return y;
   }

@@ -141,6 +141,7 @@ async function runGame(
   let creativeOpen: { close: () => void } | null = null;
   // creative applied after player create
   const input = createInput();
+  (window as any).__bvEarly = true;
 
   let player = createPlayer(8.5, 40, 8.5);
   if (creativeMode) { player.creative = true; player.flying = true; }
@@ -394,6 +395,8 @@ async function runGame(
     openInv: () => { invUi.openPlayer(); input.inventoryOpen = true; },
     closeInv: () => { invUi.close(); input.inventoryOpen = false; },
     look: (y: number, p: number) => { player.yaw = y; player.pitch = p; },
+    targetHit: () => raycast(world, player),
+
     lookAt: (x: number, y: number, z: number) => {
       const dx = x - player.x, dy = y - (player.y + EYE_HEIGHT), dz = z - player.z;
       player.yaw = Math.atan2(-dx, -dz);

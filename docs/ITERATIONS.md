@@ -206,3 +206,35 @@ Media: https://thomasaitest.github.io/blokkverden/progress/it3/
 
 ### Tester
 29 vitest grønne
+
+## Iterasjon 9 (2026-10-29) — kvalitet, båt/fiske/dør/lampe, Helvete-dimensjon
+
+**Tid:** start 21:12:58 CET → slutt ~22:13 CET (~60 min). Kvalitet over kvantitet.
+
+### Bugs funnet og fikset
+1. Båt: mount-avstand for stor + styring — mount innen rekkevidde, vannlinje-visning, sneak-avstigning
+2. Fiske: bite/reel upålitelig — forceInstantBite i test, 8s bite-vindu, alltid RawFish ved bite (5/5)
+3. Dør: gjennomsiktig hull — egen svingbar mesh (ikke greedy), opaque, lukket/åpen skudd
+4. Lampe: lite synlig «på» — hoppet over greedy mesh, BasicMaterial mørk/av vs lys/på + PointLight, natt-par
+5. Helvete: overworld-korrupsjon (it8) — separat chunk-store per dimensjon, round-trip-test
+
+### Nye features (verifisert)
+1. Helvete som egen dimensjon/chunk-store (Helstein, Sjelegrus, lava, rød himmel) — portal begge veier; OW urørt etter retur (unit + playtest)
+2. 3D-skilttekst (canvas på stolpe) — «Hei / Blokk» verifisert
+
+### Verifisert fungerer
+- Båt mount / styre / dismount + vannlinje
+- Fiske: naturlig bite (uten forceInstantBite) 3/3 wall-clock + 5/5 i verify
+- Dør mesh lukket/åpen (ikke transparent)
+- Lampe av (mørk) vs på (emissiv + glow) natt-par
+- it8-regresjon: portal 6 indre, give velger hotbar, seng, build
+- Helvete round-trip + peekBlock OW-integritet
+- 3D-skilt
+
+### Media
+`public/progress/it9/` (+ webm)
+
+### Tester
+31 vitest grønne (inkl. helvete-dim dual-store)
+
+Media: https://thomasaitest.github.io/blokkverden/progress/it9/

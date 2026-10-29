@@ -11,6 +11,7 @@ import { createMobRig, animateMobRig, createDeathPoof, updateDeathPoof } from '.
 import type { WeatherKind } from '../world/weather';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { ITEMS } from '../items/types';
+import { BlockId } from '../blocks/types';
 import type { Projectile } from '../world/projectiles';
 import type { Boat } from '../world/boats';
 import type { XpOrb } from '../world/xp';
@@ -56,6 +57,12 @@ export class GameRenderer {
   private boatPool: THREE.Mesh[] = [];
   private xpGroup = new THREE.Group();
   private xpPool: THREE.Mesh[] = [];
+  private doorGroup = new THREE.Group();
+  private doorPool: THREE.Group[] = [];
+  private lampGroup = new THREE.Group();
+  private signGroup = new THREE.Group();
+  private signPool: THREE.Mesh[] = [];
+  private lampPool: { mesh: THREE.Mesh; light: THREE.PointLight }[] = [];
   private viewRadius = 7;
   private fov = 70;
   private armorVis: THREE.Group;
@@ -120,6 +127,9 @@ export class GameRenderer {
     this.scene.add(this.arrowGroup);
     this.scene.add(this.boatGroup);
     this.scene.add(this.xpGroup);
+    this.scene.add(this.doorGroup);
+    this.scene.add(this.lampGroup);
+    this.scene.add(this.signGroup);
     this.armorVis = new THREE.Group();
     this.armorVis.visible = false;
     this.scene.add(this.armorVis);
@@ -156,6 +166,26 @@ export class GameRenderer {
   }
 
   getDayTime(): number { return this.dayTime; }
+
+  /** Helvete: red fog/sky; overworld restores day cycle colors. */
+  setDimensionVisuals(dim: 'overworld' | 'helvete'): void {
+    if (dim === 'helvete') {
+      this.skyColor.setRGB(0.25, 0.05, 0.04);
+      this.renderer.setClearColor(this.skyColor);
+      const fog = this.scene.fog as THREE.Fog;
+      fog.color.copy(this.skyColor);
+      fog.near = 8; fog.far = 55;
+      this.sun.intensity = 0.15;
+      this.ambient.intensity = 0.35;
+      this.hemi.intensity = 0.2;
+      this.hemi.color.setHex(0xff6644);
+      this.hemi.groundColor.setHex(0x331100);
+    } else {
+      this.hemi.color.setHex(0xb1c4e8);
+      this.hemi.groundColor.setHex(0x3b2a1a);
+      this.setDayTime(this.dayTime);
+    }
+  }
 
   syncChunks(world: World, force = false): void {
     if (!force && !this.needsChunkSync) return;
@@ -244,7 +274,7 @@ export class GameRenderer {
       mesh.visible = true;
       mesh.position.set(d.x, d.y + 0.15 + Math.sin(d.age * 3) * 0.08, d.z);
       mesh.rotation.y = d.age * 2.2;
-      const mat = mesh.material as THREE.MeshLambertMaterial;
+      const mat = mesh.material as THREE.MeshStandardMaterial;
       const id = d.stack?.id ?? 0;
       // stable color from id
       mat.color.setHex(0x404040 + ((id * 97) % 0xbfbfbf));
@@ -506,6 +536,138 @@ export class GameRenderer {
     mesh.updateMatrix();
     this.sectorOpaque.set(sk, mesh);
     this.scene.add(mesh);
+  }
+
+
+  /** Swinging wooden door panels — closed fills the block face, open swings ~90°. */
+  syncDoors(doors: { x: number; y: number; z: number; open: boolean }[]): void {
+    while (this.doorPool.length < doors.length) {
+      const g = new THREE.Group();
+      // Wide face in X, thin in Z so camera looking along -Z sees the door face
+      const panel = new THREE.Mesh(
+        new THREE.BoxGeometry(0.95, 1.95, 0.14),
+        new THREE.MeshLambertMaterial({ color: 0x8b5a2b, side: THREE.DoubleSide }),
+      );
+      // Hinge on -X; panel fills most of the block
+      panel.position.set(0.475, 0.975, 0.07);
+      const knob = new THREE.Mesh(
+        new THREE.BoxGeometry(0.1, 0.1, 0.1),
+        new THREE.MeshLambertMaterial({ color: 0xc9a227 }),
+      );
+      knob.position.set(0.82, 1.0, 0.16);
+      // Cross-boards for readable wood door
+      const boardMat = new THREE.MeshLambertMaterial({ color: 0x6b4220 });
+      for (const by of [0.35, 1.0, 1.6]) {
+        const board = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.08, 0.16), boardMat);
+        board.position.set(0.475, by, 0.08);
+        g.add(board);
+      }
+      g.add(panel); g.add(knob);
+      this.doorPool.push(g);
+      this.doorGroup.add(g);
+    }
+    for (let i = 0; i < this.doorPool.length; i++) {
+      const g = this.doorPool[i];
+      if (i >= doors.length) { g.visible = false; continue; }
+      const d = doors[i];
+      g.visible = true;
+      // Anchor hinge at block's -X,-Z corner
+      g.position.set(d.x, d.y, d.z);
+      g.rotation.y = d.open ? -Math.PI / 2 : 0;
+    }
+  }
+
+  /** Lit lamps: BasicMaterial when on (screen-bright), near-black when off. */
+  syncLamps(lamps: { x: number; y: number; z: number; on: boolean }[]): void {
+    while (this.lampPool.length < lamps.length) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(0.95, 0.95, 0.95),
+        new THREE.MeshBasicMaterial({ color: 0x111110 }),
+      );
+      const light = new THREE.PointLight(0xffcc66, 0, 8, 2);
+      this.lampPool.push({ mesh, light });
+      this.lampGroup.add(mesh);
+      this.lampGroup.add(light);
+    }
+    for (let i = 0; i < this.lampPool.length; i++) {
+      const { mesh, light } = this.lampPool[i];
+      if (i >= lamps.length) { mesh.visible = false; light.intensity = 0; continue; }
+      const L = lamps[i];
+      mesh.visible = true;
+      mesh.position.set(L.x + 0.5, L.y + 0.5, L.z + 0.5);
+      light.position.copy(mesh.position);
+      // Swap material for unmistakable on/off
+      const prev = mesh.material as THREE.Material;
+      if (L.on) {
+        if (!(prev instanceof THREE.MeshBasicMaterial) || (prev as THREE.MeshBasicMaterial).color.getHex() !== 0xfff7a0) {
+          prev.dispose();
+          mesh.material = new THREE.MeshBasicMaterial({ color: 0xfff7a0 });
+        } else {
+          (prev as THREE.MeshBasicMaterial).color.setHex(0xfff7a0);
+        }
+        light.intensity = 7.0;
+        light.distance = 20;
+        light.color.setHex(0xffe088);
+      } else {
+        if (!(prev instanceof THREE.MeshBasicMaterial) || (prev as THREE.MeshBasicMaterial).color.getHex() !== 0x1a1a18) {
+          prev.dispose();
+          mesh.material = new THREE.MeshBasicMaterial({ color: 0x1a1a18 });
+        } else {
+          (prev as THREE.MeshBasicMaterial).color.setHex(0x1a1a18);
+        }
+        light.intensity = 0;
+      }
+    }
+  }
+
+  /** 3D sign posts with canvas text. */
+  syncSigns(signs: { x: number; y: number; z: number; text: string }[]): void {
+    while (this.signPool.length < signs.length) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 256; canvas.height = 128;
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.magFilter = THREE.NearestFilter;
+      tex.minFilter = THREE.NearestFilter;
+      const board = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.0, 0.5),
+        new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide }),
+      );
+      const post = new THREE.Mesh(
+        new THREE.BoxGeometry(0.1, 0.7, 0.1),
+        new THREE.MeshLambertMaterial({ color: 0x6b4220 }),
+      );
+      post.position.set(0, -0.6, 0);
+      const g = new THREE.Group();
+      g.add(board); g.add(post);
+      board.userData = { canvas, tex };
+      this.signPool.push(g as unknown as THREE.Mesh);
+      this.signGroup.add(g);
+    }
+    for (let i = 0; i < this.signPool.length; i++) {
+      const g = this.signPool[i] as unknown as THREE.Group;
+      if (i >= signs.length) { g.visible = false; continue; }
+      const s = signs[i];
+      g.visible = true;
+      g.position.set(s.x + 0.5, s.y + 1.05, s.z + 0.5);
+      const board = g.children[0] as THREE.Mesh;
+      const ud = board.userData as { canvas: HTMLCanvasElement; tex: THREE.CanvasTexture };
+      const { canvas, tex } = ud;
+      const ctx = canvas.getContext('2d')!;
+      ctx.fillStyle = '#c4a574';
+      ctx.fillRect(0, 0, 256, 128);
+      ctx.strokeStyle = '#5a3a1a';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(3, 3, 250, 122);
+      ctx.fillStyle = '#1a0e05';
+      ctx.font = 'bold 28px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const lines = (s.text || 'Skilt').split(/\n/).slice(0, 3);
+      lines.forEach((line, li) => {
+        ctx.fillText(line.slice(0, 14), 128, 32 + li * 32);
+      });
+      tex.needsUpdate = true;
+    }
   }
 
   setSectorMerge(on: boolean): void {

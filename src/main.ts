@@ -129,6 +129,10 @@ async function runGame(
   const particles = new ParticleSystem(renderer.scene);
   const achieve = new AchievementBus(app);
   let dimension: DimId = 'overworld';
+  let portalCooldown = 0;
+  let owReturn = { x: 8.5, y: 40, z: 8.5 };
+  /** Helvete transit: enabled once dual-store round-trip is verified. */
+  let helveteTransit = true;
   let creativeOpen: { close: () => void } | null = null;
   // creative applied after player create
   const input = createInput();
@@ -542,25 +546,28 @@ async function runGame(
     },
     placeBoatFront: () => {
       const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw);
-      const x0 = Math.floor(player.x + fx * 3);
-      const z0 = Math.floor(player.z + fz * 3);
       const y = Math.floor(player.y) - 1;
-      for (let i = 0; i < 5; i++) {
-        const x = Math.floor(x0 + fx * i), z = Math.floor(z0 + fz * i);
+      // Axis-aligned 7×7 pond in front of player for a clear waterline
+      const ox = Math.floor(player.x + fx * 5);
+      const oz = Math.floor(player.z + fz * 5);
+      for (let dx = -3; dx <= 3; dx++) for (let dz = -3; dz <= 3; dz++) {
+        const x = ox + dx, z = oz + dz;
         world.setBlock(x, y, z, BlockId.Dirt);
         world.setBlock(x, y + 1, z, BlockId.Water);
         world.setWater(x, y + 1, z, 7);
         world.setBlock(x, y + 2, z, BlockId.Air);
+        world.setBlock(x, y + 3, z, BlockId.Air);
       }
-      const bx = x0 + fx * 2 + 0.5, bz = z0 + fz * 2 + 0.5;
-      // water block at y+1, full level → surface at y+2; hull sits just under
+      const bx = ox + 0.5, bz = oz + 0.5;
       const b = boats.place(bx, y + 1.88, bz);
       b.yaw = player.yaw;
-      // snap to water surface (full water top = y+2)
-      b.y = (y + 1) + 1.0 - 0.12;
-      player.pitch = -0.35;
-      player.x = bx - fx * 3.2; player.z = bz - fz * 3.2; player.y = y + 2.5;
-      api.lookAt(bx, b.y + 0.25, bz);
+      const surf = boats.waterSurfaceY(world, bx, bz, y + 2);
+      b.y = (surf ?? (y + 2)) - 0.12;
+      player.pitch = -0.45;
+      // Stay within mount range (~2.8) so tryMount works immediately
+      player.x = bx - fx * 1.6; player.z = bz - fz * 1.6; player.y = y + 2.4;
+      player.vx = player.vy = player.vz = 0;
+      api.lookAt(bx, b.y + 0.15, bz);
       markMesh();
       return b;
     },
@@ -651,12 +658,25 @@ async function runGame(
       api.lookAt(ox + 3.5, y + 1.5, oz + 3.5);
       return { x: ox, y, z: oz };
     },
-    castFish: () => fishing.start(player.x, player.y, player.z, player.yaw, player.pitch, world),
+    castFish: (opts?: { forceBite?: boolean }) => {
+      // Never auto-force just because ?test=1 — callers must opt in
+      fishing.forceInstantBite = !!(opts && opts.forceBite);
+      return fishing.start(player.x, player.y, player.z, player.yaw, player.pitch, world);
+    },
     reelFish: () => {
       const got = fishing.reel();
       if (got) { inv.add(got); hud.markDirty(); hud.refreshHotbar(); }
       return got;
     },
+    fishWaitBite: (maxSec = 6) => fishing.advanceUntilBite(maxSec),
+    fishState: () => ({ casting: fishing.casting, bite: fishing.bite, timer: fishing.timer }),
+    mountBoat: () => boats.tryMount(player),
+    dismountBoat: () => { boats.dismount(player); },
+    boatState: () => ({
+      mounted: boats.mounted,
+      count: boats.boats.length,
+      boat: boats.getMounted() ?? boats.boats[0] ?? null,
+    }),
     openMap: () => {
       mapOpen = true;
       mapOverlay.style.display = 'block';
@@ -681,6 +701,12 @@ async function runGame(
       world.setBlock(bx + Math.round(fx * 7), by, bz + Math.round(fz * 7), BlockId.Door);
       markMesh();
       api.lookAt(bx + fx * 3, by + 0.5, bz + fz * 3);
+    },
+    setSignText: (x: number, y: number, z: number, text: string) => {
+      (world as unknown as { _signs?: Map<string, string> })._signs ??= new Map();
+      (world as unknown as { _signs: Map<string, string> })._signs.set(`${x},${y},${z}`, text.slice(0, 48));
+      world.setBlock(x, y, z, BlockId.Sign);
+      markMesh();
     },
     stageBuild: () => {
       const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw);
@@ -717,6 +743,72 @@ async function runGame(
     achieve,
     redstone,
     dimension: () => dimension,
+    helveteEnabled: () => helveteTransit,
+    setHelveteTransit: (on: boolean) => { helveteTransit = !!on; },
+    enterHelvete: () => {
+      if (dimension === 'helvete') return { ok: false, reason: 'already' };
+      owReturn = { x: player.x, y: player.y, z: player.z };
+      world.switchDimension('helvete');
+      dimension = 'helvete';
+      const spawn = world.findHelveteSpawn();
+      const rx = Math.floor(spawn.x) - 1, ry = Math.floor(spawn.y), rz = Math.floor(spawn.z) + 3;
+      if (world.getBlock(rx + 1, ry + 1, rz) !== BlockId.Portal) {
+        for (let w = -1; w <= 4; w++) world.setBlock(rx + w, ry - 1, rz, BlockId.Helstein);
+        buildPortalFrame(world, rx, ry, rz);
+      }
+      player.x = spawn.x; player.y = spawn.y; player.z = spawn.z;
+      player.vx = player.vy = player.vz = 0;
+      portalCooldown = 2;
+      renderer.setDimensionVisuals('helvete');
+      markMesh();
+      renderer.syncChunks(world, true);
+      return { ok: true, dim: dimension, x: player.x, y: player.y, z: player.z };
+    },
+    exitHelvete: () => {
+      if (dimension !== 'helvete') return { ok: false, reason: 'not-in-helvete' };
+      world.switchDimension('overworld');
+      dimension = 'overworld';
+      player.x = owReturn.x; player.y = owReturn.y; player.z = owReturn.z;
+      player.vx = player.vy = player.vz = 0;
+      portalCooldown = 2;
+      renderer.setDimensionVisuals('overworld');
+      markMesh();
+      renderer.syncChunks(world, true);
+      return { ok: true, dim: dimension, x: player.x, y: player.y, z: player.z };
+    },
+    /** Place marker in OW, round-trip Helvete, assert OW marker untouched. */
+    testHelveteRoundTrip: () => {
+      if (dimension !== 'overworld') api.exitHelvete();
+      api.buildPlatform(6);
+      const mx = Math.floor(player.x) + 2;
+      const my = Math.floor(player.y) - 1;
+      const mz = Math.floor(player.z);
+      world.setBlock(mx, my, mz, BlockId.GoldOre);
+      const before = world.getBlock(mx, my, mz);
+      const beforeHash: number[] = [];
+      for (let dy = -1; dy <= 3; dy++) for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
+        beforeHash.push(world.getBlock(mx + dx, my + dy, mz + dz));
+      }
+      const ent = api.enterHelvete();
+      // Mutate helvete — must not affect OW
+      const hx = Math.floor(player.x), hy = Math.floor(player.y) - 1, hz = Math.floor(player.z);
+      world.setBlock(hx, hy, hz, BlockId.Helkvarts);
+      const helveteBlock = world.getBlock(hx, hy, hz);
+      const peekOw = world.peekBlock('overworld', mx, my, mz);
+      const ex = api.exitHelvete();
+      const after = world.getBlock(mx, my, mz);
+      const afterHash: number[] = [];
+      for (let dy = -1; dy <= 3; dy++) for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
+        afterHash.push(world.getBlock(mx + dx, my + dy, mz + dz));
+      }
+      const same = before === after && before === BlockId.GoldOre && peekOw === BlockId.GoldOre
+        && beforeHash.length === afterHash.length && beforeHash.every((v, i) => v === afterHash[i]);
+      return {
+        ok: !!ent.ok && !!ex.ok && helveteBlock === BlockId.Helkvarts && same,
+        before, after, peekOw, helveteBlock, same,
+        enter: ent, exit: ex,
+      };
+    },
   };
   (window as unknown as { __bv: typeof api; __BV: typeof api }).__bv = api;
   (window as unknown as { __BV: typeof api }).__BV = api;
@@ -803,6 +895,9 @@ async function runGame(
         bowCharge = 0;
       } else bowCharge = 0;
 
+      if (boats.mounted && input.sneak) {
+        boats.dismount(player);
+      }
       if (!boats.mounted) {
         const move = movePlayer(player, world, wishX, wishZ, input.jump, dt);
         if (move.fallDamage > 0) hurtPlayer(move.fallDamage);
@@ -833,8 +928,42 @@ async function runGame(
       if (player.hunger > 17 && player.health < 20) player.health = Math.min(20, player.health + dt * 0.25);
     }
 
-    // Helvete transit deferred (corrupted overworld). Portal is visual-only this round.
-    void dimension;
+    // Helvete portal transit (dual chunk store — overworld untouched while away)
+    if (portalCooldown > 0) portalCooldown -= dt;
+    if (helveteTransit && portalCooldown <= 0 && !dead && !paused) {
+      const bx = Math.floor(player.x), by = Math.floor(player.y), bz = Math.floor(player.z);
+      const inPortal = world.getBlock(bx, by, bz) === BlockId.Portal
+        || world.getBlock(bx, by + 1, bz) === BlockId.Portal;
+      if (inPortal) {
+        if (dimension === 'overworld') {
+          owReturn = { x: player.x, y: player.y, z: player.z };
+          world.switchDimension('helvete');
+          dimension = 'helvete';
+          const spawn = world.findHelveteSpawn();
+          // Return portal near spawn (only once if not already lit nearby)
+          const rx = Math.floor(spawn.x) - 1, ry = Math.floor(spawn.y), rz = Math.floor(spawn.z) + 3;
+          if (world.getBlock(rx + 1, ry + 1, rz) !== BlockId.Portal) {
+            for (let w = -1; w <= 4; w++) world.setBlock(rx + w, ry - 1, rz, BlockId.Helstein);
+            buildPortalFrame(world, rx, ry, rz);
+          }
+          player.x = spawn.x; player.y = spawn.y; player.z = spawn.z;
+          player.vx = player.vy = player.vz = 0;
+          portalCooldown = 4;
+          renderer.setDimensionVisuals('helvete');
+          markMesh();
+          renderer.syncChunks(world, true);
+        } else {
+          world.switchDimension('overworld');
+          dimension = 'overworld';
+          player.x = owReturn.x; player.y = owReturn.y; player.z = owReturn.z;
+          player.vx = player.vy = player.vz = 0;
+          portalCooldown = 4;
+          renderer.setDimensionVisuals('overworld');
+          markMesh();
+          renderer.syncChunks(world, true);
+        }
+      }
+    }
 
     world.updateAround(player.x, player.z);
     waterAcc += dt;
@@ -856,9 +985,11 @@ async function runGame(
     structuresAcc += dt;
     if (structuresAcc > 2) {
       structuresAcc = 0;
-      const pcx = Math.floor(player.x / CHUNK_SIZE), pcz = Math.floor(player.z / CHUNK_SIZE);
-      for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
-        tryPlaceStructures(world, containers, pcx + dx, pcz + dz);
+      if (dimension === 'overworld') {
+        const pcx = Math.floor(player.x / CHUNK_SIZE), pcz = Math.floor(player.z / CHUNK_SIZE);
+        for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
+          tryPlaceStructures(world, containers, pcx + dx, pcz + dz);
+        }
       }
     }
     syncTraders();
@@ -908,6 +1039,36 @@ async function runGame(
     renderer.syncProjectiles(projectiles.list);
     renderer.syncBoats(boats.boats);
     renderer.syncXp(xp.orbs);
+    {
+      const doors: { x: number; y: number; z: number; open: boolean }[] = [];
+      const lamps: { x: number; y: number; z: number; on: boolean }[] = [];
+      const px = Math.floor(player.x), py = Math.floor(player.y), pz = Math.floor(player.z);
+      for (let dy = -3; dy <= 4; dy++) for (let dz = -16; dz <= 16; dz++) for (let dx = -16; dx <= 16; dx++) {
+        const x = px + dx, y = py + dy, z = pz + dz;
+        const id = world.getBlock(x, y, z);
+        if (id === BlockId.Door) doors.push({ x, y, z, open: !!(world.getWaterLevel(x, y, z) & 1) });
+        if (id === BlockId.Lamp) lamps.push({ x, y, z, on: !!(world.getWaterLevel(x, y, z) & 1) || redstone.getPower(x, y, z) > 0 });
+      }
+      renderer.syncDoors(doors);
+      renderer.syncLamps(lamps);
+      const signMap = (world as unknown as { _signs?: Map<string, string> })._signs;
+      const signs: { x: number; y: number; z: number; text: string }[] = [];
+      if (signMap) {
+        for (const [k, text] of signMap) {
+          const [x, y, z] = k.split(',').map(Number);
+          if (world.getBlock(x, y, z) === BlockId.Sign) signs.push({ x, y, z, text });
+        }
+      }
+      // Also show nearby blank signs as posts
+      for (let dy = -2; dy <= 3; dy++) for (let dz = -12; dz <= 12; dz++) for (let dx = -12; dx <= 12; dx++) {
+        const x = px + dx, y = py + dy, z = pz + dz;
+        if (world.getBlock(x, y, z) !== BlockId.Sign) continue;
+        const key = `${x},${y},${z}`;
+        if (signMap?.has(key)) continue;
+        signs.push({ x, y, z, text: '' });
+      }
+      renderer.syncSigns(signs);
+    }
     hud.refreshHotbar();
 
     const hit = raycast(world, player);

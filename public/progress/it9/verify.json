@@ -1,0 +1,41 @@
+{
+  "checks": [
+    {
+      "area": "båt mount/styr/av",
+      "ok": true,
+      "detail": "{\"placed\":true,\"mountOk\":true,\"steered\":true,\"dismountOk\":true,\"boatY\":30.88,\"dist\":3.5518732351452296}"
+    },
+    {
+      "area": "fiske 5/5",
+      "ok": true,
+      "detail": "{\"results\":[true,true,true,true,true],\"ok\":true}"
+    },
+    {
+      "area": "dør sving",
+      "ok": true,
+      "detail": "{\"door\":{\"ox\":4,\"oy\":30,\"oz\":7,\"closedMeta\":0},\"doorOpen\":{\"meta\":1,\"id\":26}}"
+    },
+    {
+      "area": "lampe on/off",
+      "ok": true,
+      "detail": "{\"lamp\":{\"bx\":4,\"by\":30,\"bz\":8,\"offPower\":0},\"lampOn\":{\"power\":12,\"meta\":1,\"lever\":1}}"
+    },
+    {
+      "area": "it8 regresjon portal+give",
+      "ok": true,
+      "detail": "{\"pos0\":{\"x\":2.5,\"z\":8.5},\"bed\":true,\"portals\":6,\"held\":1,\"perf\":{\"drawCalls\":67,\"triangles\":43092,\"programs\":12},\"build\":true}"
+    },
+    {
+      "area": "3D skilt",
+      "ok": true,
+      "detail": "{\"x\":4,\"y\":30,\"z\":8}"
+    },
+    {
+      "area": "Helvete round-trip",
+      "ok": true,
+      "detail": "{\"test\":{\"ok\":true,\"before\":17,\"after\":17,\"peekOw\":17,\"helveteBlock\":46,\"same\":true,\"enter\":{\"ok\":true,\"dim\":\"helvete\",\"x\":8.5,\"y\":27.05,\"z\":8.5},\"exit\":{\"ok\":true,\"dim\":\"overworld\",\"x\":2.5,\"y\":30.05,\"z\":8.5}},\"peek\":{\"dim\":\"helvete\",\"ent\":{\"ok\":true,\"dim\":\"helvete\",\"x\":8.5,\"y\":27.05,\"z\":8.5}}}"
+    }
+  ],
+  "allOk": true,
+  "helveteShipped": true
+}

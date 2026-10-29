@@ -32,17 +32,13 @@ describe('greedy meshing', () => {
     expect(tris).toBeLessThan(80);
   });
 
-  it('lit lamp meta selects glow tile path without throwing', () => {
+  it('lamp is omitted from chunk mesh (renderer overlay handles glow)', () => {
     const c = new Chunk(0, 0);
     c.generated = true;
     c.set(4, 4, 4, BlockId.Lamp);
     c.setMeta(4, 4, 4, 1);
     const get = solidGet(c);
-    const meshes = meshChunk(c, get, () => 15, (x, y, z) => {
-      const lx = x, lz = z;
-      if (lx === 4 && y === 4 && lz === 4) return 1;
-      return 0;
-    });
-    expect(triCount(meshes)).toBeGreaterThan(0);
+    const meshes = meshChunk(c, get, () => 15, () => 1);
+    expect(triCount(meshes)).toBe(0);
   });
 });

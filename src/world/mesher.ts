@@ -61,6 +61,7 @@ function isFullCube(id: number): boolean {
   if (id === BlockId.PressurePlate || id === BlockId.Button || id === BlockId.Lever) return false;
   if (id === BlockId.Slab || id === BlockId.Stairs || id === BlockId.Fence || id === BlockId.GlassPane) return false;
   if (id === BlockId.Door || id === BlockId.Gate || id === BlockId.Trapdoor) return false;
+  if (id === BlockId.Lamp) return false; // emissive overlay in renderer
   const def = BLOCKS[id];
   return !!def && !def.liquid;
 }
@@ -191,9 +192,8 @@ function buildMesh(
         if (!def) continue;
         if (transparentPass !== def.transparent) continue;
         if (!transparentPass && isFullCube(id)) continue; // handled by greedy
-        if (transparentPass && isFullCube(id) && def.transparent) {
-          // transparent full cubes (glass, leaves, portal, lamp, helstein? no) — greedy below for opaque only
-        }
+        // Doors/lamps rendered as special meshes in renderer
+        if (id === BlockId.Door || id === BlockId.Lamp) continue;
         const wx = ox + lx;
         const wz = oz + lz;
         const wLevel = id === BlockId.Water || id === BlockId.Lava || id === BlockId.Crop

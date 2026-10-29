@@ -5,6 +5,7 @@ import MeshWorker from './meshWorker.ts?worker';
 import { SeededNoise } from './noise';
 import { generateTerrain, placeTreesForChunk } from './terrain';
 import { relightChunk } from './light';
+import { generateHelveteChunk, type DimId } from './helvete';
 
 export let VIEW_RADIUS = 7;
 export function setViewRadius(r: number): void {
@@ -14,27 +15,55 @@ export function setViewRadius(r: number): void {
 export class World {
   readonly seed: number;
   readonly noise: SeededNoise;
-  readonly chunks = new Map<string, Chunk>();
-  readonly meshes = new Map<string, ChunkMeshes>();
+  /** Active dimension chunk/mesh maps (swapped on switchDimension). */
+  chunks = new Map<string, Chunk>();
+  meshes = new Map<string, ChunkMeshes>();
   private dirtyMeshes = new Set<string>();
   private pending = new Map<string, { lx: number; y: number; lz: number; id: number }[]>();
   private worker: Worker | null = null;
   private meshing = new Set<string>();
   private useWorker = true;
   meshRevision = 0;
+  dimension: DimId = 'overworld';
+  private stores: Record<DimId, {
+    chunks: Map<string, Chunk>;
+    meshes: Map<string, ChunkMeshes>;
+    dirtyMeshes: Set<string>;
+    pending: Map<string, { lx: number; y: number; lz: number; id: number }[]>;
+    meshing: Set<string>;
+  }>;
 
   constructor(seed = 42) {
     this.seed = seed;
     this.noise = new SeededNoise(seed);
+    this.stores = {
+      overworld: {
+        chunks: this.chunks,
+        meshes: this.meshes,
+        dirtyMeshes: this.dirtyMeshes,
+        pending: this.pending,
+        meshing: this.meshing,
+      },
+      helvete: {
+        chunks: new Map(),
+        meshes: new Map(),
+        dirtyMeshes: new Set(),
+        pending: new Map(),
+        meshing: new Set(),
+      },
+    };
     try {
       this.worker = new MeshWorker();
-      this.worker.onmessage = (ev: MessageEvent<{ key: string; meshes: Parameters<typeof meshFromTransferables>[0] }>) => {
-        const { key, meshes } = ev.data;
-        this.meshing.delete(key);
-        if (!this.chunks.has(key)) return;
-        this.meshes.set(key, meshFromTransferables(meshes));
-        this.meshRevision++;
-        const c = this.chunks.get(key);
+      this.worker.onmessage = (ev: MessageEvent<{ key: string; dim: DimId; meshes: Parameters<typeof meshFromTransferables>[0] }>) => {
+        const { key, dim, meshes } = ev.data;
+        const store = dim === this.dimension
+          ? { chunks: this.chunks, meshes: this.meshes, meshing: this.meshing }
+          : this.stores[dim];
+        store.meshing.delete(key);
+        if (!store.chunks.has(key)) return;
+        store.meshes.set(key, meshFromTransferables(meshes));
+        if (dim === this.dimension) this.meshRevision++;
+        const c = store.chunks.get(key);
         if (c) {
           c.dirty = false;
           c.meshVersion++;
@@ -108,10 +137,23 @@ export class World {
     let c = this.chunks.get(key);
     if (!c) {
       c = new Chunk(cx, cz);
-      generateTerrain(c, this.noise);
-      this.chunks.set(key, c);
-      this.applyPending(c);
-      placeTreesForChunk(c, this.noise, (wx, y, wz, id) => this.setAbs(wx, y, wz, id));
+      if (this.dimension === 'helvete') {
+        generateHelveteChunk((wx, y, wz, id) => {
+          if (y < 0 || y >= CHUNK_HEIGHT) return;
+          const lx = wx - cx * CHUNK_SIZE;
+          const lz = wz - cz * CHUNK_SIZE;
+          if (lx < 0 || lx >= CHUNK_SIZE || lz < 0 || lz >= CHUNK_SIZE) return;
+          c!.set(lx, y, lz, id);
+        }, this.noise, cx, cz);
+        c.generated = true;
+        this.chunks.set(key, c);
+        this.applyPending(c);
+      } else {
+        generateTerrain(c, this.noise);
+        this.chunks.set(key, c);
+        this.applyPending(c);
+        placeTreesForChunk(c, this.noise, (wx, y, wz, id) => this.setAbs(wx, y, wz, id));
+      }
       this.relight(c);
       this.dirtyMeshes.add(key);
       for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
@@ -120,6 +162,62 @@ export class World {
       }
     }
     return c;
+  }
+
+  /** Swap active chunk store. Overworld stays untouched while in Helvete. */
+  switchDimension(dim: DimId): void {
+    if (dim === this.dimension) return;
+    this.stores[this.dimension] = {
+      chunks: this.chunks,
+      meshes: this.meshes,
+      dirtyMeshes: this.dirtyMeshes,
+      pending: this.pending,
+      meshing: this.meshing,
+    };
+    this.dimension = dim;
+    const s = this.stores[dim];
+    this.chunks = s.chunks;
+    this.meshes = s.meshes;
+    this.dirtyMeshes = s.dirtyMeshes;
+    this.pending = s.pending;
+    this.meshing = s.meshing;
+    // Force full remesh of visible chunks after swap
+    for (const key of this.chunks.keys()) this.dirtyMeshes.add(key);
+    this.meshRevision++;
+  }
+
+  /** Snapshot of a column for integrity tests (overworld store, not active). */
+  peekBlock(dim: DimId, wx: number, y: number, wz: number): number {
+    if (y < 0 || y >= CHUNK_HEIGHT) return BlockId.Air;
+    const store = dim === this.dimension
+      ? { chunks: this.chunks }
+      : this.stores[dim];
+    const cx = Math.floor(wx / CHUNK_SIZE);
+    const cz = Math.floor(wz / CHUNK_SIZE);
+    const c = store.chunks.get(chunkKey(cx, cz));
+    if (!c) return BlockId.Air;
+    const lx = Math.floor(wx) - cx * CHUNK_SIZE;
+    const lz = Math.floor(wz) - cz * CHUNK_SIZE;
+    return c.get(lx, y, lz);
+  }
+
+  findHelveteSpawn(): { x: number; y: number; z: number } {
+    this.ensureChunk(0, 0);
+    for (let y = CHUNK_HEIGHT - 2; y > 4; y--) {
+      const id = this.getBlock(8, y, 8);
+      const above = this.getBlock(8, y + 1, 8);
+      if (isSolid(id) && above === BlockId.Air && this.getBlock(8, y + 2, 8) === BlockId.Air
+          && id !== BlockId.Lava) {
+        return { x: 8.5, y: y + 1.05, z: 8.5 };
+      }
+    }
+    // Safe pad above lava seas
+    for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
+      this.setBlock(8 + dx, 40, 8 + dz, BlockId.Helstein);
+      this.setBlock(8 + dx, 41, 8 + dz, BlockId.Air);
+      this.setBlock(8 + dx, 42, 8 + dz, BlockId.Air);
+    }
+    return { x: 8.5, y: 41.05, z: 8.5 };
   }
 
   worldToChunk(wx: number, wz: number): { cx: number; cz: number; lx: number; lz: number } {
@@ -289,6 +387,7 @@ export class World {
         this.worker.postMessage(
           {
             key,
+            dim: this.dimension,
             cx: c.cx,
             cz: c.cz,
             blocks,

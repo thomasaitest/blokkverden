@@ -4,6 +4,7 @@ import { meshChunk, meshToTransferables } from './mesher';
 
 export interface MeshJob {
   key: string;
+  dim?: string;
   cx: number;
   cz: number;
   blocks: Uint8Array;
@@ -69,5 +70,5 @@ self.onmessage = (ev: MessageEvent<MeshJob>) => {
     packed.opaque.p.buffer, packed.opaque.n.buffer, packed.opaque.u.buffer, packed.opaque.c.buffer, packed.opaque.i.buffer,
     packed.transparent.p.buffer, packed.transparent.n.buffer, packed.transparent.u.buffer, packed.transparent.c.buffer, packed.transparent.i.buffer,
   ];
-  (self as unknown as Worker).postMessage({ key: job.key, meshes: packed }, transfer);
+  (self as unknown as Worker).postMessage({ key: job.key, dim: job.dim ?? 'overworld', meshes: packed }, transfer);
 };

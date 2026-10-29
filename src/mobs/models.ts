@@ -173,6 +173,25 @@ const KIND_LAYOUT: Record<MobKind, Layout> = {
     ],
     colors: { body: 0x2ecc71, head: 0x27ae60, leg: 0x1e8449, arm: 0x2ecc71 },
   },
+  ulv: {
+    body: [0.7, 0.5, 1.0], bodyY: 0.55,
+    head: [0.42, 0.4, 0.42], headY: 0.75, headZ: 0.52,
+    legs: [
+      { name: 'legFL', s: [0.16, 0.35, 0.16], p: [0.22, 0.18, 0.28] },
+      { name: 'legFR', s: [0.16, 0.35, 0.16], p: [-0.22, 0.18, 0.28] },
+      { name: 'legBL', s: [0.16, 0.35, 0.16], p: [0.22, 0.18, -0.32] },
+      { name: 'legBR', s: [0.16, 0.35, 0.16], p: [-0.22, 0.18, -0.32] },
+    ],
+    extras: [
+      { name: 'snout', s: [0.22, 0.16, 0.28], p: [0, 0.68, 0.78], color: 0xb0b4bc },
+      { name: 'earL', s: [0.1, 0.18, 0.08], p: [0.14, 0.98, 0.45], color: 0x8a9098 },
+      { name: 'earR', s: [0.1, 0.18, 0.08], p: [-0.14, 0.98, 0.45], color: 0x8a9098 },
+      { name: 'tail', s: [0.12, 0.12, 0.45], p: [0, 0.6, -0.65], color: 0x9aa0a8 },
+      { name: 'collar', s: [0.48, 0.08, 0.48], p: [0, 0.72, 0.35], color: 0xcc3333 },
+    ],
+    colors: { body: 0x9aa0a8, head: 0x9aa0a8, leg: 0x7a8088 },
+  },
+
 };
 
 const skinCache = new Map<string, THREE.CanvasTexture>();
@@ -232,6 +251,9 @@ function skinFor(kind: MobKind): THREE.CanvasTexture {
     px(ctx, 4, 4, '#2a1010', 8, 8);
     px(ctx, 6, 6, '#441818', 4, 4);
     px(ctx, 7, 7, '#f44', 2, 2);
+  } else if (kind === 'ulv') {
+    shadeFill(ctx, '#9aa0a8', '#6a7078', '#c0c4cc');
+    px(ctx, 2, 2, '#7a8088', 12, 2);
   } else if (kind === 'knallbolle') {
     shadeFill(ctx, '#2ecc71', '#1e8449', '#58d68d');
     // face feet pattern on body
@@ -281,6 +303,9 @@ function faceFor(kind: MobKind): THREE.CanvasTexture {
     px(ctx, 3, 5, '#222', 4, 3); px(ctx, 9, 5, '#222', 4, 3); // empty sockets
     px(ctx, 4, 6, '#88f', 2, 1); px(ctx, 10, 6, '#88f', 2, 1);
     px(ctx, 6, 11, '#c8c8b8', 4, 2);
+  } else if (kind === 'ulv') {
+    px(ctx, 4, 6, '#222', 2, 2); px(ctx, 10, 6, '#222', 2, 2);
+    px(ctx, 6, 10, '#444', 4, 2);
   } else if (kind === 'knallbolle') {
     px(ctx, 3, 4, '#111', 3, 3); px(ctx, 10, 4, '#111', 3, 3);
     px(ctx, 4, 5, '#fff', 1, 1); px(ctx, 11, 5, '#fff', 1, 1);

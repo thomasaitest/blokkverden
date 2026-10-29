@@ -687,6 +687,20 @@ async function runGame(
     getPerf: () => renderer.getPerfStats(),
     setSectorMerge: (on: boolean) => renderer.setSectorMerge(on),
     setCreative: (on: boolean) => { player.creative = on; player.flying = on; },
+    spawnWolf: () => {
+      const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw);
+      const x = player.x + fx * 3, z = player.z + fz * 3;
+      const y = Math.floor(player.y);
+      return mobs.spawn('ulv', x, y, z);
+    },
+    tameWolf: () => {
+      api.give(ItemId.Bone, 1);
+      return mobs.interactWolf(player, true);
+    },
+    wolfState: () => {
+      const w = mobs.nearest('ulv', player.x, player.y, player.z, 12);
+      return w ? { id: w.id, tamed: !!w.tamed, sitting: !!w.sitting, x: w.x, y: w.y, z: w.z } : null;
+    },
     stageBoat: () => {
       const b = api.placeBoatFront();
       return b;
@@ -1177,6 +1191,20 @@ async function runGame(
           const nearTrader = traders.find((tr) => Math.hypot(tr.x - player.x, tr.y - player.y, tr.z - player.z) < 3);
           if (nearTrader) {
             openTrade(nearTrader);
+          } else if (held && held.id === ItemId.Bone) {
+            const r = mobs.interactWolf(player, true);
+            if (r === 'tamed' || r === 'sat' || r === 'stood') {
+              if (r === 'tamed') {
+                held.count -= 1;
+                if (held.count <= 0) inv.setHeld(null);
+                hud.markDirty();
+                achieve.grant('wolf_friend' as 'first_block');
+              }
+              sound.placeBlock();
+            }
+          } else if (mobs.nearest('ulv', player.x, player.y, player.z, 2.5)?.tamed) {
+            mobs.interactWolf(player, false);
+            sound.placeBlock();
           } else if (boats.nearest(player.x, player.y, player.z, 2.2)) {
             boats.tryMount(player);
           } else {

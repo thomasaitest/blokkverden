@@ -86,7 +86,7 @@ export class MobSystem {
       const dist = 14 + Math.random() * 16;
       const x = player.x + Math.cos(ang) * dist;
       const z = player.z + Math.sin(ang) * dist;
-      const kinds: MobKind[] = ['gris', 'ku', 'sau', 'høne'];
+      const kinds: MobKind[] = ['gris', 'ku', 'sau', 'høne', 'ulv'];
       const kind = kinds[(Math.random() * kinds.length) | 0];
       const y = this.surfaceY(world, x, z);
       if (y > 2) this.spawn(kind, x, y, z);
@@ -161,6 +161,15 @@ export class MobSystem {
           onPlayerHurt(m.kind === 'vever' ? 3 : 4, tx, tz);
           sound.mobHit();
         }
+      } else if (m.kind === 'ulv' && m.tamed) {
+        if (m.sitting) {
+          tx = 0; tz = 0;
+        } else if (distP > 2.5) {
+          tx = player.x - m.x; tz = player.z - m.z;
+          m.yaw = Math.atan2(tx, tz);
+        } else {
+          tx = 0; tz = 0;
+        }
       } else {
         if ((m.age * 3 | 0) % 7 === 0 && Math.random() < 0.02) m.yaw = Math.random() * Math.PI * 2;
         tx = Math.sin(m.yaw);
@@ -169,13 +178,16 @@ export class MobSystem {
       }
 
       const len = Math.hypot(tx, tz) || 1;
-      let ndx = tx / len, ndz = tz / len;
-      // Avoid water & cliffs
-      if (feetWater(world, m.x + ndx, m.y, m.z + ndz) || cliffAhead(world, m.x, m.y, m.z, ndx, ndz)) {
-        m.yaw += Math.PI / 2 + (Math.random() - 0.5);
-        ndx = Math.sin(m.yaw); ndz = Math.cos(m.yaw);
+      let ndx = (tx || tz) ? tx / len : 0, ndz = (tx || tz) ? tz / len : 0;
+      if (tx || tz) {
+        if (feetWater(world, m.x + ndx, m.y, m.z + ndz) || cliffAhead(world, m.x, m.y, m.z, ndx, ndz)) {
+          m.yaw += Math.PI / 2 + (Math.random() - 0.5);
+          ndx = Math.sin(m.yaw); ndz = Math.cos(m.yaw);
+        }
       }
-      const speed = def.speed * (m.fuse > 0 ? 0.35 : 1) * (feetWater(world, m.x, m.y, m.z) ? 0.4 : 1);
+      const sitStop = m.kind === 'ulv' && m.tamed && m.sitting;
+      const speed = sitStop ? 0 : def.speed * (m.fuse > 0 ? 0.35 : 1) * (feetWater(world, m.x, m.y, m.z) ? 0.4 : 1)
+        * ((m.kind === 'ulv' && m.tamed && distP > 8) ? 1.35 : 1);
       m.vx = ndx * speed;
       m.vz = ndz * speed;
       m.vy -= 28 * dt;
@@ -245,7 +257,33 @@ export class MobSystem {
     if (m.kind === 'ku') drops.spawn(x, y, z, stack(ItemId.Leather, 1));
     if (m.kind === 'sau') drops.spawn(x, y, z, stack(ItemId.WoolItem, 1));
     if (m.kind === 'høne') drops.spawn(x, y, z, stack(ItemId.Feather, 1));
+    if (m.kind === 'ulv') drops.spawn(x, y, z, stack(ItemId.Bone, 1 + (Math.random() * 2 | 0)));
     if (m.hostile) drops.spawn(x, y, z, stack(ItemId.Coal, 1));
+  }
+
+  nearest(kind: MobKind | null, px: number, py: number, pz: number, r = 3): Mob | null {
+    let best: Mob | null = null, bd = r;
+    for (const m of this.mobs) {
+      if (kind && m.kind !== kind) continue;
+      const d = Math.hypot(m.x - px, m.y - py, m.z - pz);
+      if (d < bd) { bd = d; best = m; }
+    }
+    return best;
+  }
+
+  /** Bone on wild ulv → tame; empty hand / bone on tamed → toggle sit. */
+  interactWolf(player: { x: number; y: number; z: number }, hasBone: boolean): 'tamed' | 'sat' | 'stood' | 'none' {
+    const w = this.nearest('ulv', player.x, player.y, player.z, 3.2);
+    if (!w) return 'none';
+    if (!w.tamed) {
+      if (!hasBone) return 'none';
+      w.tamed = true;
+      w.sitting = false;
+      w.color = 0xc0c8d8;
+      return 'tamed';
+    }
+    w.sitting = !w.sitting;
+    return w.sitting ? 'sat' : 'stood';
   }
 
   hurtMob(m: Mob, dmg: number, kx: number, kz: number): void {

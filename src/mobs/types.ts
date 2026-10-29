@@ -6,7 +6,8 @@ export type MobKind =
   | 'vandrer' // zombie-like
   | 'bueskytt' // skeleton-like
   | 'vever' // spider-like
-  | 'knallbolle'; // creeper-like original
+  | 'knallbolle' // creeper-like original
+  | 'ulv'; // wolf — tame with bone
 
 export interface Mob {
   id: number;
@@ -32,6 +33,9 @@ export interface Mob {
   hurtFlash?: number;
   deathT?: number;
   attacking?: boolean;
+  /** Wolf: tamed companion */
+  tamed?: boolean;
+  sitting?: boolean;
 }
 
 export type TraderKind = 'byttebonde';
@@ -49,4 +53,5 @@ export const MOB_DEFS: Record<
   bueskytt: { hp: 16, hostile: true, w: 0.6, h: 1.8, color: 0xb0b0a0, speed: 1.5 },
   vever: { hp: 14, hostile: true, w: 1.0, h: 0.6, color: 0x222222, speed: 2.0 },
   knallbolle: { hp: 18, hostile: true, w: 0.6, h: 1.5, color: 0x2ecc71, speed: 1.3 },
+  ulv: { hp: 12, hostile: false, w: 0.65, h: 0.75, color: 0x9aa0a8, speed: 2.2 },
 };

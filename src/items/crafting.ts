@@ -149,7 +149,7 @@ export const RECIPES: Recipe[] = [
     result: stack(ItemId.StoneSword, 1, 132),
   },
   { w: 2, h: 3, pattern: [ItemId.Planks, ItemId.Planks, ItemId.Planks, ItemId.Planks, ItemId.Planks, ItemId.Planks], result: stack(ItemId.Door, 1) },
-  { w: 2, h: 2, pattern: [ItemId.Planks, ItemId.Planks, ItemId.Planks, ItemId.Planks], result: stack(ItemId.Trapdoor, 1) },
+  { w: 3, h: 2, pattern: [ItemId.Planks, ItemId.Planks, ItemId.Planks, ItemId.Planks, ItemId.Planks, ItemId.Planks], result: stack(ItemId.Trapdoor, 1) },
   { w: 3, h: 2, pattern: [ItemId.Stick, ItemId.Planks, ItemId.Stick, ItemId.Stick, ItemId.Planks, ItemId.Stick], result: stack(ItemId.Fence, 4) },
   { w: 3, h: 1, pattern: [ItemId.Planks, ItemId.Stick, ItemId.Planks], result: stack(ItemId.Gate, 1) },
   { w: 3, h: 3, pattern: [ItemId.Planks, 0, 0, ItemId.Planks, ItemId.Planks, 0, ItemId.Planks, ItemId.Planks, ItemId.Planks], result: stack(ItemId.Stairs, 4) },

@@ -54,3 +54,24 @@ describe('mining', () => {
     expect(pick).toBeLessThan(bare);
   });
 });
+
+
+describe('table vs trapdoor recipes', () => {
+  it('2x2 planks crafts table not trapdoor', () => {
+    const slots = [
+      stack(ItemId.Planks, 1), stack(ItemId.Planks, 1),
+      stack(ItemId.Planks, 1), stack(ItemId.Planks, 1),
+    ];
+    const r = matchRecipe(slots);
+    expect(r?.result.id).toBe(ItemId.CraftingTable);
+  });
+  it('3x2 six planks crafts trapdoor', () => {
+    const slots = [
+      stack(ItemId.Planks, 1), stack(ItemId.Planks, 1), stack(ItemId.Planks, 1),
+      stack(ItemId.Planks, 1), stack(ItemId.Planks, 1), stack(ItemId.Planks, 1),
+      null, null, null,
+    ];
+    const r = matchRecipe(slots);
+    expect(r?.result.id).toBe(ItemId.Trapdoor);
+  });
+});

@@ -13,7 +13,7 @@
     {
       "area": "Helvete lava+glow+dim",
       "ok": true,
-      "detail": "{\"ent\":{\"ok\":true,\"dim\":\"helvete\",\"x\":7.5,\"y\":32.05,\"z\":7.5},\"lava\":24938,\"glow\":262,\"helstein\":15405,\"dim\":\"helvete\"}"
+      "detail": "{\"ent\":{\"ok\":true,\"dim\":\"helvete\",\"x\":7.5,\"y\":32.05,\"z\":7.5},\"lava\":24938,\"glow\":262,\"helstein\":15436,\"dim\":\"helvete\"}"
     },
     {
       "area": "Helvete round-trip",
@@ -42,7 +42,7 @@
     {
       "area": "ulv tame/follow/sit",
       "ok": true,
-      "detail": "{\"t1\":\"tamed\",\"st1\":{\"id\":5,\"tamed\":true,\"sitting\":false,\"x\":2.5,\"y\":30,\"z\":5.5},\"distFollow\":2.483170024238576,\"t2\":\"sat\",\"stSit\":{\"id\":5,\"tamed\":true,\"sitting\":true,\"x\":4.850616176248951,\"y\":30,\"z\":5.891769362708159},\"stayed\":true,\"stSit2\":{\"id\":5,\"tamed\":true,\"sitting\":true,\"x\":4.850616176248951,\"y\":30,\"z\":5.891769362708159}}"
+      "detail": "{\"t1\":\"tamed\",\"st1\":{\"id\":5,\"tamed\":true,\"sitting\":false,\"x\":2.5,\"y\":30,\"z\":5.5},\"distFollow\":2.4462100242385785,\"t2\":\"sat\",\"stSit\":{\"id\":5,\"tamed\":true,\"sitting\":true,\"x\":4.887073295673785,\"y\":30,\"z\":5.897845549278964},\"stayed\":true,\"stSit2\":{\"id\":5,\"tamed\":true,\"sitting\":true,\"x\":4.887073295673785,\"y\":30,\"z\":5.897845549278964}}"
     },
     {
       "area": "seng",

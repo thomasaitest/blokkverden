@@ -752,10 +752,18 @@ async function runGame(
       }
       const origin = buildPortalFrame(world, ox, oy, oz);
       markMesh();
-      player.x = ox + 1.5; player.y = oy + 2.4; player.z = oz + 9.0;
+      // Isolated camera: south of frame, nothing between
+      for (let z = 1; z <= 14; z++) for (let x = -3; x <= 6; x++) for (let y = 0; y <= 6; y++) {
+        const id = world.getBlock(ox + x, oy + y, oz + z);
+        if (id !== BlockId.Portal && id !== BlockId.PortalFrame && id !== BlockId.Cobble) {
+          world.setBlock(ox + x, oy + y, oz + z, BlockId.Air);
+        }
+      }
+      markMesh();
+      player.x = ox + 1.5; player.y = oy + 2.8; player.z = oz + 12.0;
       player.vx = player.vy = player.vz = 0;
-      player.pitch = -0.12;
-      api.lookAt(ox + 1.5, oy + 2.2, oz);
+      player.pitch = -0.05;
+      api.lookAt(ox + 1.5, oy + 2.3, oz);
       return origin;
     },
     toast: (id: string) => achieve.grant(id as 'first_block'),

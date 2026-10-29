@@ -157,10 +157,11 @@ async function main() {
     bv.world.setBlock(ox, oy + 8, oz + 2, 45);
     bv.world.setBlock(ox + 1, oy + 8, oz + 2, 45);
     bv.world.setBlock(ox, oy + 8, oz + 3, 45);
-    bv.player.x = ox + 0.5; bv.player.y = oy + 6.2; bv.player.z = oz - 5.5;
-    bv.lookAt(ox + 0.5, oy + 2.0, oz + 0.5);
+    bv.teleport(ox + 0.5, oy + 6.5, oz - 6.5);
+    bv.lookAt(ox + 0.5, oy + 1.5, oz + 1.0);
+    return { ox, oy, oz, y: bv.player.y };
   });
-  await sleep(800);
+  await sleep(1000);
   await saveShot(page, '05-helvete-lava.png');
   checks.push({
     area: 'Helvete lava+glow+dim',

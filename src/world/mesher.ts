@@ -1,4 +1,4 @@
-import { BLOCKS, isOpaque, isTransparent, BlockId } from '../blocks/types';
+import { BLOCKS, isOpaque, BlockId } from '../blocks/types';
 import { tileUV } from '../blocks/textures';
 import { CHUNK_HEIGHT, CHUNK_SIZE, type Chunk } from './chunk';
 
@@ -10,8 +10,14 @@ export interface MeshData {
   indices: Uint32Array;
 }
 
+export interface ChunkMeshes {
+  opaque: MeshData;
+  transparent: MeshData;
+}
+
 type GetBlock = (x: number, y: number, z: number) => number;
 
+/** Corners ordered CCW when viewed from outside (along normal) for FrontSide. */
 const FACES: {
   dir: [number, number, number];
   corners: [number, number, number][];
@@ -20,67 +26,37 @@ const FACES: {
 }[] = [
   {
     dir: [0, 1, 0],
-    corners: [
-      [0, 1, 0],
-      [1, 1, 0],
-      [1, 1, 1],
-      [0, 1, 1],
-    ],
+    corners: [[0, 1, 1], [1, 1, 1], [1, 1, 0], [0, 1, 0]],
     normal: [0, 1, 0],
     tile: 'top',
   },
   {
     dir: [0, -1, 0],
-    corners: [
-      [0, 0, 1],
-      [1, 0, 1],
-      [1, 0, 0],
-      [0, 0, 0],
-    ],
+    corners: [[0, 0, 0], [1, 0, 0], [1, 0, 1], [0, 0, 1]],
     normal: [0, -1, 0],
     tile: 'bottom',
   },
   {
     dir: [0, 0, 1],
-    corners: [
-      [0, 0, 1],
-      [0, 1, 1],
-      [1, 1, 1],
-      [1, 0, 1],
-    ],
+    corners: [[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]],
     normal: [0, 0, 1],
     tile: 'side',
   },
   {
     dir: [0, 0, -1],
-    corners: [
-      [1, 0, 0],
-      [1, 1, 0],
-      [0, 1, 0],
-      [0, 0, 0],
-    ],
+    corners: [[1, 0, 0], [0, 0, 0], [0, 1, 0], [1, 1, 0]],
     normal: [0, 0, -1],
     tile: 'side',
   },
   {
     dir: [1, 0, 0],
-    corners: [
-      [1, 0, 1],
-      [1, 1, 1],
-      [1, 1, 0],
-      [1, 0, 0],
-    ],
+    corners: [[1, 0, 1], [1, 0, 0], [1, 1, 0], [1, 1, 1]],
     normal: [1, 0, 0],
     tile: 'side',
   },
   {
     dir: [-1, 0, 0],
-    corners: [
-      [0, 0, 0],
-      [0, 1, 0],
-      [0, 1, 1],
-      [0, 0, 1],
-    ],
+    corners: [[0, 0, 0], [0, 0, 1], [0, 1, 1], [0, 1, 0]],
     normal: [-1, 0, 0],
     tile: 'side',
   },
@@ -94,7 +70,21 @@ function aoCorner(get: GetBlock, x: number, y: number, z: number, dx: number, dy
   return 3 - (side1 + side2 + corner);
 }
 
-export function meshChunk(chunk: Chunk, getWorld: GetBlock): MeshData {
+function emptyMesh(): MeshData {
+  return {
+    positions: new Float32Array(0),
+    normals: new Float32Array(0),
+    uvs: new Float32Array(0),
+    colors: new Float32Array(0),
+    indices: new Uint32Array(0),
+  };
+}
+
+function buildMesh(
+  chunk: Chunk,
+  getWorld: GetBlock,
+  transparentPass: boolean,
+): MeshData {
   const positions: number[] = [];
   const normals: number[] = [];
   const uvs: number[] = [];
@@ -112,6 +102,7 @@ export function meshChunk(chunk: Chunk, getWorld: GetBlock): MeshData {
         if (id === BlockId.Air) continue;
         const def = BLOCKS[id];
         if (!def) continue;
+        if (transparentPass !== def.transparent) continue;
         const wx = ox + lx;
         const wz = oz + lz;
 
@@ -121,12 +112,14 @@ export function meshChunk(chunk: Chunk, getWorld: GetBlock): MeshData {
           const nz = wz + face.dir[2];
           const neighbor = getWorld(nx, ny, nz);
           const nDef = BLOCKS[neighbor];
-          // Cull face if neighbor is opaque, or same liquid
-          if (nDef && nDef.opaque) continue;
+
+          // Cull against opaque neighbors
+          if (nDef?.opaque) continue;
+          // Same liquid / same transparent id
           if (def.liquid && neighbor === id) continue;
-          if (!def.opaque && neighbor === id) continue;
-          // Don't draw opaque face against transparent unless air/liquid
-          if (!isTransparent(neighbor) && neighbor !== BlockId.Air) continue;
+          if (def.transparent && neighbor === id) continue;
+          // Opaque against non-air non-transparent (shouldn't happen if opaque check works)
+          if (!def.transparent && nDef && !nDef.transparent && !nDef.liquid) continue;
 
           const tileIdx = def.tiles[face.tile];
           const uv = tileUV(tileIdx);
@@ -135,36 +128,55 @@ export function meshChunk(chunk: Chunk, getWorld: GetBlock): MeshData {
 
           const aos: number[] = [];
           for (const c of face.corners) {
-            const ax = face.dir[0] !== 0 ? face.dir[0] : c[0] === 0 ? -1 : 1;
-            const ay = face.dir[1] !== 0 ? face.dir[1] : c[1] === 0 ? -1 : 1;
-            const az = face.dir[2] !== 0 ? face.dir[2] : c[2] === 0 ? -1 : 1;
-            // Simplified AO relative to face
             let ao = 3;
             if (face.dir[1] !== 0) {
-              ao = aoCorner(getWorld, wx + c[0], y + (face.dir[1] > 0 ? 1 : -1), wz + c[2], c[0] === 0 ? -1 : 1, 0, c[2] === 0 ? -1 : 1);
+              ao = aoCorner(
+                getWorld,
+                wx + c[0],
+                y + (face.dir[1] > 0 ? 1 : -1),
+                wz + c[2],
+                c[0] === 0 ? -1 : 1,
+                0,
+                c[2] === 0 ? -1 : 1,
+              );
             } else if (face.dir[0] !== 0) {
-              ao = aoCorner(getWorld, wx + face.dir[0], y + c[1], wz + c[2], 0, c[1] === 0 ? -1 : 1, c[2] === 0 ? -1 : 1);
+              ao = aoCorner(
+                getWorld,
+                wx + face.dir[0],
+                y + c[1],
+                wz + c[2],
+                0,
+                c[1] === 0 ? -1 : 1,
+                c[2] === 0 ? -1 : 1,
+              );
             } else {
-              ao = aoCorner(getWorld, wx + c[0], y + c[1], wz + face.dir[2], c[0] === 0 ? -1 : 1, c[1] === 0 ? -1 : 1, 0);
+              ao = aoCorner(
+                getWorld,
+                wx + c[0],
+                y + c[1],
+                wz + face.dir[2],
+                c[0] === 0 ? -1 : 1,
+                c[1] === 0 ? -1 : 1,
+                0,
+              );
             }
             aos.push(ao / 3);
-
             positions.push(wx + c[0], y + c[1], wz + c[2]);
             normals.push(face.normal[0], face.normal[1], face.normal[2]);
           }
-          // UVs for quad
-          uvs.push(uv.u0, uv.v1, uv.u0, uv.v0, uv.u1, uv.v0, uv.u1, uv.v1);
+          // UVs match corner order: bl, br, tr, tl for first face style — map consistently
+          uvs.push(uv.u0, uv.v1, uv.u1, uv.v1, uv.u1, uv.v0, uv.u0, uv.v0);
           for (let i = 0; i < 4; i++) {
             const a = aos[i] * shade;
-            const alpha = def.transparent ? (def.liquid ? 0.65 : 0.85) : 1;
+            const alpha = def.transparent ? (def.liquid ? 0.55 : 0.75) : 1;
             colors.push(a, a, a, alpha);
           }
 
-          // CCW winding for FrontSide (viewed from outside along normal)
+          // Triangles 0-1-2 and 0-2-3 (CCW)
           if (aos[0] + aos[2] > aos[1] + aos[3]) {
-            indices.push(vBase, vBase + 2, vBase + 1, vBase, vBase + 3, vBase + 2);
+            indices.push(vBase, vBase + 1, vBase + 2, vBase, vBase + 2, vBase + 3);
           } else {
-            indices.push(vBase, vBase + 2, vBase + 1, vBase, vBase + 3, vBase + 2);
+            indices.push(vBase + 1, vBase + 2, vBase + 3, vBase + 1, vBase + 3, vBase);
           }
           vBase += 4;
         }
@@ -172,11 +184,19 @@ export function meshChunk(chunk: Chunk, getWorld: GetBlock): MeshData {
     }
   }
 
+  if (!positions.length) return emptyMesh();
   return {
     positions: new Float32Array(positions),
     normals: new Float32Array(normals),
     uvs: new Float32Array(uvs),
     colors: new Float32Array(colors),
     indices: new Uint32Array(indices),
+  };
+}
+
+export function meshChunk(chunk: Chunk, getWorld: GetBlock): ChunkMeshes {
+  return {
+    opaque: buildMesh(chunk, getWorld, false),
+    transparent: buildMesh(chunk, getWorld, true),
   };
 }

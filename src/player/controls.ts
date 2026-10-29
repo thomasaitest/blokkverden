@@ -8,14 +8,16 @@ export interface InputState {
   sprint: boolean;
   breakHeld: boolean;
   placePressed: boolean;
-  hotbarSlot: number; // 0-8
+  interactPressed: boolean;
+  inventoryPressed: boolean;
+  hotbarSlot: number;
   pointerLocked: boolean;
   lookDX: number;
   lookDY: number;
-  // Touch extras
   touchMoveX: number;
   touchMoveY: number;
   touchLookActive: boolean;
+  inventoryOpen: boolean;
 }
 
 export function createInput(): InputState {
@@ -29,6 +31,8 @@ export function createInput(): InputState {
     sprint: false,
     breakHeld: false,
     placePressed: false,
+    interactPressed: false,
+    inventoryPressed: false,
     hotbarSlot: 0,
     pointerLocked: false,
     lookDX: 0,
@@ -36,6 +40,7 @@ export function createInput(): InputState {
     touchMoveX: 0,
     touchMoveY: 0,
     touchLookActive: false,
+    inventoryOpen: false,
   };
 }
 
@@ -43,12 +48,29 @@ export function bindDesktopControls(
   canvas: HTMLElement,
   input: InputState,
   onSlot: (s: number) => void,
+  onToggleInventory: () => void,
 ): () => void {
   const down = new Set<string>();
+  let lastW = 0;
 
   const onKeyDown = (e: KeyboardEvent) => {
-    if (e.repeat) return;
+    if (e.code === 'KeyE') {
+      e.preventDefault();
+      if (!e.repeat) onToggleInventory();
+      return;
+    }
+    if (input.inventoryOpen) return;
+    if (e.repeat) {
+      down.add(e.code);
+      sync();
+      return;
+    }
     down.add(e.code);
+    if (e.code === 'KeyW' || e.code === 'ArrowUp') {
+      const now = performance.now();
+      if (now - lastW < 300) input.sprint = true;
+      lastW = now;
+    }
     sync();
     if (e.code >= 'Digit1' && e.code <= 'Digit9') {
       const s = Number(e.code.slice(5)) - 1;
@@ -59,6 +81,10 @@ export function bindDesktopControls(
   };
   const onKeyUp = (e: KeyboardEvent) => {
     down.delete(e.code);
+    if (e.code === 'KeyW' || e.code === 'ArrowUp') {
+      // keep sprint until release of forward? MC keeps until stop. Clear when W up.
+      input.sprint = false;
+    }
     sync();
   };
   const sync = () => {
@@ -68,10 +94,15 @@ export function bindDesktopControls(
     input.right = down.has('KeyD') || down.has('ArrowRight');
     input.jump = down.has('Space');
     input.sneak = down.has('ShiftLeft') || down.has('ShiftRight');
-    input.sprint = down.has('ControlLeft') || down.has('KeyR');
+    // Ctrl still works as alt sprint
+    if (down.has('ControlLeft') || down.has('ControlRight')) input.sprint = true;
+    if (!input.forward && !down.has('ControlLeft') && !down.has('ControlRight')) {
+      // don't clear double-tap sprint while still holding W — handled on keyup W
+    }
   };
 
   const onMouseDown = (e: MouseEvent) => {
+    if (input.inventoryOpen) return;
     if (!input.pointerLocked) {
       canvas.requestPointerLock();
       return;
@@ -84,7 +115,7 @@ export function bindDesktopControls(
   };
   const onContext = (e: Event) => e.preventDefault();
   const onMove = (e: MouseEvent) => {
-    if (!input.pointerLocked) return;
+    if (!input.pointerLocked || input.inventoryOpen) return;
     input.lookDX += e.movementX;
     input.lookDY += e.movementY;
   };
@@ -92,6 +123,7 @@ export function bindDesktopControls(
     input.pointerLocked = document.pointerLockElement === canvas;
   };
   const onWheel = (e: WheelEvent) => {
+    if (input.inventoryOpen) return;
     e.preventDefault();
     const dir = e.deltaY > 0 ? 1 : -1;
     input.hotbarSlot = (input.hotbarSlot + dir + 9) % 9;

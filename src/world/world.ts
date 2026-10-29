@@ -1,8 +1,8 @@
 import { BlockId, isSolid } from '../blocks/types';
 import { Chunk, CHUNK_HEIGHT, CHUNK_SIZE, chunkKey, SEA_LEVEL } from './chunk';
-import { meshChunk, type MeshData } from './mesher';
+import { meshChunk, type ChunkMeshes } from './mesher';
 import { SeededNoise } from './noise';
-import { generateChunk } from './terrain';
+import { generateTerrain, placeTreesForChunk } from './terrain';
 
 export const VIEW_RADIUS = 4;
 
@@ -10,8 +10,10 @@ export class World {
   readonly seed: number;
   readonly noise: SeededNoise;
   readonly chunks = new Map<string, Chunk>();
-  readonly meshes = new Map<string, MeshData>();
+  readonly meshes = new Map<string, ChunkMeshes>();
   private dirtyMeshes = new Set<string>();
+  /** Pending leaf/log decorations for chunks not yet generated */
+  private pending = new Map<string, { lx: number; y: number; lz: number; id: number }[]>();
 
   constructor(seed = 42) {
     this.seed = seed;
@@ -22,20 +24,61 @@ export class World {
     return this.chunks.get(chunkKey(cx, cz));
   }
 
+  private setAbs(wx: number, y: number, wz: number, id: number): void {
+    if (y < 0 || y >= CHUNK_HEIGHT) return;
+    const cx = Math.floor(wx / CHUNK_SIZE);
+    const cz = Math.floor(wz / CHUNK_SIZE);
+    const lx = wx - cx * CHUNK_SIZE;
+    const lz = wz - cz * CHUNK_SIZE;
+    const key = chunkKey(cx, cz);
+    const c = this.chunks.get(key);
+    if (!c || !c.generated) {
+      let list = this.pending.get(key);
+      if (!list) {
+        list = [];
+        this.pending.set(key, list);
+      }
+      list.push({ lx, y, lz, id });
+      return;
+    }
+    const cur = c.get(lx, y, lz);
+    // Logs replace air/leaves; leaves only fill air
+    if (id === BlockId.Log) {
+      if (cur !== BlockId.Air && cur !== BlockId.Leaves) return;
+    } else if (id === BlockId.Leaves) {
+      if (cur !== BlockId.Air) return;
+    } else if (cur !== BlockId.Air) {
+      return;
+    }
+    c.set(lx, y, lz, id);
+    this.dirtyMeshes.add(key);
+  }
+
+  private applyPending(c: Chunk): void {
+    const key = chunkKey(c.cx, c.cz);
+    const list = this.pending.get(key);
+    if (!list) return;
+    for (const p of list) {
+      const cur = c.get(p.lx, p.y, p.lz);
+      if (cur === BlockId.Air) c.set(p.lx, p.y, p.lz, p.id);
+      else if (p.id === BlockId.Log && cur === BlockId.Leaves) c.set(p.lx, p.y, p.lz, p.id);
+    }
+    this.pending.delete(key);
+    c.dirty = true;
+  }
+
   ensureChunk(cx: number, cz: number): Chunk {
     const key = chunkKey(cx, cz);
     let c = this.chunks.get(key);
     if (!c) {
       c = new Chunk(cx, cz);
-      generateChunk(c, this.noise);
+      generateTerrain(c, this.noise);
       this.chunks.set(key, c);
+      this.applyPending(c);
+      placeTreesForChunk(c, this.noise, (wx, y, wz, id) => this.setAbs(wx, y, wz, id));
       this.dirtyMeshes.add(key);
-      // Neighbors may need remesh for boundary faces
       for (const [dx, dz] of [
-        [1, 0],
-        [-1, 0],
-        [0, 1],
-        [0, -1],
+        [1, 0], [-1, 0], [0, 1], [0, -1],
       ] as const) {
         const nk = chunkKey(cx + dx, cz + dz);
         if (this.chunks.has(nk)) this.dirtyMeshes.add(nk);
@@ -47,9 +90,6 @@ export class World {
   worldToChunk(wx: number, wz: number): { cx: number; cz: number; lx: number; lz: number } {
     const cx = Math.floor(wx / CHUNK_SIZE);
     const cz = Math.floor(wz / CHUNK_SIZE);
-    const lx = ((Math.floor(wx) % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
-    const lz = ((Math.floor(wz) % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
-    // Fix for negative coords
     const flx = Math.floor(wx) - cx * CHUNK_SIZE;
     const flz = Math.floor(wz) - cz * CHUNK_SIZE;
     return { cx, cz, lx: flx, lz: flz };
@@ -85,7 +125,6 @@ export class World {
         this.ensureChunk(pcx + dx, pcz + dz);
       }
     }
-    // Unload far chunks
     for (const [key, c] of this.chunks) {
       const ddx = c.cx - pcx;
       const ddz = c.cz - pcz;
@@ -127,7 +166,6 @@ export class World {
   }
 
   serializeModified(): { cx: number; cz: number; blocks: number[] }[] {
-    // Save all loaded chunks (simple for it1)
     return [...this.chunks.values()].map((c) => c.toJSON());
   }
 
@@ -135,6 +173,7 @@ export class World {
     this.chunks.clear();
     this.meshes.clear();
     this.dirtyMeshes.clear();
+    this.pending.clear();
     for (const d of data) {
       const c = Chunk.fromJSON(d);
       this.chunks.set(chunkKey(c.cx, c.cz), c);

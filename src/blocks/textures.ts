@@ -52,18 +52,15 @@ export function createAtlasCanvas(): HTMLCanvasElement {
   const img = ctx.createImageData(ATLAS_SIZE, ATLAS_SIZE);
   const d = img.data;
 
-  // 0 grass top
-  fillTile(d, 0, (lx, ly, rnd) => {
+  fillTile(d, 0, (_lx, _ly, rnd) => {
     const v = 90 + Math.floor(rnd * 40);
     return [40 + Math.floor(rnd * 20), v, 30 + Math.floor(rnd * 15), 255];
   });
-  // 1 dirt
-  fillTile(d, 1, (lx, ly, rnd) => {
+  fillTile(d, 1, (_lx, _ly, rnd) => {
     const v = 90 + Math.floor(rnd * 35);
     return [v, 60 + Math.floor(rnd * 20), 30 + Math.floor(rnd * 15), 255];
   });
-  // 2 grass side
-  fillTile(d, 2, (lx, ly, rnd) => {
+  fillTile(d, 2, (_lx, ly, rnd) => {
     if (ly < 3) {
       const v = 90 + Math.floor(rnd * 40);
       return [40, v, 30, 255];
@@ -71,18 +68,15 @@ export function createAtlasCanvas(): HTMLCanvasElement {
     const v = 90 + Math.floor(rnd * 35);
     return [v, 60, 30, 255];
   });
-  // 3 stone
   fillTile(d, 3, (_lx, _ly, rnd) => {
     const v = 110 + Math.floor(rnd * 40);
     return [v, v, v + 5, 255];
   });
-  // 4 cobble
   fillTile(d, 4, (lx, ly, rnd) => {
     const seam = lx % 4 === 0 || ly % 4 === 0;
     const v = seam ? 70 : 100 + Math.floor(rnd * 45);
     return [v, v, v, 255];
   });
-  // 5 log top
   fillTile(d, 5, (lx, ly, rnd) => {
     const cx = lx - 7.5;
     const cy = ly - 7.5;
@@ -90,44 +84,62 @@ export function createAtlasCanvas(): HTMLCanvasElement {
     if (r2 < 20) return [160 + Math.floor(rnd * 20), 120, 60, 255];
     return [90, 55, 25, 255];
   });
-  // 6 log side
-  fillTile(d, 6, (lx, ly, rnd) => {
+  fillTile(d, 6, (_lx, ly, rnd) => {
     const stripe = Math.sin(ly * 0.8) * 8;
     const v = 100 + stripe + rnd * 15;
     return [v, v * 0.6, v * 0.3, 255];
   });
-  // 7 planks
-  fillTile(d, 7, (lx, ly, rnd) => {
+  fillTile(d, 7, (_lx, ly, rnd) => {
     const seam = ly % 4 === 0;
     const v = seam ? 120 : 170 + Math.floor(rnd * 25);
     return [v, v * 0.75, v * 0.4, 255];
   });
-  // 8 leaves
-  fillTile(d, 8, (lx, ly, rnd) => {
+  fillTile(d, 8, (_lx, _ly, rnd) => {
     if (rnd < 0.25) return [0, 0, 0, 0];
     const v = 50 + Math.floor(rnd * 50);
     return [30, v + 40, 25, 220];
   });
-  // 9 sand
   fillTile(d, 9, (_lx, _ly, rnd) => {
     const v = 200 + Math.floor(rnd * 35);
     return [v, v - 20, 120 + Math.floor(rnd * 20), 255];
   });
-  // 10 glass
-  fillTile(d, 10, (lx, ly, rnd) => {
+  fillTile(d, 10, (lx, ly) => {
     const edge = lx === 0 || ly === 0 || lx === 15 || ly === 15;
     if (edge) return [180, 220, 230, 180];
     return [200, 230, 240, 60];
   });
-  // 11 water
-  fillTile(d, 11, (lx, ly, rnd) => {
+  fillTile(d, 11, (_lx, _ly, rnd) => {
     const v = 60 + Math.floor(rnd * 40);
     return [30, 80 + v * 0.3, 180 + Math.floor(rnd * 40), 160];
   });
-  // 12–15 unused dark
-  for (let t = 12; t < 16; t++) {
-    fillTile(d, t, () => [20, 20, 20, 255]);
-  }
+  // 12 crafting table side/top
+  fillTile(d, 12, (lx, ly, rnd) => {
+    if (ly < 2 || ly > 13 || lx < 2 || lx > 13) {
+      const v = 140 + rnd * 20;
+      return [v, v * 0.7, v * 0.35, 255];
+    }
+    // tool grid hint
+    if ((lx === 5 || lx === 10 || ly === 5 || ly === 10) && lx > 2 && lx < 13) return [80, 50, 20, 255];
+    return [180 + rnd * 20, 140, 70, 255];
+  });
+  // 13 stick
+  fillTile(d, 13, (lx, ly) => {
+    const on = Math.abs(lx - ly) <= 1 && lx >= 2 && lx <= 13;
+    if (on) return [160, 110, 50, 255];
+    return [0, 0, 0, 0];
+  });
+  // 14 wood tool
+  fillTile(d, 14, (lx, ly) => {
+    if (ly >= 10 && lx >= 6 && lx <= 9) return [140, 90, 40, 255];
+    if (ly >= 3 && ly <= 9 && lx >= 4 && lx <= 11) return [180, 140, 70, 255];
+    return [0, 0, 0, 0];
+  });
+  // 15 stone tool
+  fillTile(d, 15, (lx, ly) => {
+    if (ly >= 10 && lx >= 6 && lx <= 9) return [140, 90, 40, 255];
+    if (ly >= 3 && ly <= 9 && lx >= 4 && lx <= 11) return [130, 130, 135, 255];
+    return [0, 0, 0, 0];
+  });
 
   ctx.putImageData(img, 0, 0);
   return canvas;

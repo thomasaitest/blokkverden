@@ -1,25 +1,32 @@
 import * as THREE from 'three';
 import { createAtlasCanvas } from '../blocks/textures';
-import type { MeshData } from '../world/mesher';
+import type { ChunkMeshes, MeshData } from '../world/mesher';
 import type { World } from '../world/world';
 import type { PlayerState } from '../player/physics';
 import { EYE_HEIGHT } from '../player/physics';
 import type { Hit } from '../player/raycast';
+import type { DropEntity } from '../world/drops';
+import { ITEMS } from '../items/types';
+import { tileUV, ATLAS_SIZE } from '../blocks/textures';
 
 export class GameRenderer {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene: THREE.Scene;
   readonly camera: THREE.PerspectiveCamera;
   readonly canvas: HTMLCanvasElement;
-  private chunkMeshes = new Map<string, THREE.Mesh>();
-  private material: THREE.MeshLambertMaterial;
-  private waterMaterial: THREE.MeshLambertMaterial;
+  private opaqueMeshes = new Map<string, THREE.Mesh>();
+  private transparentMeshes = new Map<string, THREE.Mesh>();
+  private opaqueMat: THREE.MeshLambertMaterial;
+  private transparentMat: THREE.MeshLambertMaterial;
   private sun: THREE.DirectionalLight;
   private ambient: THREE.AmbientLight;
   private hemi: THREE.HemisphereLight;
   private outline: THREE.LineSegments;
   private skyColor = new THREE.Color();
-  private dayTime = 0.25; // 0–1, 0.25 = morning
+  private dayTime = 0.25;
+  private atlasCanvas: HTMLCanvasElement;
+  private dropGroup = new THREE.Group();
+  private dropPool: THREE.Mesh[] = [];
 
   constructor(container: HTMLElement) {
     this.canvas = document.createElement('canvas');
@@ -35,31 +42,31 @@ export class GameRenderer {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.sortObjects = true;
 
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 256);
     this.scene.fog = new THREE.Fog(0x87b5e0, 40, 110);
 
-    const atlas = createAtlasCanvas();
-    const tex = new THREE.CanvasTexture(atlas);
+    this.atlasCanvas = createAtlasCanvas();
+    const tex = new THREE.CanvasTexture(this.atlasCanvas);
     tex.magFilter = THREE.NearestFilter;
     tex.minFilter = THREE.NearestFilter;
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.flipY = false;
 
-    this.material = new THREE.MeshLambertMaterial({
+    this.opaqueMat = new THREE.MeshLambertMaterial({
       map: tex,
       vertexColors: true,
-      alphaTest: 0.1,
-      side: THREE.DoubleSide,
+      side: THREE.FrontSide,
     });
-    this.waterMaterial = new THREE.MeshLambertMaterial({
+    this.transparentMat = new THREE.MeshLambertMaterial({
       map: tex,
       vertexColors: true,
       transparent: true,
-      opacity: 0.7,
-      side: THREE.DoubleSide,
       depthWrite: false,
+      side: THREE.FrontSide,
+      alphaTest: 0.05,
     });
 
     this.ambient = new THREE.AmbientLight(0xffffff, 0.45);
@@ -68,7 +75,6 @@ export class GameRenderer {
     this.sun.position.set(50, 80, 30);
     this.scene.add(this.ambient, this.hemi, this.sun);
 
-    // Outline for targeted block
     const edges = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.002, 1.002, 1.002));
     this.outline = new THREE.LineSegments(
       edges,
@@ -76,8 +82,13 @@ export class GameRenderer {
     );
     this.outline.visible = false;
     this.scene.add(this.outline);
+    this.scene.add(this.dropGroup);
 
     window.addEventListener('resize', () => this.onResize());
+  }
+
+  getAtlas(): HTMLCanvasElement {
+    return this.atlasCanvas;
   }
 
   onResize(): void {
@@ -88,24 +99,16 @@ export class GameRenderer {
 
   setDayTime(t: number): void {
     this.dayTime = ((t % 1) + 1) % 1;
-    // sun angle: 0 = midnight, 0.25 = sunrise, 0.5 = noon
     const angle = this.dayTime * Math.PI * 2 - Math.PI / 2;
     const sunY = Math.sin(angle);
     const sunX = Math.cos(angle);
     this.sun.position.set(sunX * 100, sunY * 100, 40);
     const day = Math.max(0, sunY);
-    const night = 1 - day;
     this.sun.intensity = 0.25 + day * 0.9;
     this.ambient.intensity = 0.2 + day * 0.35;
-
-    if (day > 0.2) {
-      this.skyColor.setRGB(0.53, 0.71, 0.88);
-    } else if (day > 0) {
-      // sunrise/sunset
-      this.skyColor.setRGB(0.85, 0.45 + day, 0.35);
-    } else {
-      this.skyColor.setRGB(0.05, 0.06, 0.12);
-    }
+    if (day > 0.2) this.skyColor.setRGB(0.53, 0.71, 0.88);
+    else if (day > 0) this.skyColor.setRGB(0.85, 0.45 + day, 0.35);
+    else this.skyColor.setRGB(0.05, 0.06, 0.12);
     this.renderer.setClearColor(this.skyColor);
     (this.scene.fog as THREE.Fog).color.copy(this.skyColor);
     this.hemi.intensity = 0.15 + day * 0.3;
@@ -117,20 +120,27 @@ export class GameRenderer {
 
   syncChunks(world: World): void {
     for (const [key, data] of world.meshes) {
-      this.upsertMesh(key, data);
+      this.upsert(key, data);
     }
-    for (const key of this.chunkMeshes.keys()) {
+    for (const key of [...this.opaqueMeshes.keys()]) {
       if (!world.meshes.has(key)) {
-        const m = this.chunkMeshes.get(key)!;
-        this.scene.remove(m);
-        m.geometry.dispose();
-        this.chunkMeshes.delete(key);
+        this.removeKey(key);
       }
     }
   }
 
-  private upsertMesh(key: string, data: MeshData): void {
-    let mesh = this.chunkMeshes.get(key);
+  private removeKey(key: string): void {
+    for (const map of [this.opaqueMeshes, this.transparentMeshes]) {
+      const m = map.get(key);
+      if (m) {
+        this.scene.remove(m);
+        m.geometry.dispose();
+        map.delete(key);
+      }
+    }
+  }
+
+  private geoFrom(data: MeshData): THREE.BufferGeometry {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(data.positions, 3));
     geo.setAttribute('normal', new THREE.BufferAttribute(data.normals, 3));
@@ -138,16 +148,40 @@ export class GameRenderer {
     geo.setAttribute('color', new THREE.BufferAttribute(data.colors, 4));
     geo.setIndex(new THREE.BufferAttribute(data.indices, 1));
     geo.computeBoundingSphere();
+    return geo;
+  }
 
-    if (mesh) {
-      mesh.geometry.dispose();
-      mesh.geometry = geo;
-    } else {
-      mesh = new THREE.Mesh(geo, this.material);
-      mesh.frustumCulled = true;
-      this.chunkMeshes.set(key, mesh);
-      this.scene.add(mesh);
-    }
+  private upsert(key: string, data: ChunkMeshes): void {
+    const put = (
+      map: Map<string, THREE.Mesh>,
+      meshData: MeshData,
+      mat: THREE.Material,
+      renderOrder: number,
+    ) => {
+      if (meshData.indices.length === 0) {
+        const old = map.get(key);
+        if (old) {
+          this.scene.remove(old);
+          old.geometry.dispose();
+          map.delete(key);
+        }
+        return;
+      }
+      let mesh = map.get(key);
+      const geo = this.geoFrom(meshData);
+      if (mesh) {
+        mesh.geometry.dispose();
+        mesh.geometry = geo;
+      } else {
+        mesh = new THREE.Mesh(geo, mat);
+        mesh.frustumCulled = true;
+        mesh.renderOrder = renderOrder;
+        map.set(key, mesh);
+        this.scene.add(mesh);
+      }
+    };
+    put(this.opaqueMeshes, data.opaque, this.opaqueMat, 0);
+    put(this.transparentMeshes, data.transparent, this.transparentMat, 2);
   }
 
   updateCamera(p: PlayerState): void {
@@ -165,7 +199,50 @@ export class GameRenderer {
     this.outline.position.set(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
   }
 
+  syncDrops(drops: DropEntity[]): void {
+    while (this.dropPool.length < drops.length) {
+      const g = new THREE.BoxGeometry(0.25, 0.25, 0.25);
+      const m = new THREE.MeshLambertMaterial({ color: 0xffffff });
+      const mesh = new THREE.Mesh(g, m);
+      this.dropPool.push(mesh);
+      this.dropGroup.add(mesh);
+    }
+    for (let i = 0; i < this.dropPool.length; i++) {
+      const mesh = this.dropPool[i];
+      if (i >= drops.length) {
+        mesh.visible = false;
+        continue;
+      }
+      const d = drops[i];
+      mesh.visible = true;
+      mesh.position.set(d.x, d.y + Math.sin(d.age * 3) * 0.05, d.z);
+      mesh.rotation.y = d.age * 2;
+      const def = ITEMS[d.stack.id];
+      const tile = def?.iconTile ?? 1;
+      // tint by hashing tile
+      const col = new THREE.Color().setHSL((tile * 0.07) % 1, 0.45, 0.55);
+      (mesh.material as THREE.MeshLambertMaterial).color = col;
+    }
+  }
+
   render(): void {
     this.renderer.render(this.scene, this.camera);
   }
+}
+
+export function drawItemIcon(
+  ctx: CanvasRenderingContext2D,
+  atlas: HTMLCanvasElement,
+  itemId: number,
+  dx: number,
+  dy: number,
+  size: number,
+): void {
+  const def = ITEMS[itemId];
+  const tile = def?.iconTile ?? 1;
+  const uv = tileUV(tile);
+  const sx = uv.u0 * ATLAS_SIZE;
+  const sy = uv.v0 * ATLAS_SIZE;
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(atlas, sx, sy, 16, 16, dx, dy, size, size);
 }

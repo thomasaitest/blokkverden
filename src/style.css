@@ -183,3 +183,109 @@ canvas#game {
 @media (pointer: fine) {
   #touch-controls { display: none !important; }
 }
+
+#vitals {
+  position: fixed;
+  left: 50%;
+  bottom: 72px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 28px;
+  z-index: 10;
+  pointer-events: none;
+  text-shadow: 0 1px 2px #000;
+  font-size: 16px;
+}
+#hearts .heart.full, #hearts .heart.half { color: #e33; }
+#hearts .heart.empty { color: #422; opacity: 0.7; }
+#hunger .drum.full, #hunger .drum.half { filter: none; }
+#hunger .drum.empty { opacity: 0.35; }
+
+.stack-count {
+  position: absolute;
+  bottom: 1px; right: 3px;
+  font-size: 11px;
+  color: #fff;
+  text-shadow: 0 1px 1px #000;
+  font-weight: 700;
+}
+.slot-num {
+  position: absolute;
+  top: 1px; left: 3px;
+  font-size: 9px;
+  color: #aaa;
+}
+.dur-bar {
+  position: absolute;
+  left: 3px; right: 3px; bottom: 2px;
+  height: 3px;
+  background: #333;
+}
+.dur-bar i {
+  display: block;
+  height: 100%;
+  background: #5c5;
+}
+
+#inv-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  pointer-events: auto;
+}
+.inv-panel {
+  background: #c6c6c6;
+  border: 3px solid #373737;
+  padding: 14px 16px 18px;
+  border-radius: 4px;
+  min-width: 360px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+  color: #222;
+  font-size: 13px;
+}
+.inv-title { font-weight: 700; margin-bottom: 10px; }
+.inv-title small { font-weight: 400; opacity: 0.7; }
+.inv-label { margin: 10px 0 4px; font-weight: 600; }
+.craft-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.craft-grid {
+  display: grid;
+  gap: 3px;
+}
+.craft-grid.g2 { grid-template-columns: repeat(2, 44px); }
+.craft-grid.g3 { grid-template-columns: repeat(3, 44px); }
+.craft-arrow { font-size: 22px; color: #444; }
+.craft-out { width: 48px; height: 48px; }
+.inv-grid {
+  display: grid;
+  grid-template-columns: repeat(9, 44px);
+  gap: 3px;
+}
+.inv-hotbar {
+  display: flex;
+  gap: 3px;
+}
+#inv-overlay .hb-slot {
+  width: 44px;
+  height: 44px;
+  background: #8b8b8b;
+  border: 2px solid #373737;
+  pointer-events: auto;
+  cursor: pointer;
+}
+#inv-cursor {
+  position: fixed;
+  width: 40px;
+  height: 40px;
+  pointer-events: none;
+  z-index: 60;
+  display: none;
+}

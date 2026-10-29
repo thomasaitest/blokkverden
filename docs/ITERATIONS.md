@@ -46,3 +46,45 @@ Original voxel-sandkasse. Ingen Mojang-assets.
 10. feat: flere biomer (skog, ørken, snø) + underjordisk stein/malm-start
 
 Media: https://thomasaitest.github.io/blokkverden/progress/it1/
+
+## Iterasjon 2 (2026-10-29)
+
+### Bygget
+1. fix: robust Y-snap + step-up (~1 blokk) og fallskade
+2. fix: trær over chunk-grenser (pending decorations + setAbs)
+3. fix: face-culling med FrontSide (fjernet DoubleSide); separat opaque/transparent mesh
+4. Transparent depthWrite=false for vann/glass/løv
+5. Inventar (E) med dra/slipp, 36 slots + hotbar
+6. Crafting 2×2 i inventar
+7. Arbeidsbenk 3×3 (høyreklikk) med oppskrifter (planker, pinner, benk, tre-/steinverktøy)
+8. Tre-/steinverktøy med mining speed + durability
+9. Item-drops i verden + plukk opp
+10. Helse/hunger-HUD + fallskade; sprint via dobbel-W (Ctrl som alt)
+
+### Playtest
+- ~56 fps, 66 chunks; inventar/arbeidsbenk/drops OK
+- Media: `public/progress/it2/`
+
+### Bugs funnet
+1. Inventar-FPS dropper mens overlay er åpent (DOM re-render)
+2. Crafting-UI støtter ikke «shift-klikk» / oppskriftsbok
+3. Drops er fargede kuber (ikke item-billboards med atlas)
+4. Vann mangler fortsatt strøm/svømming
+5. Hunger synker litt raskt ved sprint
+6. Meshing fortsatt på main thread
+7. Ingen lyd
+8. Arbeidsbenk åpnes via API i playtest — høyreklikk-mål kan miss’e hvis man holder blokk
+
+### Plan iterasjon 3 (~10)
+1. feat: fakkel + lyspropagasjon
+2. feat: biomer (skog, ørken, snø) + malm (kull/jern)
+3. feat: ovn (furnace) med smelting
+4. feat: kiste med lagring
+5. feat: vannstrøm + svømming
+6. feat: enkle mobs (gris/ku) + drops mat
+7. feat: spise mat for hunger
+8. feat: bedre drop-rendering (atlas-sprites)
+9. feat: oppskriftsbok / shift-craft
+10. fix: meshing i worker + mindre hitch
+
+Media: https://thomasaitest.github.io/blokkverden/progress/it2/

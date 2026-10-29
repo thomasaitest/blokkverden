@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { createAtlasCanvas, tileUV, ATLAS_SIZE } from '../blocks/textures';
+import { createAtlasCanvas, tileUV, ATLAS_W, ATLAS_H } from '../blocks/textures';
 import type { ChunkMeshes, MeshData } from '../world/mesher';
 import type { World } from '../world/world';
 import type { PlayerState } from '../player/physics';
@@ -532,5 +532,5 @@ export function drawItemIcon(
   const tile = def?.iconTile ?? 1;
   const uv = tileUV(tile);
   ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(atlas, uv.u0 * ATLAS_SIZE, uv.v0 * ATLAS_SIZE, 16, 16, dx, dy, size, size);
+  ctx.drawImage(atlas, uv.u0 * ATLAS_W, uv.v0 * ATLAS_H, 16, 16, dx, dy, size, size);
 }

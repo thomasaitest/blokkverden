@@ -1,0 +1,87 @@
+{
+  "bugs": [],
+  "verified": [
+    {
+      "area": "tittel-meny",
+      "ok": true,
+      "detail": "title visible"
+    },
+    {
+      "area": "hint-banner test-mode",
+      "ok": true,
+      "detail": "display=none"
+    },
+    {
+      "area": "bevegelse/kollisjon",
+      "ok": true,
+      "detail": "{\"moved\":3.5256939000000056,\"jumped\":true,\"wallDist\":-3.5969243999999994,\"pastWall\":false,\"fellThrough\":false,\"y\":30.005,\"by\":30,\"fps\":46}"
+    },
+    {
+      "area": "knus/plasser",
+      "ok": true,
+      "detail": "{\"afterBreak\":0,\"placed\":2,\"beforePlace\":0}"
+    },
+    {
+      "area": "inventar/crafting",
+      "ok": true,
+      "detail": "{\"invOpen\":true,\"crafted\":true,\"hasPlanks\":true}"
+    },
+    {
+      "area": "mobs/kamp",
+      "ok": true,
+      "detail": "{\"hp0\":20,\"hpAfter\":0,\"hits\":6,\"dead\":true}"
+    },
+    {
+      "area": "båt",
+      "ok": true,
+      "detail": "{\"exists\":true,\"y\":30.88,\"mounted\":false,\"waterlineOk\":true}"
+    },
+    {
+      "area": "dør/trapp/stige",
+      "ok": true,
+      "detail": "{\"doorToggle\":true,\"meta0\":0,\"meta1\":1,\"ladderY\":32.26971999999998,\"climbed\":true,\"stairsId\":30,\"ladderId\":33}"
+    },
+    {
+      "area": "rødtråd",
+      "ok": true,
+      "detail": "{\"ok\":true,\"leverMeta\":1,\"lampPower\":9,\"lampMeta\":1,\"dustPower\":14}"
+    },
+    {
+      "area": "portal-ramme",
+      "ok": true,
+      "detail": "{\"portalBlocks\":6,\"frameBlocks\":14,\"dim\":\"overworld\"}"
+    },
+    {
+      "area": "kreativ-fly",
+      "ok": true,
+      "detail": "{\"y0\":30.005,\"y1\":33.664838720000006,\"y2\":31.06548871999998,\"rose\":true,\"sank\":true,\"flying\":false}"
+    },
+    {
+      "area": "fiske",
+      "ok": true,
+      "detail": "{\"started\":true,\"got\":null}"
+    },
+    {
+      "area": "handel",
+      "ok": true,
+      "detail": "{\"traders\":1,\"open\":true,\"text\":\"Byttebonde\\n8× Hvete → 1× Gullbarr\\n4× Råfisk → 2× Brød\\n16× Brostein → 8× Fakkel\\n3\"}"
+    },
+    {
+      "area": "seng",
+      "ok": true,
+      "detail": "{\"slept\":true,\"dayTime\":0.28,\"bed\":{\"x\":3,\"y\":30,\"z\":9}}"
+    },
+    {
+      "area": "lagre",
+      "ok": true,
+      "detail": "{\"before\":{\"x\":3.5,\"y\":31,\"z\":9.5},\"worlds\":[\"__test__\"],\"hasTest\":true}"
+    },
+    {
+      "area": "ingen-pageerror",
+      "ok": true,
+      "detail": "none"
+    }
+  ],
+  "pageErrors": [],
+  "at": "2026-10-29T19:25:46.077Z"
+}

@@ -97,8 +97,9 @@ export function movePlayer(
   if (onLadder && !p.flying) {
     p.vy = jump ? 4.2 : (p.sneaking ? -3.5 : -0.6);
     const sin = Math.sin(p.yaw), cos = Math.cos(p.yaw);
-    p.vx = (wishX * cos - wishZ * sin) * 2.5;
-    p.vz = (wishX * sin + wishZ * cos) * 2.5;
+    // Match camera/raycast forward (-sin,-cos): wishZ=-1 is forward
+    p.vx = (wishX * cos + wishZ * sin) * 2.5;
+    p.vz = (-wishX * sin + wishZ * cos) * 2.5;
     tryAxis(world, p, h, 'x', p.vx * dt);
     tryAxis(world, p, h, 'z', p.vz * dt);
     p.y += p.vy * dt;
@@ -110,8 +111,8 @@ export function movePlayer(
   if (p.creative && p.flying) {
     const flySpeed = p.sprinting ? 12 : 6.5;
     const sin = Math.sin(p.yaw), cos = Math.cos(p.yaw);
-    p.vx = (wishX * cos - wishZ * sin) * flySpeed;
-    p.vz = (wishX * sin + wishZ * cos) * flySpeed;
+    p.vx = (wishX * cos + wishZ * sin) * flySpeed;
+    p.vz = (-wishX * sin + wishZ * cos) * flySpeed;
     p.vy = 0;
     if (jump) p.vy = flySpeed;
     if (p.sneaking) p.vy = -flySpeed;
@@ -127,8 +128,8 @@ export function movePlayer(
 
   const sin = Math.sin(p.yaw);
   const cos = Math.cos(p.yaw);
-  const fx = wishX * cos - wishZ * sin;
-  const fz = wishX * sin + wishZ * cos;
+  const fx = wishX * cos + wishZ * sin;
+  const fz = -wishX * sin + wishZ * cos;
   const len = Math.hypot(fx, fz);
   let mx = 0, mz = 0;
   if (len > 0.001) {

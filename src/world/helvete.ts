@@ -1,50 +1,80 @@
 import { BlockId } from '../blocks/types';
 import type { World } from './world';
-import { CHUNK_SIZE, SEA_LEVEL } from './chunk';
+import { CHUNK_SIZE } from './chunk';
 import { SeededNoise } from './noise';
 
-/** «Helvete» — original hellish dimension. */
-export const HELVETE_SCALE = 8; // overworld x / 8
+/** «Helvete» — original hellish dimension (generation kept; transit deferred). */
+export const HELVETE_SCALE = 8;
 
-export function isPortalFrameComplete(world: World, x: number, y: number, z: number): boolean {
-  // 4x5 frame of PortalFrame with air/portal inside
-  // Check if (x,y,z) is inside a valid frame standing in X or Z
-  return checkFrame(world, x, y, z, 1, 0) || checkFrame(world, x, y, z, 0, 1);
-}
-
-function checkFrame(world: World, x: number, y: number, z: number, dx: number, dz: number): boolean {
-  // find bottom-left of inner 2x3
-  for (let oy = -3; oy <= 0; oy++) for (let o = -2; o <= 0; o++) {
-    const ix = x + o * dx, iz = z + o * dz, iy = y + oy;
-    let ok = true;
-    for (let h = 0; h < 3; h++) for (let w = 0; w < 2; w++) {
-      const id = world.getBlock(ix + w * dx, iy + h, iz + w * dz);
-      if (id !== BlockId.Air && id !== BlockId.Portal) ok = false;
+/**
+ * Portal frame: 4 wide × 5 tall of PortalFrame, inner 2×3 air/portal.
+ * Bottom-left corner of the OUTER frame is (fx, fy, fz), facing along X (dz=0) or Z (dx=0).
+ */
+export function findPortalFrame(
+  world: World, x: number, y: number, z: number,
+): { fx: number; fy: number; fz: number; dx: number; dz: number } | null {
+  for (const [dx, dz] of [[1, 0], [0, 1]] as const) {
+    for (let oy = -4; oy <= 1; oy++) {
+      for (let o = -3; o <= 1; o++) {
+        const fx = x + o * dx;
+        const fz = z + o * dz;
+        const fy = y + oy;
+        if (isFrameAt(world, fx, fy, fz, dx, dz)) return { fx, fy, fz, dx, dz };
+      }
     }
-    // frame
-    for (let h = -1; h <= 3; h++) {
-      if (world.getBlock(ix - dx, iy + h, iz - dz) !== BlockId.PortalFrame) ok = false;
-      if (world.getBlock(ix + 2 * dx, iy + h, iz + 2 * dz) !== BlockId.PortalFrame) ok = false;
-    }
-    for (let w = -1; w <= 2; w++) {
-      if (world.getBlock(ix + w * dx, iy - 1, iz + w * dz) !== BlockId.PortalFrame) ok = false;
-      if (world.getBlock(ix + w * dx, iy + 3, iz + w * dz) !== BlockId.PortalFrame) ok = false;
-    }
-    if (ok) return true;
   }
-  return false;
+  return null;
 }
 
-export function lightPortal(world: World, x: number, y: number, z: number): boolean {
-  if (!isPortalFrameComplete(world, x, y, z)) return false;
-  // fill nearby air inside frames with portal — scan 5x5x6
-  for (let dy = -2; dy <= 4; dy++) for (let dz = -3; dz <= 3; dz++) for (let dx = -3; dx <= 3; dx++) {
-    const wx = x + dx, wy = y + dy, wz = z + dz;
-    if (world.getBlock(wx, wy, wz) === BlockId.Air && isPortalFrameComplete(world, wx, wy, wz)) {
-      world.setBlock(wx, wy, wz, BlockId.Portal);
+function isFrameAt(world: World, fx: number, fy: number, fz: number, dx: number, dz: number): boolean {
+  // Outer 4×5 must be PortalFrame on border; interior 2×3 air or portal
+  for (let h = 0; h < 5; h++) {
+    for (let w = 0; w < 4; w++) {
+      const wx = fx + w * dx;
+      const wz = fz + w * dz;
+      const wy = fy + h;
+      const border = h === 0 || h === 4 || w === 0 || w === 3;
+      const id = world.getBlock(wx, wy, wz);
+      if (border) {
+        if (id !== BlockId.PortalFrame) return false;
+      } else {
+        if (id !== BlockId.Air && id !== BlockId.Portal) return false;
+      }
     }
   }
   return true;
+}
+
+export function isPortalFrameComplete(world: World, x: number, y: number, z: number): boolean {
+  return findPortalFrame(world, x, y, z) != null;
+}
+
+export function lightPortal(world: World, x: number, y: number, z: number): boolean {
+  const frame = findPortalFrame(world, x, y, z);
+  if (!frame) return false;
+  const { fx, fy, fz, dx, dz } = frame;
+  for (let h = 1; h <= 3; h++) {
+    for (let w = 1; w <= 2; w++) {
+      const wx = fx + w * dx;
+      const wz = fz + w * dz;
+      const wy = fy + h;
+      if (world.getBlock(wx, wy, wz) === BlockId.Air) world.setBlock(wx, wy, wz, BlockId.Portal);
+    }
+  }
+  return true;
+}
+
+/** Build a lit portal standing on ground at (ox, oy, oz) facing X. Returns frame origin. */
+export function buildPortalFrame(world: World, ox: number, oy: number, oz: number): { x: number; y: number; z: number } {
+  // Clear interior + place frame: bottom at oy, top at oy+4
+  for (let h = 0; h < 5; h++) {
+    for (let w = 0; w < 4; w++) {
+      const border = h === 0 || h === 4 || w === 0 || w === 3;
+      world.setBlock(ox + w, oy + h, oz, border ? BlockId.PortalFrame : BlockId.Air);
+    }
+  }
+  lightPortal(world, ox + 1, oy + 1, oz);
+  return { x: ox, y: oy, z: oz };
 }
 
 export function generateHelveteChunk(
@@ -63,9 +93,8 @@ export function generateHelveteChunk(
       if (y < 3) id = BlockId.Stone;
       setBlock(wx, y, wz, id);
     }
-    // lava-like water at low
     if (h < 26) {
-      for (let y = h + 1; y <= 26; y++) setBlock(wx, y, wz, BlockId.Water); // visual stand-in; tint via biome fog
+      for (let y = h + 1; y <= 26; y++) setBlock(wx, y, wz, BlockId.Lava);
     }
   }
 }

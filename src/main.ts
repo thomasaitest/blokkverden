@@ -34,7 +34,7 @@ import { RedstoneSystem } from './world/redstone';
 import { ParticleSystem } from './world/particles';
 import { AchievementBus } from './ui/achievements';
 import { openCreativeInventory } from './ui/creative';
-import { lightPortal, generateHelveteChunk, type DimId } from './world/helvete';
+import { lightPortal, buildPortalFrame, type DimId } from './world/helvete';
 
 const DAY_LEN = 900; // ~15 min day cycle (MC is 20)
 
@@ -393,7 +393,46 @@ async function runGame(
     },
     give: (id: number, n = 1) => {
       inv.add({ id, count: n, durability: ITEMS[id]?.maxDurability });
+      let slot = inv.slots.findIndex((s) => s && s.id === id);
+      if (slot >= 9) {
+        // Swap into hotbar so the item is immediately usable
+        const cur = inv.selected;
+        const tmp = inv.slots[cur];
+        inv.slots[cur] = inv.slots[slot];
+        inv.slots[slot] = tmp;
+        slot = cur;
+      }
+      if (slot >= 0 && slot < 9) inv.selected = slot;
       hud.markDirty(); hud.refreshHotbar();
+    },
+    /** Break the looked-at block instantly (test helper). */
+    breakLooking: () => {
+      const hit = raycast(world, player);
+      if (!hit) return false;
+      const id = world.getBlock(hit.x, hit.y, hit.z);
+      if (id === BlockId.Air || id === BlockId.Water || id === BlockId.Lava) return false;
+      const drop = dropForBlock(id, inv.held());
+      world.setBlock(hit.x, hit.y, hit.z, BlockId.Air);
+      if (drop) drops.spawn(hit.x, hit.y, hit.z, drop);
+      markMesh();
+      return true;
+    },
+    /** Place held block on the looked-at face (test helper). */
+    placeLooking: () => {
+      const hit = raycast(world, player);
+      if (!hit) return false;
+      const taken = inv.takeOneFromSelected();
+      if (!taken) return false;
+      const placeId = ITEMS[taken.id]?.placeBlock;
+      const px = hit.x + hit.nx, py = hit.y + hit.ny, pz = hit.z + hit.nz;
+      if (placeId == null || (world.getBlock(px, py, pz) !== BlockId.Air && world.getBlock(px, py, pz) !== BlockId.Water)) {
+        inv.add(taken);
+        return false;
+      }
+      world.setBlock(px, py, pz, placeId);
+      if (player.creative) inv.add(taken);
+      markMesh();
+      return true;
     },
     clearMobs: () => { mobs.clear(); },
     spawnMob: (kind: string, ox = 3, oy = 0, oz = 0) => {
@@ -475,29 +514,7 @@ async function runGame(
       player.x = cx + 0.5; player.y = y + 1.05; player.z = cz + 0.5;
       player.vx = player.vy = player.vz = 0;
       player.inWater = false;
-      // Helvete portal transit
-    if (world.getBlock(Math.floor(player.x), Math.floor(player.y), Math.floor(player.z)) === BlockId.Portal
-      || world.getBlock(Math.floor(player.x), Math.floor(player.y + 1), Math.floor(player.z)) === BlockId.Portal) {
-      if (dimension === 'overworld') {
-        dimension = 'helvete';
-        achieve.grant('enter_helvete');
-        // generate helvete chunks around scaled coords
-        const hx = player.x / 8, hz = player.z / 8;
-        player.x = hx; player.z = hz;
-        const noise = world.noise;
-        for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
-          const cx = Math.floor(hx / 16) + dx, cz = Math.floor(hz / 16) + dz;
-          generateHelveteChunk((x, y, z, id) => { world.setBlock(x, y, z, id); }, noise, cx, cz);
-        }
-        player.y = 40;
-        for (let y = 70; y > 0; y--) {
-          if (world.getBlock(Math.floor(player.x), y, Math.floor(player.z)) !== BlockId.Air) { player.y = y + 1; break; }
-        }
-        markMesh();
-      }
-    }
-
-    world.updateAround(player.x, player.z);
+      world.updateAround(player.x, player.z);
       markMesh();
       return { x: player.x, y: player.y, z: player.z, platformY: y };
     },
@@ -680,21 +697,17 @@ async function runGame(
       api.lookAt(ox + 3, oy + 0.5, oz);
     },
     stageHelvetePortal: () => {
-      const ox = Math.floor(player.x) + 3, oz = Math.floor(player.z);
+      const ox = Math.floor(player.x) + 2, oz = Math.floor(player.z) - 1;
       const oy = Math.floor(player.y);
-      for (let h = 0; h < 5; h++) {
-        world.setBlock(ox, oy + h, oz, BlockId.PortalFrame);
-        world.setBlock(ox + 3, oy + h, oz, BlockId.PortalFrame);
-      }
-      for (let w = 0; w < 4; w++) {
-        world.setBlock(ox + w, oy - 1, oz, BlockId.PortalFrame);
-        world.setBlock(ox + w, oy + 4, oz, BlockId.PortalFrame);
-      }
-      for (let h = 0; h < 3; h++) for (let w = 1; w <= 2; w++) world.setBlock(ox + w, oy + h, oz, BlockId.Air);
-      lightPortal(world, ox + 1, oy, oz);
+      // solid pad under frame
+      for (let w = -1; w <= 4; w++) world.setBlock(ox + w, oy - 1, oz, BlockId.Helstein);
+      const origin = buildPortalFrame(world, ox, oy, oz);
       markMesh();
-      api.lookAt(ox + 1.5, oy + 1.5, oz);
-      return { x: ox, y: oy, z: oz };
+      // step back far enough to see full 4×5 frame
+      player.x = ox + 1.5; player.y = oy + 1.2; player.z = oz + 6.5;
+      player.vx = player.vy = player.vz = 0;
+      api.lookAt(ox + 1.5, oy + 2.0, oz);
+      return origin;
     },
     toast: (id: string) => achieve.grant(id as 'first_block'),
     weather,
@@ -820,27 +833,8 @@ async function runGame(
       if (player.hunger > 17 && player.health < 20) player.health = Math.min(20, player.health + dt * 0.25);
     }
 
-    // Helvete portal transit
-    if (world.getBlock(Math.floor(player.x), Math.floor(player.y), Math.floor(player.z)) === BlockId.Portal
-      || world.getBlock(Math.floor(player.x), Math.floor(player.y + 1), Math.floor(player.z)) === BlockId.Portal) {
-      if (dimension === 'overworld') {
-        dimension = 'helvete';
-        achieve.grant('enter_helvete');
-        // generate helvete chunks around scaled coords
-        const hx = player.x / 8, hz = player.z / 8;
-        player.x = hx; player.z = hz;
-        const noise = world.noise;
-        for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
-          const cx = Math.floor(hx / 16) + dx, cz = Math.floor(hz / 16) + dz;
-          generateHelveteChunk((x, y, z, id) => { world.setBlock(x, y, z, id); }, noise, cx, cz);
-        }
-        player.y = 40;
-        for (let y = 70; y > 0; y--) {
-          if (world.getBlock(Math.floor(player.x), y, Math.floor(player.z)) !== BlockId.Air) { player.y = y + 1; break; }
-        }
-        markMesh();
-      }
-    }
+    // Helvete transit deferred (corrupted overworld). Portal is visual-only this round.
+    void dimension;
 
     world.updateAround(player.x, player.z);
     waterAcc += dt;
@@ -869,6 +863,29 @@ async function runGame(
     }
     syncTraders();
     redstone.update(world, player, dt);
+    if (redstone.dirty.length) {
+      for (const d of redstone.dirty) world.markMeshDirty(Math.floor(d.x / 16), Math.floor(d.z / 16));
+      markMesh();
+    }
+    // Persist dust power into meta so mesher can show glow tile
+    for (const d of redstone.lastPoweredDust) {
+      if (world.getBlock(d.x, d.y, d.z) === BlockId.RedDust) world.setMeta(d.x, d.y, d.z, Math.min(15, d.p));
+    }
+    // Clear unpowered dust meta nearby (cheap: only dirty lamps/doors already handled)
+    if (redstone.lastPoweredDust.length && Math.random() < 0.3) {
+      const px = Math.floor(player.x), py = Math.floor(player.y), pz = Math.floor(player.z);
+      for (let dz = -12; dz <= 12; dz++) for (let dx = -12; dx <= 12; dx++) {
+        const x = px + dx, y = py, z = pz + dz;
+        if (world.getBlock(x, y, z) === BlockId.RedDust && redstone.getPower(x, y, z) <= 0 && world.getWaterLevel(x, y, z) !== 0) {
+          world.setMeta(x, y, z, 0);
+          world.markMeshDirty(Math.floor(x / 16), Math.floor(z / 16));
+          markMesh();
+        }
+      }
+    }
+    for (const d of redstone.lastPoweredDust) {
+      if (Math.random() < dt * 4) particles.burst(d.x + 0.5, d.y + 0.15, d.z + 0.5, 0xff4422, 1, 'redstone');
+    }
     particles.update(dt);
     if (boats.mounted) achieve.grant('boat_ride');
     if (player.creative && player.flying) achieve.grant('fly');
@@ -950,7 +967,7 @@ async function runGame(
           }
         } else if (tid === BlockId.Door || tid === BlockId.Gate || tid === BlockId.Trapdoor) {
           const meta = world.getWaterLevel(hit.x, hit.y, hit.z);
-          world.setWater(hit.x, hit.y, hit.z, meta ^ 1);
+          world.setMeta(hit.x, hit.y, hit.z, meta ^ 1);
           sound.placeBlock(); markMesh();
         } else if (tid === BlockId.Lever) {
           redstone.toggleLever(world, hit.x, hit.y, hit.z); sound.placeBlock(); markMesh();

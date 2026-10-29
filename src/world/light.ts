@@ -40,7 +40,10 @@ export function relightChunk(chunk: Chunk, getBlock: GetBlock, getChunk: GetChun
   for (let y = 0; y < CHUNK_HEIGHT; y++)
     for (let lz = 0; lz < CHUNK_SIZE; lz++)
       for (let lx = 0; lx < CHUNK_SIZE; lx++) {
-        const emit = lightEmission(chunk.get(lx, y, lz));
+        const bid = chunk.get(lx, y, lz);
+        let emit = lightEmission(bid);
+        // Powered lamp (meta bit0) emits like a torch
+        if (bid === BlockId.Lamp && (chunk.waterLevel[chunk.index(lx, y, lz)] & 1)) emit = 15;
         if (emit > 0) {
           chunk.blockLight[chunk.index(lx, y, lz)] = emit;
           blkQ.push(ox + lx, y, oz + lz, emit);

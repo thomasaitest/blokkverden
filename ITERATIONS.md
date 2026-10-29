@@ -32,3 +32,16 @@ Priorities: articulated mobs, draw-call metrics, hint toggle, boat waterline, fi
 - etter merge: **34 fps**, draw **49**, tris 144k
 
 ### Shots: 01–10 + clip-it7.webm
+
+## it8 — 2026-10-29 (Europe/Oslo)
+
+~60 min. Kvalitet først: bugjakt, deretter greedy mesh, synlig rødtråd, seng, verdener rename.
+
+### Perf walk @r7 headless
+- merge av: ~40 fps, draw 97, tris 48k
+- merge på: **58 fps**, draw **57**, tris 55k
+
+### Bugs fikset
+buildPlatform-portal-lekkasje; Helvete-transit av; portal-lighting; setMeta; look-aligned movement; give→hotbar.
+
+### Shots: 00–11 + clip-it8.webm

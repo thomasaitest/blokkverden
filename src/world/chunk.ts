@@ -45,9 +45,20 @@ export class Chunk {
   set(lx: number, y: number, lz: number, id: number): void {
     if (lx < 0 || lz < 0 || y < 0 || lx >= CHUNK_SIZE || lz >= CHUNK_SIZE || y >= CHUNK_HEIGHT) return;
     const i = this.index(lx, y, lz);
+    const prev = this.blocks[i];
     this.blocks[i] = id;
     if (id === BlockId.Water && this.waterLevel[i] === 0) this.waterLevel[i] = 7;
-    if (id !== BlockId.Water) this.waterLevel[i] = 0;
+    else if (id !== BlockId.Water && id !== prev) {
+      // Clear meta when block type changes; Crop/Door/etc keep via setMeta
+      this.waterLevel[i] = 0;
+    }
+    this.dirty = true;
+    this.lightDirty = true;
+  }
+
+  setMeta(lx: number, y: number, lz: number, meta: number): void {
+    if (lx < 0 || lz < 0 || y < 0 || lx >= CHUNK_SIZE || lz >= CHUNK_SIZE || y >= CHUNK_HEIGHT) return;
+    this.waterLevel[this.index(lx, y, lz)] = meta & 255;
     this.dirty = true;
     this.lightDirty = true;
   }

@@ -155,6 +155,36 @@ export async function deleteWorldNamed(name: string): Promise<void> {
   db.close();
 }
 
+
+export async function renameWorldNamed(oldName: string, newName: string): Promise<boolean> {
+  const trimmed = newName.trim();
+  if (!trimmed || trimmed === oldName) return false;
+  const existing = await listWorlds();
+  if (existing.some((w) => w.name === trimmed)) return false;
+  const data = await loadWorldNamed(oldName);
+  if (!data) return false;
+  data.name = trimmed;
+  data.savedAt = Date.now();
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).delete(oldName);
+    tx.objectStore(STORE).put(data, trimmed);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  const list = existing.filter((m) => m.name !== oldName);
+  list.push({ name: trimmed, seed: data.seed, savedAt: data.savedAt });
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(META, 'readwrite');
+    tx.objectStore(META).put(list, 'list');
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+  return true;
+}
+
 /** Legacy helpers */
 export async function saveWorld(
   world: World, player: PlayerState, inv: Inventory, drops: DropSystem,

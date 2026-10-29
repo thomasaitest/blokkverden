@@ -1,0 +1,21 @@
+{
+  "perf": {
+    "noMerge": {
+      "fps": 40,
+      "perf": {
+        "drawCalls": 97,
+        "triangles": 47894,
+        "programs": 5
+      }
+    },
+    "withMerge": {
+      "fps": 58.07200929152145,
+      "perf": {
+        "drawCalls": 57,
+        "triangles": 54742,
+        "programs": 5
+      }
+    }
+  },
+  "hint": "checked"
+}

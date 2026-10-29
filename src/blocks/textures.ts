@@ -1,7 +1,10 @@
 const TILE = 16;
 export const COLS = 8;
-export const ROWS = 8;
-export const ATLAS_SIZE = TILE * COLS;
+export const ROWS = 10;
+export const ATLAS_W = TILE * COLS;
+export const ATLAS_H = TILE * ROWS;
+/** @deprecated use ATLAS_W — kept for icon drawing width */
+export const ATLAS_SIZE = ATLAS_W;
 
 function hash(n: number): number {
   n = (n ^ 61) ^ (n >>> 16);
@@ -10,8 +13,8 @@ function hash(n: number): number {
 }
 
 function setPx(d: Uint8ClampedArray, x: number, y: number, r: number, g: number, b: number, a = 255): void {
-  if (x < 0 || y < 0 || x >= ATLAS_SIZE || y >= ATLAS_SIZE) return;
-  const i = (y * ATLAS_SIZE + x) * 4;
+  if (x < 0 || y < 0 || x >= ATLAS_W || y >= ATLAS_H) return;
+  const i = (y * ATLAS_W + x) * 4;
   d[i] = r; d[i + 1] = g; d[i + 2] = b; d[i + 3] = a;
 }
 
@@ -33,10 +36,10 @@ function fillTile(
 
 export function createAtlasCanvas(): HTMLCanvasElement {
   const canvas = document.createElement('canvas');
-  canvas.width = ATLAS_SIZE;
-  canvas.height = ATLAS_SIZE;
+  canvas.width = ATLAS_W;
+  canvas.height = ATLAS_H;
   const ctx = canvas.getContext('2d')!;
-  const img = ctx.createImageData(ATLAS_SIZE, ATLAS_SIZE);
+  const img = ctx.createImageData(ATLAS_W, ATLAS_H);
   const d = img.data;
 
   fillTile(d, 0, (_x, _y, rnd) => [40 + rnd * 20, 90 + rnd * 40, 30 + rnd * 15, 255]);
@@ -288,6 +291,45 @@ export function createAtlasCanvas(): HTMLCanvasElement {
   fillTile(d, 63, (lx, ly) => {
     if ((lx + ly) % 4 < 2) return [20, 80, 70, 255];
     return [10, 50, 45, 255];
+  });
+  // 64 lava
+  fillTile(d, 64, (lx, ly, rnd) => {
+    const v = 180 + (rnd * 60) | 0;
+    const g = 40 + ((lx + ly) % 5) * 8;
+    return [v, g, 10, 230];
+  });
+  // 65 glødstein
+  fillTile(d, 65, (lx, ly, rnd) => {
+    if ((lx + ly) % 3 === 0) return [255, 240, 160, 255];
+    return [220 + (rnd * 30) | 0, 180, 60, 255];
+  });
+  // 66 helkvarts
+  fillTile(d, 66, (lx, ly, rnd) => {
+    const v = 210 + (rnd * 30) | 0;
+    if ((lx % 4 === 0) || (ly % 4 === 0)) return [v - 30, v - 30, v - 10, 255];
+    return [v, v, v - 5, 255];
+  });
+  // 67 anvil
+  fillTile(d, 67, (lx, ly) => {
+    if (ly < 4 || ly > 12) return [70, 70, 75, 255];
+    if (lx < 2 || lx > 13) return [50, 50, 55, 255];
+    return [110, 110, 120, 255];
+  });
+  // 68 bone item
+  fillTile(d, 68, (lx, ly) => {
+    if (Math.abs(lx - 8) < 2 && ly > 1 && ly < 14) return [240, 235, 210, 255];
+    if ((ly < 4 || ly > 11) && Math.abs(lx - 8) < 4) return [230, 220, 190, 255];
+    return [0, 0, 0, 0];
+  });
+  // 69 powered red dust
+  fillTile(d, 69, (lx, ly) => {
+    if (Math.abs(lx - 8) < 3 || Math.abs(ly - 8) < 3) return [255, 80, 60, 255];
+    return [0, 0, 0, 0];
+  });
+  // 70 lit lamp
+  fillTile(d, 70, (lx, ly) => {
+    if (lx < 2 || ly < 2 || lx > 13 || ly > 13) return [60, 50, 20, 255];
+    return [255, 250, 180, 255];
   });
 
   ctx.putImageData(img, 0, 0);

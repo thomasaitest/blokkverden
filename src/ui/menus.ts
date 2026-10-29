@@ -1,6 +1,6 @@
 import type { GameSettings } from '../settings';
 import { loadSettings, saveSettings } from '../settings';
-import { listWorlds, deleteWorldNamed } from '../storage/save';
+import { listWorlds, deleteWorldNamed, renameWorldNamed } from '../storage/save';
 
 export interface MenuCallbacks {
   onPlay: (worldName: string, seed?: number, fresh?: boolean, creative?: boolean) => void;
@@ -80,6 +80,7 @@ export function createTitleMenu(root: HTMLElement, cb: MenuCallbacks): {
       row.className = 'world-row';
       row.innerHTML = `<span>${w.name}</span><span class="muted">${new Date(w.savedAt).toLocaleString('nb-NO')}</span>
         <button type="button" data-play="${w.name}">Åpne</button>
+        <button type="button" data-ren="${w.name}">Gi nytt navn</button>
         <button type="button" data-del="${w.name}" class="danger">Slett</button>`;
       rows.appendChild(row);
     }
@@ -97,10 +98,20 @@ export function createTitleMenu(root: HTMLElement, cb: MenuCallbacks): {
     worldList.querySelectorAll('[data-play]').forEach((b) => {
       b.addEventListener('click', () => cb.onPlay((b as HTMLElement).dataset.play!, undefined, false));
     });
+    worldList.querySelectorAll('[data-ren]').forEach((b) => {
+      b.addEventListener('click', async () => {
+        const n = (b as HTMLElement).dataset.ren!;
+        const nn = prompt(`Nytt navn for «${n}»`, n);
+        if (!nn || nn.trim() === n) return;
+        const ok = await renameWorldNamed(n, nn.trim());
+        if (!ok) alert('Kunne ikke gi nytt navn (opptatt eller ugyldig).');
+        await renderWorlds();
+      });
+    });
     worldList.querySelectorAll('[data-del]').forEach((b) => {
       b.addEventListener('click', async () => {
         const n = (b as HTMLElement).dataset.del!;
-        if (confirm(`Slette ${n}?`)) { await deleteWorldNamed(n); await renderWorlds(); }
+        if (confirm(`Slette «${n}»? Dette kan ikke angres.`)) { await deleteWorldNamed(n); await renderWorlds(); }
       });
     });
   };

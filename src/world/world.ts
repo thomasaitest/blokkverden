@@ -165,6 +165,16 @@ export class World {
     this.dirtyMeshes.add(chunkKey(cx, cz));
   }
 
+  /** Set block meta (open/powered/crop stage) without changing block id. */
+  setMeta(wx: number, y: number, wz: number, meta: number): void {
+    if (y < 0 || y >= CHUNK_HEIGHT) return;
+    const { cx, cz, lx, lz } = this.worldToChunk(wx, wz);
+    const c = this.ensureChunk(cx, cz);
+    c.setMeta(lx, y, lz, meta);
+    this.markLightAround(cx, cz);
+    this.dirtyMeshes.add(chunkKey(cx, cz));
+  }
+
   setBlock(wx: number, y: number, wz: number, id: number): boolean {
     if (y < 0 || y >= CHUNK_HEIGHT) return false;
     const { cx, cz, lx, lz } = this.worldToChunk(wx, wz);

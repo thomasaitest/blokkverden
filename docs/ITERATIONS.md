@@ -176,3 +176,33 @@ Media: https://thomasaitest.github.io/blokkverden/progress/it3/
 
 ### Tester
 22 vitest grønne
+
+
+## Iterasjon 8 (2026-10-29) — kvalitet, greedy mesh, rødtråd, seng, lagring
+
+**Tid:** start 20:14 CET → slutt 21:09 CET (~55+ min). Kvalitet over kvantitet.
+
+### Bugs funnet og fikset
+1. `buildPlatform` hadde feilaktig Helvete-portal-kode inni seg — fjernet
+2. Helvete-transit overskrev overworld-chunks — deaktivert (portal kun visuell)
+3. Portal-ramme matchet ikke lighting → 0 portalblokker — ny 4×5 `buildPortalFrame`
+4. `setWater`/`chunk.set` slettet meta på spak/dør — ny `setMeta`
+5. Bevegelse speilvendt mot kamera/raycast — fikset wish→world
+6. `give()` valgte ikke hotbar-item — select/swap
+7. Atlas-ikon-UV feil etter utvidet atlas — fikset ATLAS_W/H
+
+### Nye features (verifisert)
+1. Greedy meshing (enhetstest flat pute <80 tris)
+2. Synlig rødtråd (glow-tile + partikler; lampe lyser når powered)
+3. Seng: søvn hopper natt + respawn
+4. Verdenlagring: rename + slett med bekreftelse
+
+### Perf walk @r7 headless
+- merge av: ~40 fps, draw 97, tris ~48k
+- merge på: ~58 fps, draw 57, tris ~55k
+
+### Media
+`public/progress/it8/`
+
+### Tester
+29 vitest grønne

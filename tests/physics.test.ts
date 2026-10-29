@@ -37,3 +37,20 @@ describe('physics', () => {
     expect(dmg).toBeGreaterThan(0);
   });
 });
+
+describe('look-aligned movement', () => {
+  it('walks toward +X when looking at +X (yaw = -π/2)', () => {
+    const w = new World(3);
+    w.ensureChunk(0, 0);
+    for (let x = 0; x < 16; x++) for (let z = 0; z < 16; z++) {
+      w.setBlock(x, 10, z, BlockId.Stone);
+      for (let y = 11; y < 20; y++) w.setBlock(x, y, z, BlockId.Air);
+    }
+    const p = createPlayer(8.5, 11.05, 8.5);
+    p.yaw = -Math.PI / 2; // look +X (matches lookAt / raycast)
+    p.onGround = true;
+    const x0 = p.x;
+    for (let i = 0; i < 30; i++) movePlayer(p, w, 0, -1, false, 1 / 60); // forward
+    expect(p.x).toBeGreaterThan(x0 + 0.5);
+  });
+});

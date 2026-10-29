@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-export type ParticleKind = 'break' | 'sprint' | 'splash';
+export type ParticleKind = 'break' | 'sprint' | 'splash' | 'redstone';
 
 interface P {
   mesh: THREE.Mesh;

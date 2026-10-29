@@ -55,7 +55,7 @@ async function main() {
     else await d.accept();
   });
 
-  await page.goto(base + '/', { waitUntil: 'networkidle', timeout: 120000 });
+  await page.goto(base + '/', { waitUntil: 'domcontentloaded', timeout: 120000 });
   await page.locator('#btn-single').click();
   await sleep(300);
   await page.locator('#btn-new-world').click();

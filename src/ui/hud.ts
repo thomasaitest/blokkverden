@@ -1,5 +1,4 @@
-import { ITEMS, type ItemStack } from '../items/types';
-import { createAtlasCanvas, tileUV, ATLAS_SIZE } from '../blocks/textures';
+import { ITEMS } from '../items/types';
 import type { PlayerState } from '../player/physics';
 import { CHUNK_SIZE } from '../world/chunk';
 import type { Inventory } from '../items/inventory';
@@ -11,32 +10,31 @@ export interface HudApi {
   updateDebug: (p: PlayerState, fps: number, chunks: number, day: number) => void;
   updateBars: (p: PlayerState) => void;
   refreshHotbar: () => void;
+  markDirty: () => void;
   showDebug: boolean;
   slot: number;
   el: HTMLElement;
   atlas: HTMLCanvasElement;
 }
 
-export function createHud(root: HTMLElement, inv: Inventory, atlas?: HTMLCanvasElement): HudApi {
+export function createHud(root: HTMLElement, inv: Inventory, atlas: HTMLCanvasElement): HudApi {
   const el = document.createElement('div');
   el.id = 'hud';
   el.innerHTML = `
     <div id="crosshair"></div>
     <div id="break-bar"><div id="break-fill"></div></div>
-    <div id="vitals">
-      <div id="hearts"></div>
-      <div id="hunger"></div>
-    </div>
+    <div id="vitals"><div id="hearts"></div><div id="hunger"></div><div id="bubbles"></div></div>
     <div id="hotbar"></div>
     <pre id="debug"></pre>
-    <div id="hint">Klikk for å spille · WASD · dobbel-W sprint · Space · Shift · E inventar · 1–9<br/>På nettbrett: styrespak + dra for å se</div>
+    <div id="hint">Klikk · WASD · dobbel-W · Space · Shift · E · 1–9 · høyreklikk ovn/kiste/benk<br/>Spis: høyreklikk mat i hotbar · På nettbrett: styrespak</div>
   `;
   root.appendChild(el);
 
-  const atlasCanvas = atlas ?? createAtlasCanvas();
   const hotbarEl = el.querySelector('#hotbar') as HTMLElement;
   let slot = inv.selected;
   let showDebug = true;
+  let hotbarDirty = true;
+  let lastBars = '';
 
   const renderHotbar = () => {
     hotbarEl.innerHTML = '';
@@ -46,10 +44,8 @@ export function createHud(root: HTMLElement, inv: Inventory, atlas?: HTMLCanvasE
       const s = inv.slots[i];
       if (s) {
         const c = document.createElement('canvas');
-        c.width = 32;
-        c.height = 32;
-        const ctx = c.getContext('2d')!;
-        drawItemIcon(ctx, atlasCanvas, s.id, 0, 0, 32);
+        c.width = 32; c.height = 32;
+        drawItemIcon(c.getContext('2d')!, atlas, s.id, 0, 0, 32);
         cell.appendChild(c);
         if (s.count > 1) {
           const lab = document.createElement('span');
@@ -64,19 +60,18 @@ export function createHud(root: HTMLElement, inv: Inventory, atlas?: HTMLCanvasE
       cell.appendChild(num);
       cell.addEventListener('click', (e) => {
         e.stopPropagation();
-        slot = i;
-        inv.selected = i;
-        api.slot = i;
-        renderHotbar();
+        slot = i; inv.selected = i; api.slot = i; hotbarDirty = true; renderHotbar();
       });
       hotbarEl.appendChild(cell);
     }
+    hotbarDirty = false;
   };
 
   const breakFill = el.querySelector('#break-fill') as HTMLElement;
   const debugEl = el.querySelector('#debug') as HTMLElement;
   const hearts = el.querySelector('#hearts') as HTMLElement;
   const hunger = el.querySelector('#hunger') as HTMLElement;
+  const bubbles = el.querySelector('#bubbles') as HTMLElement;
 
   window.addEventListener('keydown', (e) => {
     if (e.code === 'KeyF3') {
@@ -91,6 +86,7 @@ export function createHud(root: HTMLElement, inv: Inventory, atlas?: HTMLCanvasE
       slot = ((s % 9) + 9) % 9;
       inv.selected = slot;
       api.slot = slot;
+      hotbarDirty = true;
       renderHotbar();
     },
     setBreakProgress: (t) => {
@@ -103,47 +99,57 @@ export function createHud(root: HTMLElement, inv: Inventory, atlas?: HTMLCanvasE
       const cz = Math.floor(p.z / CHUNK_SIZE);
       const held = inv.held();
       debugEl.textContent = [
-        `Blokkverden it2`,
+        `Blokkverden it3`,
         `${fps.toFixed(0)} fps`,
         `xyz: ${p.x.toFixed(2)} / ${p.y.toFixed(2)} / ${p.z.toFixed(2)}`,
         `chunk: ${cx} ${cz}`,
-        `facing: ${((p.yaw * 180) / Math.PI) | 0}° pitch ${((p.pitch * 180) / Math.PI) | 0}°`,
+        `facing: ${((p.yaw * 180) / Math.PI) | 0}°`,
         `chunks: ${chunks}`,
         `dag: ${(day * 100).toFixed(0)}%`,
-        `hp: ${p.health.toFixed(0)} hunger: ${p.hunger.toFixed(0)}`,
+        `hp: ${p.health.toFixed(0)} hunger: ${p.hunger.toFixed(1)} air: ${p.air.toFixed(0)}`,
         held ? `hold: ${ITEMS[held.id]?.name ?? held.id}` : `hold: —`,
-      ].join('\n');
+        p.inWater ? 'i vann' : '',
+      ].filter(Boolean).join('\n');
     },
     updateBars: (p) => {
-      const h = Math.max(0, Math.min(20, p.health));
-      const g = Math.max(0, Math.min(20, p.hunger));
-      hearts.textContent = '♥'.repeat(Math.ceil(h / 2)) + (h % 2 ? '' : '');
-      hearts.dataset.val = String(h);
-      // simpler: 10 icons
+      const key = `${p.health|0},${p.hunger|0},${p.air|0},${p.inWater?1:0}`;
+      if (key === lastBars) return;
+      lastBars = key;
       hearts.innerHTML = '';
       hunger.innerHTML = '';
+      bubbles.innerHTML = '';
       for (let i = 0; i < 10; i++) {
-        const full = h >= (i + 1) * 2;
-        const half = !full && h >= i * 2 + 1;
+        const full = p.health >= (i + 1) * 2;
+        const half = !full && p.health >= i * 2 + 1;
         const span = document.createElement('span');
         span.className = 'heart' + (full ? ' full' : half ? ' half' : ' empty');
         span.textContent = full || half ? '♥' : '♡';
         hearts.appendChild(span);
       }
       for (let i = 0; i < 10; i++) {
-        const full = g >= (i + 1) * 2;
-        const half = !full && g >= i * 2 + 1;
+        const full = p.hunger >= (i + 1) * 2;
+        const half = !full && p.hunger >= i * 2 + 1;
         const span = document.createElement('span');
         span.className = 'drum' + (full ? ' full' : half ? ' half' : ' empty');
         span.textContent = full || half ? '🍗' : '○';
         hunger.appendChild(span);
       }
+      if (p.inWater || p.air < 20) {
+        for (let i = 0; i < 10; i++) {
+          const full = p.air >= (i + 1) * 2;
+          const span = document.createElement('span');
+          span.textContent = full ? '○' : '·';
+          span.style.opacity = full ? '1' : '0.3';
+          bubbles.appendChild(span);
+        }
+      }
     },
-    refreshHotbar: renderHotbar,
+    refreshHotbar: () => { if (hotbarDirty) renderHotbar(); },
+    markDirty: () => { hotbarDirty = true; },
     showDebug,
     slot,
     el,
-    atlas: atlasCanvas,
+    atlas,
   };
 
   renderHotbar();

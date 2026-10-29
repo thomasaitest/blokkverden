@@ -88,3 +88,45 @@ Media: https://thomasaitest.github.io/blokkverden/progress/it1/
 10. fix: meshing i worker + mindre hitch
 
 Media: https://thomasaitest.github.io/blokkverden/progress/it2/
+
+## Iterasjon 3 (2026-10-29)
+
+### Bygget
+1. Chunk-meshing i Web Worker (+ synk-fallback)
+2. Fakkel + sky-/blokkllys (flood fill per chunk)
+3. Biomer (ocean, beach, plains, forest, desert, snow) + huler + malm (kull/jern/gull/diamant)
+4. Ovn med smelting + drivstoff
+5. Kiste med 27 slots (lagret)
+6. Rennende vann + svømming/drukning (luftbobler)
+7. Spise mat (eple fra løv, bakt eple)
+8. Tregere hunger
+9. Drops som boblende/roterende mini-kuber
+10. Shift-klikk + oppskriftsbok; worker reduserer inventar-hitch
+
+### Playtest
+- ~38 fps, 74 chunks, tørr spawn, fakkel om natten, ovn/oppskrifter OK
+- Media: `public/progress/it3/`
+
+### Bugs funnet
+1. Lys propagerer ikke godt over chunk-grenser (kun kant-seed)
+2. Vannfylling kan være treg / flommer flatt
+3. Drops bruker tintet atlas, ikke perfekte per-face UV
+4. Oppskriftsbok er kun liste (ikke klikk-for-å-plassere mønster)
+5. Ovn-UI refreshes hvert 200ms (lite flimring)
+6. FPS fortsatt ~35–45 i dense chunks
+7. Ingen lyd / mobs ennå
+8. Diamant/jern-verktøy mangler (bare tre/stein)
+
+### Plan iterasjon 4 (~10)
+1. feat: jern-/diamantverktøy + rustning start
+2. feat: enkle mobs (ku/gris/zombie om natten)
+3. feat: senger / respawn
+4. feat: bedre lys over chunk-grenser
+5. feat: lyd (steg, knus, vann, ovn)
+6. feat: bue / kamp
+7. feat: mer biomer-detalj (kaktus, snølag)
+8. feat: kart-item
+9. fix: vannnivå-rendering (delvis blokk)
+10. feat: achievements / første hub-lenke
+
+Media: https://thomasaitest.github.io/blokkverden/progress/it3/

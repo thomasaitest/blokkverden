@@ -2,35 +2,36 @@ import type { PlayerState } from '../player/physics';
 import type { World } from '../world/world';
 import type { Inventory } from '../items/inventory';
 import type { DropSystem } from '../world/drops';
+import type { ContainerStore } from '../world/containers';
 import type { ItemStack } from '../items/types';
+import type { FurnaceState } from '../items/furnace';
 
 const DB_NAME = 'blokkverden';
 const STORE = 'worlds';
 const KEY = 'default';
 
 export interface SaveData {
-  version: 2;
+  version: 3;
   seed: number;
   player: {
-    x: number;
-    y: number;
-    z: number;
-    yaw: number;
-    pitch: number;
-    health: number;
-    hunger: number;
+    x: number; y: number; z: number; yaw: number; pitch: number;
+    health: number; hunger: number; air: number;
   };
   hotbarSlot: number;
   dayTime: number;
   inventory: (ItemStack | null)[];
   drops: { x: number; y: number; z: number; stack: ItemStack; age: number }[];
-  chunks: { cx: number; cz: number; blocks: number[] }[];
+  containers: {
+    chests: { k: string; slots: (ItemStack | null)[] }[];
+    furnaces: ({ k: string } & FurnaceState)[];
+  };
+  chunks: { cx: number; cz: number; blocks: number[]; waterLevel?: number[] }[];
   savedAt: number;
 }
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 2);
+    const req = indexedDB.open(DB_NAME, 3);
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
@@ -45,24 +46,21 @@ export async function saveWorld(
   player: PlayerState,
   inv: Inventory,
   drops: DropSystem,
+  containers: ContainerStore,
   dayTime: number,
 ): Promise<void> {
   const data: SaveData = {
-    version: 2,
+    version: 3,
     seed: world.seed,
     player: {
-      x: player.x,
-      y: player.y,
-      z: player.z,
-      yaw: player.yaw,
-      pitch: player.pitch,
-      health: player.health,
-      hunger: player.hunger,
+      x: player.x, y: player.y, z: player.z, yaw: player.yaw, pitch: player.pitch,
+      health: player.health, hunger: player.hunger, air: player.air,
     },
     hotbarSlot: inv.selected,
     dayTime,
     inventory: inv.toJSON(),
     drops: drops.toJSON(),
+    containers: containers.toJSON(),
     chunks: world.serializeModified(),
     savedAt: Date.now(),
   };

@@ -289,3 +289,19 @@ canvas#game {
   z-index: 60;
   display: none;
 }
+#bubbles { margin-left: 8px; color: #9cf; }
+.book-btn {
+  margin-left: 8px; padding: 6px 10px; border: 2px solid #373737;
+  background: #ddd; cursor: pointer; font-weight: 700;
+}
+.recipe-book {
+  max-height: 120px; overflow: auto; background: #bdbdbd;
+  border: 2px solid #555; padding: 6px; margin-bottom: 8px; font-size: 12px;
+}
+.recipe-row { padding: 2px 0; border-bottom: 1px solid #999; }
+.furnace-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.furnace-prog { width: 60px; }
+#fu-burn, #fu-cook {
+  height: 6px; background: #e65; margin: 4px 0; width: 0%;
+}
+#fu-cook { background: #fc5; }

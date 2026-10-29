@@ -1,0 +1,20 @@
+{
+  "x": 2.5,
+  "y": 36.005,
+  "z": 2.5,
+  "yaw": 0,
+  "pitch": -0.5,
+  "onGround": true,
+  "slot": 5,
+  "chunks": 74,
+  "dayTime": 0.28274983333333303,
+  "fps": 38,
+  "health": 20,
+  "hunger": 20,
+  "air": 20,
+  "invOpen": false,
+  "drops": 0,
+  "held": 12,
+  "inWater": false,
+  "meshes": 73
+}

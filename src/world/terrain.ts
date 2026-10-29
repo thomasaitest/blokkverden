@@ -4,7 +4,20 @@ import { SeededNoise } from './noise';
 
 export type SetAbs = (wx: number, y: number, wz: number, id: number) => void;
 
-/** Terrain only — trees placed afterwards via placeTreesForChunk. */
+export type Biome = 'ocean' | 'beach' | 'plains' | 'forest' | 'desert' | 'snow';
+
+export function biomeAt(noise: SeededNoise, wx: number, wz: number): Biome {
+  const t = noise.fbm2(wx * 0.003, wz * 0.003, 4, 2.0, 0.5); // temperature-ish
+  const m = noise.fbm2(wx * 0.003 + 100, wz * 0.003 + 100, 4, 2.0, 0.5); // moisture
+  const h = noise.fbm2(wx * 0.008, wz * 0.008, 3, 2.1, 0.55);
+  if (h < -0.25) return 'ocean';
+  if (h < -0.12) return 'beach';
+  if (t < -0.25) return 'snow';
+  if (t > 0.35 && m < 0) return 'desert';
+  if (m > 0.2) return 'forest';
+  return 'plains';
+}
+
 export function generateTerrain(chunk: Chunk, noise: SeededNoise): void {
   const ox = chunk.cx * CHUNK_SIZE;
   const oz = chunk.cz * CHUNK_SIZE;
@@ -15,26 +28,58 @@ export function generateTerrain(chunk: Chunk, noise: SeededNoise): void {
       const wz = oz + lz;
       const n = noise.fbm2(wx * 0.02, wz * 0.02, 5, 2.0, 0.5);
       const hill = noise.fbm2(wx * 0.008, wz * 0.008, 3, 2.1, 0.55);
+      const biome = biomeAt(noise, wx, wz);
+
       let h = Math.floor(SEA_LEVEL + n * 8 + hill * 14);
-      h = Math.max(4, Math.min(CHUNK_HEIGHT - 8, h));
-      const beach = h <= SEA_LEVEL + 1;
+      if (biome === 'ocean') h = Math.floor(SEA_LEVEL - 6 + n * 3);
+      if (biome === 'beach') h = Math.floor(SEA_LEVEL + n * 2);
+      if (biome === 'desert') h = Math.floor(SEA_LEVEL + 2 + n * 6 + hill * 8);
+      h = Math.max(3, Math.min(CHUNK_HEIGHT - 8, h));
 
       for (let y = 0; y < CHUNK_HEIGHT; y++) {
         let id: number = BlockId.Air;
         if (y === 0) id = BlockId.Stone;
         else if (y < h - 4) id = BlockId.Stone;
-        else if (y < h) id = BlockId.Dirt;
-        else if (y === h) id = beach ? BlockId.Sand : BlockId.Grass;
-        else if (y <= SEA_LEVEL && y > h) id = BlockId.Water;
+        else if (y < h) {
+          if (biome === 'desert' || biome === 'beach') id = BlockId.Sand;
+          else id = BlockId.Dirt;
+        } else if (y === h) {
+          if (biome === 'desert' || biome === 'beach') id = BlockId.Sand;
+          else if (biome === 'snow') id = BlockId.SnowGrass;
+          else if (biome === 'ocean' && h < SEA_LEVEL) id = BlockId.Dirt;
+          else id = BlockId.Grass;
+        } else if (y <= SEA_LEVEL && y > h) {
+          id = BlockId.Water;
+        }
         chunk.set(lx, y, lz, id);
+        if (id === BlockId.Water) chunk.waterLevel[chunk.index(lx, y, lz)] = 7;
+      }
+
+      // Caves — 3D noise carve
+      for (let y = 2; y < h - 2; y++) {
+        const cave = noise.fbm2(wx * 0.06 + y * 0.04, wz * 0.06 - y * 0.03, 3, 2.0, 0.5);
+        const cave2 = noise.fbm2(wx * 0.05 - 50, y * 0.05, 2, 2.0, 0.5);
+        if (cave > 0.45 && cave2 > 0.2 && chunk.get(lx, y, lz) === BlockId.Stone) {
+          chunk.set(lx, y, lz, y < SEA_LEVEL - 8 && noise.hash2(wx + y, wz) > 0.92 ? BlockId.Water : BlockId.Air);
+        }
+      }
+
+      // Ores in stone
+      for (let y = 1; y < h; y++) {
+        if (chunk.get(lx, y, lz) !== BlockId.Stone) continue;
+        const r = noise.hash2(wx * 31 + y * 7, wz * 17 + y);
+        if (y < 12 && r > 0.985) chunk.set(lx, y, lz, BlockId.DiamondOre);
+        else if (y < 28 && r > 0.975) chunk.set(lx, y, lz, BlockId.GoldOre);
+        else if (y < 40 && r > 0.96) chunk.set(lx, y, lz, BlockId.IronOre);
+        else if (y < 50 && r > 0.94) chunk.set(lx, y, lz, BlockId.CoalOre);
       }
     }
   }
   chunk.generated = true;
   chunk.dirty = true;
+  chunk.lightDirty = true;
 }
 
-/** Place trees whose trunks are in this chunk; canopy may cross borders via setAbs. */
 export function placeTreesForChunk(chunk: Chunk, noise: SeededNoise, setAbs: SetAbs): void {
   const ox = chunk.cx * CHUNK_SIZE;
   const oz = chunk.cz * CHUNK_SIZE;
@@ -43,19 +88,22 @@ export function placeTreesForChunk(chunk: Chunk, noise: SeededNoise, setAbs: Set
     for (let lx = 0; lx < CHUNK_SIZE; lx++) {
       const wx = ox + lx;
       const wz = oz + lz;
-      // Find surface
+      const biome = biomeAt(noise, wx, wz);
+      if (biome === 'desert' || biome === 'ocean' || biome === 'beach') continue;
+
       let surface = -1;
       for (let y = CHUNK_HEIGHT - 1; y >= 0; y--) {
         const id = chunk.get(lx, y, lz);
-        if (id === BlockId.Grass) {
+        if (id === BlockId.Grass || id === BlockId.SnowGrass) {
           surface = y;
           break;
         }
         if (id !== BlockId.Air && id !== BlockId.Leaves && id !== BlockId.Water) break;
       }
       if (surface < 0 || surface <= SEA_LEVEL) continue;
+      const dens = biome === 'forest' ? 0.92 : 0.97;
       const t = noise.hash2(wx, wz);
-      if (t <= 0.97) continue;
+      if (t <= dens) continue;
       placeTreeAbs(wx, surface + 1, wz, noise.hash2(wx + 7, wz + 3), setAbs);
     }
   }
@@ -74,18 +122,10 @@ function placeTreeAbs(wx: number, y: number, wz: number, rnd: number, setAbs: Se
       for (let dz = -r; dz <= r; dz++) {
         if (dx === 0 && dz === 0 && dy < 2) continue;
         if (Math.abs(dx) === r && Math.abs(dz) === r && rnd < 0.4) continue;
-        const px = wx + dx;
-        const pz = wz + dz;
         const py = top + dy;
         if (py < 0 || py >= CHUNK_HEIGHT) continue;
-        setAbs(px, py, pz, BlockId.Leaves);
+        setAbs(wx + dx, py, wz + dz, BlockId.Leaves);
       }
     }
   }
-}
-
-/** @deprecated use generateTerrain + placeTreesForChunk */
-export function generateChunk(chunk: Chunk, noise: SeededNoise, setAbs?: SetAbs): void {
-  generateTerrain(chunk, noise);
-  if (setAbs) placeTreesForChunk(chunk, noise, setAbs);
 }

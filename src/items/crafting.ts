@@ -11,6 +11,29 @@ export interface Recipe {
 }
 
 export const RECIPES: Recipe[] = [
+  // torch: coal + stick
+  { w: 1, h: 2, pattern: [ItemId.Coal, ItemId.Stick], result: stack(ItemId.Torch, 4) },
+  // chest
+  {
+    w: 3, h: 3,
+    pattern: [
+      ItemId.Planks, ItemId.Planks, ItemId.Planks,
+      ItemId.Planks, 0, ItemId.Planks,
+      ItemId.Planks, ItemId.Planks, ItemId.Planks,
+    ],
+    result: stack(ItemId.Chest, 1),
+  },
+  // furnace
+  {
+    w: 3, h: 3,
+    pattern: [
+      ItemId.Cobble, ItemId.Cobble, ItemId.Cobble,
+      ItemId.Cobble, 0, ItemId.Cobble,
+      ItemId.Cobble, ItemId.Cobble, ItemId.Cobble,
+    ],
+    result: stack(ItemId.Furnace, 1),
+  },
+
   // 1 log -> 4 planks
   { w: 1, h: 1, pattern: [ItemId.Log], result: stack(ItemId.Planks, 4) },
   // 2 planks vertical -> 4 sticks

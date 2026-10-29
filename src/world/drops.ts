@@ -4,12 +4,8 @@ import type { Inventory } from '../items/inventory';
 
 export interface DropEntity {
   id: number;
-  x: number;
-  y: number;
-  z: number;
-  vx: number;
-  vy: number;
-  vz: number;
+  x: number; y: number; z: number;
+  vx: number; vy: number; vz: number;
   stack: ItemStack;
   age: number;
 }
@@ -42,14 +38,13 @@ export class DropSystem {
       d.z += d.vz * dt;
       d.vx *= 0.95;
       d.vz *= 0.95;
-      const gy = groundY(d.x, d.z) + 0.25;
+      const gy = groundY(d.x, d.z) + 0.2;
       if (d.y < gy) {
         d.y = gy;
         d.vy = 0;
         d.vx *= 0.7;
         d.vz *= 0.7;
       }
-      // Pickup after 0.5s
       if (d.age > 0.5) {
         const dist = Math.hypot(d.x - player.x, d.y - (player.y + 0.9), d.z - player.z);
         if (dist < 1.6) {
@@ -64,18 +59,14 @@ export class DropSystem {
   }
 
   toJSON() {
-    return this.drops.map((d) => ({
-      x: d.x, y: d.y, z: d.z, stack: d.stack, age: d.age,
-    }));
+    return this.drops.map((d) => ({ x: d.x, y: d.y, z: d.z, stack: d.stack, age: d.age }));
   }
 
   loadJSON(data: { x: number; y: number; z: number; stack: ItemStack; age: number }[]): void {
     this.drops = data.map((d) => ({
       id: this.nextId++,
-      x: d.x, y: d.y, z: d.z,
-      vx: 0, vy: 0, vz: 0,
-      stack: { ...d.stack },
-      age: d.age,
+      x: d.x, y: d.y, z: d.z, vx: 0, vy: 0, vz: 0,
+      stack: { ...d.stack }, age: d.age,
     }));
   }
 }

@@ -68,12 +68,14 @@ export class Inventory {
   fillStarter(): void {
     this.add(stack(ItemId.Log, 16));
     this.add(stack(ItemId.Planks, 32));
-    this.add(stack(ItemId.Cobble, 16));
+    this.add(stack(ItemId.Cobble, 32));
     this.add(stack(ItemId.Stick, 16));
-    this.add(stack(ItemId.Dirt, 32));
-    this.add(stack(ItemId.Sand, 16));
-    this.add(stack(ItemId.Glass, 8));
+    this.add(stack(ItemId.Coal, 8));
+    this.add(stack(ItemId.Torch, 8));
+    this.add(stack(ItemId.Apple, 4));
     this.add(stack(ItemId.CraftingTable, 1));
+    this.add(stack(ItemId.Furnace, 1));
+    this.add(stack(ItemId.Chest, 1));
   }
 
   toJSON(): (ItemStack | null)[] {

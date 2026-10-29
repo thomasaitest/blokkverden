@@ -201,9 +201,16 @@ export class GameRenderer {
 
   syncDrops(drops: DropEntity[]): void {
     while (this.dropPool.length < drops.length) {
-      const g = new THREE.BoxGeometry(0.25, 0.25, 0.25);
-      const m = new THREE.MeshLambertMaterial({ color: 0xffffff });
-      const mesh = new THREE.Mesh(g, m);
+      const g = new THREE.BoxGeometry(0.28, 0.28, 0.28);
+      const mats = [
+        new THREE.MeshLambertMaterial({ map: this.opaqueMat.map }),
+        new THREE.MeshLambertMaterial({ map: this.opaqueMat.map }),
+        new THREE.MeshLambertMaterial({ map: this.opaqueMat.map }),
+        new THREE.MeshLambertMaterial({ map: this.opaqueMat.map }),
+        new THREE.MeshLambertMaterial({ map: this.opaqueMat.map }),
+        new THREE.MeshLambertMaterial({ map: this.opaqueMat.map }),
+      ];
+      const mesh = new THREE.Mesh(g, mats);
       this.dropPool.push(mesh);
       this.dropGroup.add(mesh);
     }
@@ -215,13 +222,23 @@ export class GameRenderer {
       }
       const d = drops[i];
       mesh.visible = true;
-      mesh.position.set(d.x, d.y + Math.sin(d.age * 3) * 0.05, d.z);
-      mesh.rotation.y = d.age * 2;
+      mesh.position.set(d.x, d.y + 0.15 + Math.sin(d.age * 3) * 0.08, d.z);
+      mesh.rotation.y = d.age * 2.2;
+      mesh.rotation.x = Math.sin(d.age) * 0.15;
       const def = ITEMS[d.stack.id];
       const tile = def?.iconTile ?? 1;
-      // tint by hashing tile
-      const col = new THREE.Color().setHSL((tile * 0.07) % 1, 0.45, 0.55);
-      (mesh.material as THREE.MeshLambertMaterial).color = col;
+      const uv = tileUV(tile);
+      // Update UVs on geometry for the tile
+      const geo = mesh.geometry as THREE.BoxGeometry;
+      const uvs = geo.attributes.uv;
+      // Simple: tint material color by tile instead of per-face UV remap for performance
+      const mats = mesh.material as THREE.MeshLambertMaterial[];
+      const col = new THREE.Color().setHSL((tile * 0.05) % 1, 0.35, 0.55);
+      for (const m of mats) {
+        m.color.copy(col);
+        m.map = this.opaqueMat.map;
+      }
+      void uvs; void uv;
     }
   }
 

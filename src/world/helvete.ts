@@ -83,19 +83,39 @@ export function generateHelveteChunk(
   cx: number,
   cz: number,
 ): void {
+  const lavaTop = 28;
   for (let lz = 0; lz < CHUNK_SIZE; lz++) for (let lx = 0; lx < CHUNK_SIZE; lx++) {
     const wx = cx * CHUNK_SIZE + lx, wz = cz * CHUNK_SIZE + lz;
-    const n = noise.fbm2(wx * 0.04, wz * 0.04, 3);
-    const h = Math.floor(28 + n * 10);
+    const n = noise.fbm2(wx * 0.035, wz * 0.035, 3);
+    // Lower baseline so most columns are lava seas; ridges poke through
+    const h = Math.floor(18 + n * 14); // ~11–32
     for (let y = 0; y <= h; y++) {
       let id: number = BlockId.Helstein;
-      if (y === h) id = Math.random() > 0.85 ? BlockId.Sjelegrus : BlockId.Helstein;
+      if (y === h) id = Math.random() > 0.8 ? BlockId.Sjelegrus : BlockId.Helstein;
       if (y < 3) id = BlockId.Stone;
       setBlock(wx, y, wz, id);
     }
-    if (h < 26) {
-      for (let y = h + 1; y <= 26; y++) setBlock(wx, y, wz, BlockId.Lava);
+    if (h < lavaTop) {
+      for (let y = h + 1; y <= lavaTop; y++) setBlock(wx, y, wz, BlockId.Lava);
     }
+    // Ceiling glowstone veins above lava / ridges
+    const ceilN = noise.fbm2(wx * 0.08 + 40, wz * 0.08 + 40, 2);
+    if (ceilN > 0.35) {
+      const cy = Math.min(48, lavaTop + 8 + ((ceilN * 10) | 0));
+      setBlock(wx, cy, wz, BlockId.Glodstein);
+      if (ceilN > 0.55) setBlock(wx, cy - 1, wz, BlockId.Glodstein);
+    }
+  }
+  // Guaranteed glowstone clusters near chunk centers (visible from spawn pads)
+  const baseX = cx * CHUNK_SIZE + 8;
+  const baseZ = cz * CHUNK_SIZE + 8;
+  for (let i = 0; i < 5; i++) {
+    const ox = baseX + ((i * 3) % 7) - 3;
+    const oz = baseZ + ((i * 5) % 7) - 3;
+    const oy = lavaTop + 3 + (i % 3);
+    setBlock(ox, oy, oz, BlockId.Glodstein);
+    setBlock(ox + 1, oy, oz, BlockId.Glodstein);
+    setBlock(ox, oy, oz + 1, BlockId.Glodstein);
   }
 }
 

@@ -723,16 +723,23 @@ async function runGame(
       api.lookAt(ox + 3, oy + 0.5, oz);
     },
     stageHelvetePortal: () => {
-      const ox = Math.floor(player.x) + 2, oz = Math.floor(player.z) - 1;
+      api.buildPlatform(10);
+      const ox = Math.floor(player.x) + 2, oz = Math.floor(player.z) - 2;
       const oy = Math.floor(player.y);
-      // solid pad under frame
-      for (let w = -1; w <= 4; w++) world.setBlock(ox + w, oy - 1, oz, BlockId.Helstein);
+      // wide pad + clear sky behind so full 4×5 lit frame reads clearly
+      for (let w = -2; w <= 5; w++) for (let d = -1; d <= 1; d++) {
+        world.setBlock(ox + w, oy - 1, oz + d, BlockId.Helstein);
+        for (let yy = 0; yy <= 6; yy++) {
+          if (d !== 0 || w < 0 || w > 3) world.setBlock(ox + w, oy + yy, oz + d, BlockId.Air);
+        }
+      }
       const origin = buildPortalFrame(world, ox, oy, oz);
       markMesh();
-      // step back far enough to see full 4×5 frame
-      player.x = ox + 1.5; player.y = oy + 1.2; player.z = oz + 6.5;
+      // Centered 3/4 view of entire frame
+      player.x = ox + 1.5; player.y = oy + 2.2; player.z = oz + 8.0;
       player.vx = player.vy = player.vz = 0;
-      api.lookAt(ox + 1.5, oy + 2.0, oz);
+      player.pitch = -0.15;
+      api.lookAt(ox + 1.5, oy + 2.2, oz);
       return origin;
     },
     toast: (id: string) => achieve.grant(id as 'first_block'),

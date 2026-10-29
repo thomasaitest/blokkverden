@@ -31,6 +31,7 @@ export class GameRenderer {
   private hemi: THREE.HemisphereLight;
   private outline: THREE.LineSegments;
   private skyColor = new THREE.Color();
+  private dimensionVisual: 'overworld' | 'helvete' = 'overworld';
   private dayTime = 0.25;
   private atlasCanvas: HTMLCanvasElement;
   private dropGroup = new THREE.Group();
@@ -151,6 +152,10 @@ export class GameRenderer {
 
   setDayTime(t: number): void {
     this.dayTime = ((t % 1) + 1) % 1;
+    if (this.dimensionVisual === 'helvete') {
+      this.applyHelveteSky();
+      return;
+    }
     const angle = this.dayTime * Math.PI * 2 - Math.PI / 2;
     const sunY = Math.sin(angle);
     this.sun.position.set(Math.cos(angle) * 100, sunY * 100, 40);
@@ -165,21 +170,28 @@ export class GameRenderer {
     this.hemi.intensity = 0.12 + day * 0.28;
   }
 
+  private applyHelveteSky(): void {
+    // Deep red-black void — never pale/white
+    this.skyColor.setRGB(0.12, 0.02, 0.015);
+    this.renderer.setClearColor(this.skyColor);
+    const fog = this.scene.fog as THREE.Fog;
+    fog.color.setRGB(0.18, 0.03, 0.02);
+    fog.near = 6;
+    fog.far = 42;
+    this.sun.intensity = 0.05;
+    this.ambient.intensity = 0.45;
+    this.hemi.intensity = 0.35;
+    this.hemi.color.setHex(0xff4422);
+    this.hemi.groundColor.setHex(0x220800);
+  }
+
   getDayTime(): number { return this.dayTime; }
 
   /** Helvete: red fog/sky; overworld restores day cycle colors. */
   setDimensionVisuals(dim: 'overworld' | 'helvete'): void {
+    this.dimensionVisual = dim;
     if (dim === 'helvete') {
-      this.skyColor.setRGB(0.25, 0.05, 0.04);
-      this.renderer.setClearColor(this.skyColor);
-      const fog = this.scene.fog as THREE.Fog;
-      fog.color.copy(this.skyColor);
-      fog.near = 8; fog.far = 55;
-      this.sun.intensity = 0.15;
-      this.ambient.intensity = 0.35;
-      this.hemi.intensity = 0.2;
-      this.hemi.color.setHex(0xff6644);
-      this.hemi.groundColor.setHex(0x331100);
+      this.applyHelveteSky();
     } else {
       this.hemi.color.setHex(0xb1c4e8);
       this.hemi.groundColor.setHex(0x3b2a1a);
@@ -323,7 +335,7 @@ export class GameRenderer {
 
   syncWeather(kind: WeatherKind, intensity: number, cam: THREE.Vector3, flash: number): void {
     this.weatherKind = kind;
-    if (flash > 0.05) {
+    if (flash > 0.05 && this.dimensionVisual !== 'helvete') {
       this.renderer.setClearColor(new THREE.Color(0.9, 0.9, 1.0));
     }
     if (kind === 'clear' || intensity < 0.05) {
@@ -372,6 +384,10 @@ export class GameRenderer {
     this.camera.fov = fov;
     this.camera.far = rd * 16 + 40;
     this.camera.updateProjectionMatrix();
+    if (this.dimensionVisual === 'helvete') {
+      this.applyHelveteSky();
+      return;
+    }
     const fogFar = rd * 16 * 0.95;
     const fog = this.scene.fog as THREE.Fog;
     fog.near = fogFar * 0.45;
@@ -543,26 +559,30 @@ export class GameRenderer {
   syncDoors(doors: { x: number; y: number; z: number; open: boolean }[]): void {
     while (this.doorPool.length < doors.length) {
       const g = new THREE.Group();
-      // Wide face in X, thin in Z so camera looking along -Z sees the door face
+      // 2-block tall panel flush with floor (no sky gap at threshold)
       const panel = new THREE.Mesh(
-        new THREE.BoxGeometry(0.95, 1.95, 0.14),
+        new THREE.BoxGeometry(0.98, 1.98, 0.12),
         new THREE.MeshLambertMaterial({ color: 0x8b5a2b, side: THREE.DoubleSide }),
       );
-      // Hinge on -X; panel fills most of the block
-      panel.position.set(0.475, 0.975, 0.07);
+      panel.position.set(0.49, 0.99, 0.06);
       const knob = new THREE.Mesh(
         new THREE.BoxGeometry(0.1, 0.1, 0.1),
         new THREE.MeshLambertMaterial({ color: 0xc9a227 }),
       );
-      knob.position.set(0.82, 1.0, 0.16);
-      // Cross-boards for readable wood door
+      knob.position.set(0.82, 1.0, 0.14);
       const boardMat = new THREE.MeshLambertMaterial({ color: 0x6b4220 });
-      for (const by of [0.35, 1.0, 1.6]) {
-        const board = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.08, 0.16), boardMat);
-        board.position.set(0.475, by, 0.08);
+      for (const by of [0.4, 1.0, 1.55]) {
+        const board = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.08, 0.14), boardMat);
+        board.position.set(0.49, by, 0.07);
         g.add(board);
       }
-      g.add(panel); g.add(knob);
+      // Threshold sill closes the floor gap
+      const sill = new THREE.Mesh(
+        new THREE.BoxGeometry(0.98, 0.06, 0.2),
+        new THREE.MeshLambertMaterial({ color: 0x5a3a18 }),
+      );
+      sill.position.set(0.49, 0.03, 0.1);
+      g.add(panel); g.add(knob); g.add(sill);
       this.doorPool.push(g);
       this.doorGroup.add(g);
     }

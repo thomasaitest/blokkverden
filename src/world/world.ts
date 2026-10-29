@@ -203,21 +203,47 @@ export class World {
 
   findHelveteSpawn(): { x: number; y: number; z: number } {
     this.ensureChunk(0, 0);
-    for (let y = CHUNK_HEIGHT - 2; y > 4; y--) {
-      const id = this.getBlock(8, y, 8);
-      const above = this.getBlock(8, y + 1, 8);
-      if (isSolid(id) && above === BlockId.Air && this.getBlock(8, y + 2, 8) === BlockId.Air
-          && id !== BlockId.Lava) {
-        return { x: 8.5, y: y + 1.05, z: 8.5 };
+    this.ensureChunk(0, -1);
+    this.ensureChunk(-1, 0);
+    // Prefer a ridge above lava so seas + glowstone are visible
+    for (let r = 0; r < 24; r++) {
+      for (let dx = -r; dx <= r; dx++) for (let dz = -r; dz <= r; dz++) {
+        if (Math.max(Math.abs(dx), Math.abs(dz)) !== r && r > 0) continue;
+        const wx = 8 + dx, wz = 8 + dz;
+        this.ensureChunk(Math.floor(wx / CHUNK_SIZE), Math.floor(wz / CHUNK_SIZE));
+        for (let y = 45; y > 8; y--) {
+          const id = this.getBlock(wx, y, wz);
+          const above = this.getBlock(wx, y + 1, wz);
+          if (!isSolid(id) || id === BlockId.Lava || above !== BlockId.Air) continue;
+          // Look for nearby lava column
+          let nearLava = false;
+          for (let oy = y - 8; oy <= y; oy++) {
+            if (this.getBlock(wx + 2, oy, wz) === BlockId.Lava
+              || this.getBlock(wx - 2, oy, wz) === BlockId.Lava
+              || this.getBlock(wx, oy, wz + 2) === BlockId.Lava
+              || this.getBlock(wx, oy, wz - 2) === BlockId.Lava) {
+              nearLava = true; break;
+            }
+          }
+          if (nearLava || r > 12) {
+            return { x: wx + 0.5, y: y + 1.05, z: wz + 0.5 };
+          }
+        }
       }
     }
-    // Safe pad above lava seas
-    for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
-      this.setBlock(8 + dx, 40, 8 + dz, BlockId.Helstein);
-      this.setBlock(8 + dx, 41, 8 + dz, BlockId.Air);
-      this.setBlock(8 + dx, 42, 8 + dz, BlockId.Air);
+    // Safe pad with lava overlook + glowstone
+    for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) {
+      this.setBlock(8 + dx, 32, 8 + dz, BlockId.Helstein);
+      this.setBlock(8 + dx, 33, 8 + dz, BlockId.Air);
+      this.setBlock(8 + dx, 34, 8 + dz, BlockId.Air);
     }
-    return { x: 8.5, y: 41.05, z: 8.5 };
+    for (let z = 11; z <= 16; z++) for (let x = 6; x <= 10; x++) {
+      for (let y = 20; y <= 28; y++) this.setBlock(x, y, z, BlockId.Lava);
+    }
+    this.setBlock(8, 36, 8, BlockId.Glodstein);
+    this.setBlock(9, 36, 8, BlockId.Glodstein);
+    this.setBlock(8, 36, 9, BlockId.Glodstein);
+    return { x: 8.5, y: 33.05, z: 8.5 };
   }
 
   worldToChunk(wx: number, wz: number): { cx: number; cz: number; lx: number; lz: number } {

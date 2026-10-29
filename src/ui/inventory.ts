@@ -141,6 +141,13 @@ export function createInventoryUi(
       const left = inv.add(item);
       if (left <= 0) chestSlots[index] = null;
       else item.count = left;
+    } else if (from === 'craft') {
+      item = craft[index];
+      if (!item) return;
+      const left = inv.add(item);
+      if (left <= 0) craft[index] = null;
+      else item.count = left;
+      updateCraft();
     }
   };
 
@@ -223,15 +230,17 @@ export function createInventoryUi(
       for (let i = 0; i < gridN * gridN; i++) {
         const cell = document.createElement('div');
         cell.className = 'hb-slot';
+        cell.dataset.craftSlot = String(i);
         paintSlot(cell, craft[i]);
         bindSlot(cell, (right, shift) => {
-          if (shift) return;
+          if (shift) { shiftMove('craft', i); return; }
           mergeOrSwap(() => craft[i], (s) => { craft[i] = s; }, right);
           updateCraft();
         });
         grid.appendChild(cell);
       }
       const out = el.querySelector('#craft-out') as HTMLElement;
+      out.dataset.craftOut = '1';
       paintSlot(out, craftResult);
       bindSlot(out, () => takeResult());
       el.querySelector('#btn-book')?.addEventListener('click', (e) => {
@@ -285,6 +294,7 @@ export function createInventoryUi(
     for (let i = 9; i < 36; i++) {
       const cell = document.createElement('div');
       cell.className = 'hb-slot';
+      cell.dataset.invSlot = String(i);
       paintSlot(cell, inv.slots[i]);
       bindSlot(cell, (right, shift) => {
         if (shift) { shiftMove('inv', i); return; }
@@ -296,6 +306,7 @@ export function createInventoryUi(
     for (let i = 0; i < 9; i++) {
       const cell = document.createElement('div');
       cell.className = 'hb-slot' + (i === inv.selected ? ' active' : '');
+      cell.dataset.invSlot = String(i);
       paintSlot(cell, inv.slots[i]);
       bindSlot(cell, (right, shift) => {
         if (shift) { shiftMove('inv', i); return; }

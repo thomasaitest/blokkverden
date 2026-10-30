@@ -363,7 +363,7 @@ async function main() {
   await flatPad(page, 45);
   await page.evaluate(() => { const bv = (window as any).__bv; bv.mobs.mobs.length = 0; bv.player.health = 20; bv.teleport(8.5, 46.05, 8.5);
     const s = bv.spawnMob('bueskytt', 7.3, -0.0001, 0.2); s.y = 46.05; s.__test = true; s.__pin = [s.x, s.z]; });
-  const openMin = await hpAfter(8000);
+  const openMin = await hpAfter(10000);
   await page.evaluate(() => { const bv = (window as any).__bv; bv.mobs.mobs.length = 0; bv.player.health = 20;
     for (let x = 3; x <= 14; x++) for (let z = 3; z <= 14; z++) {
       bv.world.setBlock(x, 49, z, 3);

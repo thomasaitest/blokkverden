@@ -1,0 +1,76 @@
+{
+  "when": "2026-10-30T17:53:00.888Z",
+  "results": [
+    {
+      "id": "P1-esc-pauses",
+      "status": "PASS",
+      "notes": "before.locked=true after={\"locked\":false,\"paused\":true}"
+    },
+    {
+      "id": "P1b-resume",
+      "status": "PASS",
+      "notes": "{\"locked\":true,\"paused\":false}"
+    },
+    {
+      "id": "P2-inv-close-relock",
+      "status": "PASS",
+      "notes": "{\"inv1\":true,\"invAfter\":false,\"locked\":true,\"paused\":false}"
+    },
+    {
+      "id": "P3-esc-closes-inv",
+      "status": "PASS",
+      "notes": "{\"inv\":false,\"paused\":false}"
+    },
+    {
+      "id": "P4-no-stuck-keys",
+      "status": "PASS",
+      "notes": "held={\"f\":true,\"inv\":false,\"locked\":true} afterLockLoss={\"f\":false}"
+    },
+    {
+      "id": "P6-wheel",
+      "status": "PASS",
+      "notes": "notch 0→1 (deltaY/wheelDeltaY [[100,-120]]) 30 notches 1→4 ev=[[2,-120,0],[2,-120,0],[2,-120,0],[2,-120,0],[2,-120,0],[2,-120,0]] n=30"
+    },
+    {
+      "id": "P7-focus-click-swallowed",
+      "status": "PASS",
+      "notes": "{\"unlocked\":true,\"dirt\":5,\"locked\":true}"
+    },
+    {
+      "id": "P7b-then-places",
+      "status": "PASS",
+      "notes": "dirt 5→4"
+    },
+    {
+      "id": "P8a-pillar-vs-zombie",
+      "status": "PASS",
+      "notes": "onPillar minHp=20 {\"me\":[8.5,49.01],\"mob\":[9.32,46]} control(ground) minHp=4.7747749999999645"
+    },
+    {
+      "id": "P8b-shelter-vs-skeleton",
+      "status": "PASS",
+      "notes": "open minHp=9.212424999999987 shelter minHp=20"
+    },
+    {
+      "id": "P9-respawn-relock",
+      "status": "PASS",
+      "notes": "dead=false locked=true"
+    },
+    {
+      "id": "P10-craft-achievement",
+      "status": "PASS",
+      "notes": "placed=true toastAfterPlace=\"\" table=true crafted=true planks=4 toastAfterCraft=\"FremskrittHåndverkLagde noe på arbeidsbenken\""
+    },
+    {
+      "id": "P11-hud-stable",
+      "status": "PASS",
+      "notes": "full={\"hearts\":[448,608],\"hunger\":[636,796]} low={\"hearts\":[448,608],\"hunger\":[636,796]}"
+    },
+    {
+      "id": "P5-quit-reopen",
+      "status": "PASS",
+      "notes": "oldDay 0.307997333333331→0.307997333333331 glLost=true canvases=1 pos=5.5,46.0,11.5"
+    }
+  ],
+  "bugs": []
+}

@@ -2,6 +2,37 @@
 
 Original voxel-sandkasse. Ingen Mojang-assets.
 
+## Iterasjon 13 (2026-10-30)
+
+### Fokus
+Feiljakt for en ekte spiller i Chrome på Mac: pekerlås/Esc, inventar, mus/styreflate, mobber, HUD, avslutt/gjenåpne. Ekte tastatur/mus i Chromium; `__bv` bare til oppsett.
+
+### Fikset
+1. Esc / mistet pekerlås (Cmd+Tab) åpner pausemenyen (headed Chrome sluker Esc-tasten); taster som var holdt nede slippes (ingen «fast» W)
+2. Esc i inventaret lukker det uten å åpne pause; før ble `inventoryOpen` stående → WASD død
+3. Lukke inventar (E) og «Gjenoppstå» fanger musa igjen som i MC; klikket som fanger musa plasserer/knuser ikke lenger blokker
+4. «Til tittel» avslutter økta: før fortsatte gammel løkke å rendre og autolagre gammel tilstand over den gjenåpnede verdenen; WebGL-kontekst og mesh-worker frigjøres
+5. Raske musebevegelser kappes ikke lenger (±40 px) — bare OS-hopp > 600 px forkastes
+6. Hotbar-scroll: ett hakk = én plass; Mac-styreflate summeres (snurret før gjennom hele hotbaren)
+7. Mobber: nærkamp krever vertikal overlapp + siktlinje, skjelettpiler går ikke gjennom vegger/tak (søyle og ly er trygt som i MC)
+8. Mob-landing: `ceil()` løftet mobber en hel blokk ved landing → klatret opp på kanter/søyler
+9. «Håndverk»-fremskritt kom ved blokkplassering; nå bare ved craft på arbeidsbenk
+10. HUD: tomme hjerter synlige (også på dødsskjermen), fast bredde så sult/hjerter ikke forskyves; «Respawn» → «Gjenoppstå»
+
+### Playtest
+- Core: **55 PASS / 0 FAIL / 0 PARTIAL** (`scripts/core-playtest.ts`, kjørt etter hver fiks)
+- it13-verify: **14/14 PASS** (`scripts/it13-verify.ts`, P1–P11)
+- 50 vitest grønne (nye: kontroller, hjul, siktlinje, mob-landing), npm audit 0 sårbarheter, secrets-scan rent
+
+### Kjente begrensninger
+- Styreflate-hjul kan ikke syntetiseres via CDP; dekkes av enhetstest
+- Headless swiftshader gir ~17–28 fps; ekte Mac-GPU ikke målt
+
+### Media
+https://thomasaitest.github.io/blokkverden/progress/it13/
+
+---
+
 ## Iterasjon 12 (2026-10-30)
 
 ### Fokus

@@ -132,6 +132,18 @@ Last run: 2026-10-30 22:43–22:50 CET · it15 (55 PASS / 0 FAIL, I3/I4 now real
 | M8 | No canopy spawns | Nothing spawns on leaves (was: skeletons on tree tops) | PASS | vitest |
 | M6 | Real combat in core run | I3/I4 now use real LMB clicks (were faked with `__bv.mobs.hitAt`) | PASS | core-playtest I3/I4 |
 
+## N. Gravity, leaves, light (it16, `scripts/it16-verify.ts`, real input)
+| # | Check | Minecraft-expected | Status | Notes |
+|---|--------|-------------------|--------|-------|
+| N1 | Sand falls | Break the block under a sand column (LMB) → whole column drops; sand placed (RMB) against a floating block falls to the ground (through water; breaks into an item on a torch) | PASS | S1, S2 + vitest |
+| N2 | Buried by sand | Dig dirt with 2 sand above you → sand fills feet+head cells; you are stuck, see the sand texture, take 1 ♥/2 every 0.5 s; dig the head block out (LMB) → stand on the lower sand, no more damage | PASS | S3 + vitest (was: lifted up through the sand, x-ray view) |
+| N3 | Leaf decay | Chop all logs of a tree (axe, LMB) → its leaves vanish gradually over ~2–20 s (not instantly); leaves still within 6 of another log stay | PASS | L1 + vitest |
+| N4 | Placed leaves | Leaves placed by the player never decay | PASS | L2 + vitest |
+| N5 | Leaf drops | Apple 0.5 %, 1–2 sticks 2 % (was apple 8 %, stick 10 %) | PASS | vitest (40 000 samples) |
+| N7 | Structures | Villages/ruins/dungeons exist as soon as their chunk is generated (not stamped next to / around the player when first approached) | PASS | core B3 (was trapped in a house wall stamped onto the test pad) |
+| N8 | Dark caves | Light 0 is near-black; torch-lit areas stay bright | PASS | X6 screenshot + vitest light curve |
+| N6 | Daylight | Noon: blocks show full texture colour, sides shaded only by MC face shading (not ~half-dark); night stays dark | PASS | it16-00a/00c screenshots |
+
 ## Method rules
 1. **Real input:** synthesized keyboard/mouse via pointer lock. `__bv` may set up a scenario only — never perform the action under test.
 2. Log every bug and every deviation from Minecraft.

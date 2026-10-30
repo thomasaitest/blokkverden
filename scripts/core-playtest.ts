@@ -147,6 +147,13 @@ async function ensureRespawn(page: Page) {
 }
 
 async function flatPad(page: Page, y = 45) {
+  // it16: generate the pad's neighbour chunks first — a village house from a neighbour chunk was stamped
+  // into the pad *after* it was flattened, and the B3 teleport then put the player inside its planks wall
+  // (now MC suffocation; before it16 the player was silently lifted out of the wall).
+  // Teleport first, let terrain + structures generate, then flatten.
+  await page.evaluate((y) => { const bv = (window as any).__bv; bv.teleport(8.5, y + 1.05, 8.5); bv.world.updateAround(8.5, 8.5); }, y);
+  await sleep(2500); // structures for freshly generated chunks are placed on a 2 s tick
+
   await page.evaluate((y) => {
     const bv = (window as any).__bv;
     for (let x = 0; x <= 16; x++) for (let z = 0; z <= 16; z++) {
@@ -278,7 +285,11 @@ async function main() {
   const y0 = (await st(page)).y;
   await page.keyboard.down('Space'); await sleep(50); await page.keyboard.up('Space');
   await sleep(150);
-  record('B2', (await st(page)).y > y0 + 0.2 ? 'PASS' : 'FAIL', '');
+  const b2y = (await st(page)).y;
+  const b2diag = b2y > y0 + 0.2 ? '' : JSON.stringify(await page.evaluate(() => { const bv = (window as any).__bv; const p = bv.player; const r: any = {};
+    for (let y = 45; y <= 48; y++) r[y] = bv.world.getBlock(Math.floor(p.x), y, Math.floor(p.z));
+    return { x: p.x, y: p.y, z: p.z, r, chunk: bv.world.hasChunkAt(Math.floor(p.x), Math.floor(p.z)), ground: p.onGround, vy: p.vy, st: bv.getState() }; }));
+  record('B2', b2y > y0 + 0.2 ? 'PASS' : 'FAIL', b2diag);
 
   await page.evaluate(() => { const bv = (window as any).__bv; bv.teleport(8.5, 46.05, 8.5); bv.look(0, 0); });
   // Double-tap W for sprint (MC-like) then hold
@@ -286,7 +297,7 @@ async function main() {
   await page.keyboard.down('KeyW'); await sleep(900); await page.keyboard.up('KeyW');
   let sprintD = Math.abs((await st(page)).z - 8.5);
   // swiftshader can stall a few frames (dt clamp → slow motion); retry the sprint key up to 3×
-  let sprintTries = 0, sprintFps = 0;
+  let sprintTries = 0, sprintFps = 0, sprintDiag = '';
   while (sprintD <= 2 && sprintTries < 3) {
     sprintTries++;
     await page.evaluate(() => { const bv = (window as any).__bv; bv.teleport(8.5, 46.05, 8.5); bv.look(0, 0); });
@@ -297,8 +308,11 @@ async function main() {
     await page.keyboard.up('ControlLeft');
     const sb = await st(page);
     sprintD = Math.abs(sb.z - 8.5); sprintFps = sb.fps;
+    sprintDiag = JSON.stringify(await page.evaluate(() => { const bv = (window as any).__bv; const p = bv.player; const { x, y, z, vx, vy, vz, onGround, flying, creative, health } = p;
+      const r: any = {}; for (let yy = 45; yy <= 49; yy++) r[yy] = bv.world.getBlock(8, yy, 8); const m = bv.mobs.mobs.map((m: any) => [m.kind, +m.x.toFixed(1), +m.y.toFixed(1), +m.z.toFixed(1)]);
+      return { r, m, x, y, z, vx, vy, vz, onGround, flying, creative, health, inv: bv.input.inventoryOpen, mounted: bv.boats?.mounted }; })) + ` y=${sb.y.toFixed(2)} locked=${sb.locked} ptr=${await page.evaluate(() => !!document.pointerLockElement)} sneak=${await page.evaluate(() => (window as any).__bv.player.sneaking)}`;
   }
-  record('B3', sprintD > 2 ? 'PASS' : 'PARTIAL', `dist=${sprintD.toFixed(2)} ctrlTries=${sprintTries} fps=${Number(sprintFps).toFixed(0)}`);
+  record('B3', sprintD > 2 ? 'PASS' : 'PARTIAL', `dist=${sprintD.toFixed(2)} ctrlTries=${sprintTries} fps=${Number(sprintFps).toFixed(0)} ${sprintDiag}`);
 
   // sneak edge
   await page.evaluate(() => {

@@ -29,7 +29,7 @@ import { loadSettings, saveSettings, type GameSettings } from './settings';
 import type { MobKind } from './mobs/types';
 import { WeatherSystem } from './world/weather';
 import { FishingSystem } from './world/fishing';
-import { tryPlaceStructures, resetStructures, structuresToJSON } from './world/structures';
+import { tryPlaceStructures, skipStructures, resetStructures, structuresToJSON } from './world/structures';
 import { createByttebonde, createTraderRig, tryTrade, type Byttebonde } from './mobs/trader';
 import { renderMapCanvas } from './world/mapitem';
 import { MusicBus } from './audio/music';
@@ -1185,8 +1185,16 @@ async function runGame(
       structuresAcc = 0;
       if (dimension === 'overworld') {
         const pcx = Math.floor(player.x / CHUNK_SIZE), pcz = Math.floor(player.z / CHUNK_SIZE);
-        for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
-          tryPlaceStructures(world, containers, pcx + dx, pcz + dz);
+        // MC generates structures with the terrain. Before it16 they were stamped only once you came
+        // within 2 chunks: houses popped into view next to you, over your own builds, or around you.
+        // Now every chunk in view distance gets its structures within ~2 s of being generated.
+        const R = VIEW_RADIUS;
+        for (let dz = -R; dz <= R; dz++) for (let dx = -R; dx <= R; dx++) {
+          if (!world.hasChunkAt((pcx + dx) * CHUNK_SIZE, (pcz + dz) * CHUNK_SIZE)) continue;
+          // Never build a structure on top of / around the player (new world, teleport, portal):
+          // chunks within 2 of you that are still unbuilt simply get none.
+          if (Math.abs(dx) <= 2 && Math.abs(dz) <= 2) skipStructures(pcx + dx, pcz + dz);
+          else tryPlaceStructures(world, containers, pcx + dx, pcz + dz);
         }
       }
     }

@@ -145,3 +145,13 @@ describe('sand on your head (MC suffocation)', () => {
     for (const id of [BlockId.Glass, BlockId.Leaves, BlockId.Slab]) { w.setBlock(8, 22, 8, id); expect(headInSolid(w, p.x, p.y, p.z)).toBe(false); }
   });
 });
+
+import { lightCurve } from '../src/world/mesher';
+describe('light curve (it16)', () => {
+  it('dark caves near-black, torch-lit mid range at least as bright as before, full sky = 1', () => {
+    expect(lightCurve(0)).toBeLessThan(0.06);
+    expect(lightCurve(7)).toBeGreaterThan(0.3);
+    expect(lightCurve(15)).toBeCloseTo(1, 5);
+    for (let l = 1; l <= 15; l++) expect(lightCurve(l)).toBeGreaterThan(lightCurve(l - 1));
+  });
+});

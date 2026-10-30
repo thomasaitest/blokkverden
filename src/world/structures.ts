@@ -16,6 +16,9 @@ export function structuresToJSON(): string[] {
   return [...placed];
 }
 
+/** Mark a chunk's structures as done without building them (used for chunks right around the player). */
+export function skipStructures(cx: number, cz: number): void { placed.add(`${cx},${cz}`); }
+
 export function tryPlaceStructures(world: World, containers: ContainerStore, cx: number, cz: number): void {
   const key = `${cx},${cz}`;
   if (placed.has(key)) return;

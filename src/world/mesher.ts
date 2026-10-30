@@ -97,7 +97,10 @@ function emitQuad(
   const uv = tileUV(tileIdx);
   const shade = face.dir[1] === 1 ? 1.0 : face.dir[1] === -1 ? 0.55 : face.dir[0] !== 0 ? 0.75 : 0.85;
   const lx2 = getLight(wx + face.dir[0], y + face.dir[1], wz + face.dir[2]);
-  let lightMul = 0.15 + (lx2 / 15) * 0.85;
+  // MC-like light curve: unlit caves (light 0) are near-black, torch/sky light ramps up steeply.
+  // it16: the scene ambient now gives full texture colour at noon, so the old linear 0.15 floor made
+  // pitch-dark caves look grey and lit.
+  let lightMul = lightCurve(lx2);
   // Powered redstone / lit lamp boost
   if (id === BlockId.RedDust && meta > 0) lightMul = Math.max(lightMul, 0.55 + meta / 15 * 0.45);
   if (id === BlockId.Lamp && (meta & 1)) lightMul = Math.max(lightMul, 1.0);
@@ -365,4 +368,10 @@ export function meshFromTransferables(t: {
 /** Count triangles for tests. */
 export function triCount(m: ChunkMeshes): number {
   return (m.opaque.indices.length + m.transparent.indices.length) / 3;
+}
+
+/** Light level 0–15 → vertex brightness (linear). l0 ≈ 0.04, l7 ≈ 0.35, l15 = 1. */
+export function lightCurve(l: number): number {
+  const f = Math.max(0, Math.min(15, l)) / 15;
+  return 0.04 + 0.96 * Math.pow(f, 1.5);
 }

@@ -332,7 +332,8 @@ async function main() {
     await sleep(500);
     await shot(page, 'it16-01-sand-paa-jord.png');
     // hold just long enough to break dirt by hand (0.5 s) but not the sand that lands in its place
-    await hold(page, 700);
+    // presses of 0.65 s by hand: dirt needs 0.5 s; the sand landing in its place would need another full 0.5 s
+    for (let t = 0; t < 10 && (await gb(12, 46, 8)) === 2; t++) await hold(page, 650);
     await sleep(300);
     const col = [];
     for (let y = 46; y <= 49; y++) col.push(await gb(12, y, 8));

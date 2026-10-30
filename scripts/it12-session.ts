@@ -247,6 +247,7 @@ async function main() {
   });
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 }, recordVideo: process.env.NOVID ? undefined : { dir: VID, size: { width: 1280, height: 720 } } });
   const page = await ctx.newPage();
+  await page.addInitScript('window.__name = (f) => f;');
   page.on('pageerror', (e) => { console.error('PAGEERROR', e.message); bug('pageerror ' + e.message); });
 
   await boot(page, base, 'It12Session');

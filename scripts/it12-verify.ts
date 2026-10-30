@@ -247,7 +247,7 @@ async function main() {
     headless: true, channel: 'chrome',
     args: ['--use-angle=swiftshader', '--use-gl=angle', '--enable-webgl', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader'],
   });
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 }, recordVideo: process.env.BV_VID ? { dir: process.env.BV_VID, size: { width: 1280, height: 720 } } : undefined });
   const page = await ctx.newPage();
   await page.addInitScript('window.__name = (f) => f;');
   page.on('pageerror', (e) => { console.error('PAGEERROR', e.message); bug('pageerror ' + e.message); });
@@ -387,6 +387,7 @@ async function main() {
   const summary: Record<string, number> = { PASS: 0, FAIL: 0, PARTIAL: 0 };
   for (const r of results) summary[r.status] = (summary[r.status] ?? 0) + 1;
   console.log('=== SUMMARY ===', summary);
+  await ctx.close();
   await browser.close();
   child.kill('SIGKILL');
   process.exit(0);

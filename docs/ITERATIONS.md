@@ -2,6 +2,31 @@
 
 Original voxel-sandkasse. Ingen Mojang-assets.
 
+## Iterasjon 12 (2026-10-30)
+
+### Fokus
+Feiljakt i overlevelseskjernen mot Minecraft-oppførsel (Chromium, ekte tastatur/mus).
+
+### Fikset
+1. Drop-fysikk: ting teleporteres ikke lenger til overflaten; Q-drop; død slipper også rustning; full inventar håndteres
+2. Tom start i overlevelse; strukturer lagres per verden
+3. Ingen sprint ved sult ≤ 6; sult-skade som i MC (½ hjerte / 4 s, stopper på ½ hjerte, ignorerer rustning); fallskade ignorerer rustning
+4. HUD: hjerter/sult ikke lenger under XP-linja, halve hjerter; ekte ikoner på drops
+5. Løv og vann tegnes til full sikteavstand
+6. Hold høyreklikk for å spise (1,6 s, ikke ved full sult); seng setter alltid gjenopplivingspunkt + melding, ingen gratis heling ved søvn
+7. Drops av samme type slås sammen; ulastede chunks er solide (ingen fall gjennom verden)
+8. Playtest-skript: mer robust sprint/spise-test (swiftshader-hakk), ingen hengende vite preview
+
+### Playtest
+- Core: **55 PASS / 0 FAIL / 0 PARTIAL** (`scripts/core-playtest.ts`)
+- it12-verify: **8/8 PASS**
+- 42 vitest grønne, npm audit 0 sårbarheter, secrets-scan rent
+
+### Media
+https://thomasaitest.github.io/blokkverden/progress/it12/
+
+---
+
 ## Iterasjon 11 (2026-10-30)
 
 ### Fokus

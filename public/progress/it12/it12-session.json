@@ -1,0 +1,76 @@
+{
+  "when": "2026-10-30T13:53:36.155Z",
+  "results": [
+    {
+      "id": "S1-empty-start",
+      "status": "PASS",
+      "notes": "nonEmptySlots=0"
+    },
+    {
+      "id": "S2-cave-drop-height",
+      "status": "PASS",
+      "notes": "block=0 drops=[{\"x\":8.62,\"y\":46.2,\"z\":6.4,\"n\":1}]"
+    },
+    {
+      "id": "S2-cave-drop-pickup",
+      "status": "PASS",
+      "notes": "cobble=1"
+    },
+    {
+      "id": "S3-q-drop-one",
+      "status": "PASS",
+      "notes": "inv=4 drops=[{\"x\":8.5,\"y\":47.12,\"z\":11.54,\"n\":1}]"
+    },
+    {
+      "id": "S3-ctrlq-stack",
+      "status": "PASS",
+      "notes": "inv=0"
+    },
+    {
+      "id": "S3-q-repickup",
+      "status": "PASS",
+      "notes": "dirt=5"
+    },
+    {
+      "id": "S4-respawn-empty",
+      "status": "PASS",
+      "notes": "{\"slots\":0,\"armor\":0,\"dead\":false}"
+    },
+    {
+      "id": "S4-recover-drops",
+      "status": "PASS",
+      "notes": "{\"dirt\":10,\"pick\":1,\"helm\":1,\"left\":0}"
+    },
+    {
+      "id": "S5-close-overflow",
+      "status": "PASS",
+      "notes": "[{\"x\":8.5,\"y\":47.05,\"z\":7.36,\"n\":1}]"
+    },
+    {
+      "id": "S6-chunk-border-dig",
+      "status": "PASS",
+      "notes": "blocks=0,0 (visual check png)"
+    },
+    {
+      "id": "S7-sprint-borders",
+      "status": "PASS",
+      "notes": "dist=22.1 embedded=0 minY=32.01 fpsAvg=19 fpsMin=16.872890888638874 stuckSamples=10"
+    },
+    {
+      "id": "S8-save-drop",
+      "status": "PASS",
+      "notes": "pre=1 post=0 planksTotal(inv+drops)=3 inv=[\"6x3\"]"
+    },
+    {
+      "id": "S9-village-no-restamp",
+      "status": "PASS",
+      "notes": "wall={\"x\":-28,\"y\":37,\"z\":54} minedNow=0 afterReload=0"
+    },
+    {
+      "id": "S10-no-sprint-hungry",
+      "status": "PASS",
+      "notes": "fed=8.04 hungry=6.19"
+    }
+  ],
+  "bugs": []
+}

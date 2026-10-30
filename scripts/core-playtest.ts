@@ -271,14 +271,20 @@ async function main() {
   await page.keyboard.press('KeyW'); await sleep(40);
   await page.keyboard.down('KeyW'); await sleep(900); await page.keyboard.up('KeyW');
   let sprintD = Math.abs((await st(page)).z - 8.5);
-  if (sprintD <= 2) {
+  // swiftshader can stall a few frames (dt clamp → slow motion); retry the sprint key up to 3×
+  let sprintTries = 0, sprintFps = 0;
+  while (sprintD <= 2 && sprintTries < 3) {
+    sprintTries++;
     await page.evaluate(() => { const bv = (window as any).__bv; bv.teleport(8.5, 46.05, 8.5); bv.look(0, 0); });
+    await sleep(300);
+    await focusGame(page);
     await page.keyboard.down('ControlLeft');
     await page.keyboard.down('KeyW'); await sleep(1000); await page.keyboard.up('KeyW');
     await page.keyboard.up('ControlLeft');
-    sprintD = Math.abs((await st(page)).z - 8.5);
+    const sb = await st(page);
+    sprintD = Math.abs(sb.z - 8.5); sprintFps = sb.fps;
   }
-  record('B3', sprintD > 2 ? 'PASS' : 'PARTIAL', `dist=${sprintD.toFixed(2)}`);
+  record('B3', sprintD > 2 ? 'PASS' : 'PARTIAL', `dist=${sprintD.toFixed(2)} ctrlTries=${sprintTries} fps=${Number(sprintFps).toFixed(0)}`);
 
   // sneak edge
   await page.evaluate(() => {

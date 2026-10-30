@@ -1,0 +1,46 @@
+{
+  "when": "2026-10-30T15:12:22.387Z",
+  "results": [
+    {
+      "id": "V1-far-leaves",
+      "status": "PASS",
+      "notes": "{\"vis\":171,\"tot\":171}"
+    },
+    {
+      "id": "V2-hud-layout",
+      "status": "PASS",
+      "notes": "{\"hearts\":{\"left\":479.1328125,\"right\":588.6640625,\"top\":602,\"bottom\":624,\"w\":109.53125},\"hunger\":{\"left\":616.6640625,\"right\":764.8671875,\"top\":602,\"bottom\":624,\"w\":148.203125},\"xp\":{\"left\":430,\"right\":850,\"top\":630,\"bottom\":638,\"w\":420},\"hotbar\":{\"left\":420,\"right\":860,\"top\":646,\"bottom\":702,\"w\":440},\"armor\":{\"left\":594,\"right\":686,\"top\":576,\"bottom\":596,\"w\":92},\"label\":{\"left\":622.484375,\"right\":657.515625,\"top\":624,\"bottom\":641,\"w\":35.03125}}"
+    },
+    {
+      "id": "V3-drop-icon",
+      "status": "PASS",
+      "notes": "drop={\"x\":8.5,\"y\":46.2,\"z\":7.012047252770189,\"id\":4} rgb=36,38,38 (verify png)"
+    },
+    {
+      "id": "V4-starvation",
+      "status": "PASS",
+      "notes": "after8.8s=3 (½-heart steps; swiftshader dt clamp may give 1 tick) floor={\"hp\":1,\"dead\":false}"
+    },
+    {
+      "id": "V5-bed-day-spawn",
+      "status": "PASS",
+      "notes": "day=0.40 msg=\"Gjenopplivingspunkt satt · Du kan bare sove om natten\" respawn=8.5,47.0,6.5 bed={\"x\":8,\"y\":46,\"z\":6}"
+    },
+    {
+      "id": "V6-bed-night-sleep",
+      "status": "PASS",
+      "notes": "dayAfter=0.280"
+    },
+    {
+      "id": "V7-hold-to-eat",
+      "status": "PASS",
+      "notes": "click=10 heldMs=1635 hold=14 apples=2 fullHungerApples=2"
+    },
+    {
+      "id": "V8-drop-merge",
+      "status": "PASS",
+      "notes": "dirtEntities=[3]"
+    }
+  ],
+  "bugs": []
+}

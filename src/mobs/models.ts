@@ -370,11 +370,14 @@ export function animateMobRig(root: THREE.Group, m: Mob, dt: number, playerPos?:
   const hurt = m.hurtFlash ?? 0;
   const flash = hurt > 0;
   const fuseWhite = m.fuse > 0 && ((m.fuse * 10) | 0) % 2 === 0;
+  // burning in sunlight: flickering orange glow
+  const burnGlow = m.burning && m.deathT == null ? (((m.age * 8) | 0) % 2 === 0 ? 0xff6a00 : 0xb03000) : 0;
   root.traverse((o) => {
     if (o instanceof THREE.Mesh && o.material && 'emissive' in (o.material as THREE.MeshLambertMaterial)) {
       const mat = o.material as THREE.MeshLambertMaterial;
       if (flash) mat.emissive?.setHex(0xff0000);
       else if (fuseWhite) mat.emissive?.setHex(0xffffff);
+      else if (burnGlow) mat.emissive?.setHex(burnGlow);
       else mat.emissive?.setHex(0x000000);
     }
   });

@@ -29,6 +29,16 @@ export class ContainerStore {
     return f;
   }
 
+  /** Every stack held at (x,y,z) — chest slots or furnace input/fuel/output. */
+  contentsAt(x: number, y: number, z: number): ItemStack[] {
+    const k = posKey(x, y, z);
+    const out: ItemStack[] = [];
+    for (const s of this.chests.get(k) ?? []) if (s && s.count > 0) out.push({ ...s });
+    const f = this.furnaces.get(k);
+    if (f) for (const s of [f.input, f.fuel, f.output]) if (s && s.count > 0) out.push({ ...s });
+    return out;
+  }
+
   removeAt(x: number, y: number, z: number): void {
     const k = posKey(x, y, z);
     this.chests.delete(k);

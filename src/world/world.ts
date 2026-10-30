@@ -516,6 +516,11 @@ export class World {
     this.meshing.clear();
     for (const d of data) {
       const c = Chunk.fromJSON(d);
+      // it14 migration: worlds saved before bedrock had plain stone at y=0 (dig through → fall out of the world)
+      for (let lx = 0; lx < CHUNK_SIZE; lx++) for (let lz = 0; lz < CHUNK_SIZE; lz++) {
+        const b = c.get(lx, 0, lz);
+        if (b === BlockId.Stone || b === BlockId.Air) c.set(lx, 0, lz, BlockId.Bedrock);
+      }
       this.chunks.set(chunkKey(c.cx, c.cz), c);
       this.dirtyMeshes.add(chunkKey(c.cx, c.cz));
     }

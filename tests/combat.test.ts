@@ -52,6 +52,7 @@ describe('mob ground collision (no wall-climbing)', () => {
     }
     for (let y = 46; y <= 48; y++) w.setBlock(8, y, 8, BlockId.Stone);
     const sys = new MobSystem();
+    sys.dayTime = 0.9; // night: no sun burning
     const z = sys.spawn('vandrer', 9.75, 46.02, 8.5);
     const player = createPlayer(8.5, 49, 8.5);
     let hits = 0, maxY = 0;

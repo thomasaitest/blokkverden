@@ -38,7 +38,8 @@ export function generateTerrain(chunk: Chunk, noise: SeededNoise): void {
 
       for (let y = 0; y < CHUNK_HEIGHT; y++) {
         let id: number = BlockId.Air;
-        if (y === 0) id = BlockId.Stone;
+        if (y === 0) id = BlockId.Bedrock;
+        else if (y <= 2 && noise.hash2(wx * 13 + y * 101, wz * 7 - y * 37) < (y === 1 ? 0.6 : 0.3)) id = BlockId.Bedrock;
         else if (y < h - 4) id = BlockId.Stone;
         else if (y < h) {
           if (biome === 'desert' || biome === 'beach') id = BlockId.Sand;

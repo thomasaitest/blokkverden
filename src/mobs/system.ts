@@ -1,5 +1,6 @@
 import { isSolid, BlockId } from '../blocks/types';
 import type { World } from '../world/world';
+import { CHUNK_HEIGHT } from '../world/chunk';
 import type { PlayerState } from '../player/physics';
 import { MOB_DEFS, type Mob, type MobKind } from './types';
 import type { DropSystem } from '../world/drops';
@@ -55,10 +56,23 @@ export function inMeleeReach(m: { x: number; y: number; z: number; height: numbe
   return p.y < m.y + m.height && p.y + 1.8 > m.y;
 }
 
+/** Open sky straight above the mob's head (MC canSeeSky) and not standing in water. */
+export function burnsInSun(world: World, m: { x: number; y: number; z: number; height: number }): boolean {
+  const bx = Math.floor(m.x), bz = Math.floor(m.z);
+  const head = Math.floor(m.y + m.height * 0.9);
+  if (world.getBlock(bx, Math.floor(m.y), bz) === BlockId.Water || world.getBlock(bx, head, bz) === BlockId.Water) return false;
+  for (let y = head + 1; y < CHUNK_HEIGHT; y++) {
+    const id = world.getBlock(bx, y, bz);
+    if (id !== BlockId.Air && id !== BlockId.Torch) return false;
+  }
+  return true;
+}
+
 export class MobSystem {
   mobs: Mob[] = [];
   nextId = 1;
   spawnCool = 0;
+  dayTime = 0; // set from trySpawn each frame
 
   clear(): void { this.mobs = []; }
 
@@ -95,6 +109,7 @@ export class MobSystem {
   }
 
   trySpawn(world: World, player: PlayerState, dayTime: number, dt: number): void {
+    this.dayTime = dayTime;
     this.spawnCool -= dt;
     if (this.spawnCool > 0) return;
     this.spawnCool = 3;
@@ -129,9 +144,6 @@ export class MobSystem {
     this.mobs = this.mobs.filter((m) => {
       const d = Math.hypot(m.x - player.x, m.z - player.z);
       if (d > 72) return false;
-      if (m.hostile && !night && world.getLight(Math.floor(m.x), Math.floor(m.y + 1), Math.floor(m.z)) > 11) {
-        m.hp -= dt * 4;
-      }
       return m.hp > 0;
     });
   }
@@ -141,8 +153,16 @@ export class MobSystem {
     onPlayerHurt: (dmg: number, kx: number, kz: number) => void,
     xp?: XpSystem,
   ): void {
+    const day = this.dayTime >= 0.22 && this.dayTime <= 0.76;
     for (const m of this.mobs) {
       m.age += dt;
+      // MC: zombies and skeletons burn in direct sunlight (open sky above the head, not in water).
+      // Was applied in trySpawn with the frame dt once per 3 s → mobs effectively never burned.
+      if (day && (m.kind === 'vandrer' || m.kind === 'bueskytt') && burnsInSun(world, m)) {
+        m.burning = true;
+        m.hp -= dt * 2;
+        if (m.hp <= 0) continue;
+      } else m.burning = false;
       m.attackCool -= dt;
       if (m.knockBack && m.knockBack > 0) m.knockBack -= dt;
       const def = MOB_DEFS[m.kind];
@@ -156,9 +176,14 @@ export class MobSystem {
           tz = player.z - m.z;
           m.yaw = Math.atan2(tx, tz);
         }
-        if (m.kind === 'knallbolle' && distP < 3.5) {
+        // MC creeper: starts hissing within ~3 blocks (with sight), keeps it up while you're within ~7,
+        // and the fuse winds back down when you get away (was: never reset → instant blast next time).
+        const fusing = m.kind === 'knallbolle' && (m.fuse > 0 ? distP < 7 : distP < 3.5 && Math.abs(m.y - player.y) < 3
+          && lineOfSight(world, m.x, m.y + m.height * 0.85, m.z, player.x, player.y + 1.62, player.z));
+        if (m.kind === 'knallbolle' && !fusing) m.fuse = Math.max(0, m.fuse - dt);
+        if (fusing) {
           m.fuse += dt;
-          if (m.fuse > 1.4) {
+          if (m.fuse > 1.5) { // MC: 30 ticks
             sound.explode();
             if (distP < 5) onPlayerHurt(12 * (1 - distP / 5), tx, tz);
             for (let dy = -1; dy <= 2; dy++)
@@ -167,7 +192,8 @@ export class MobSystem {
                   if (dx * dx + dy * dy + dz * dz > 6) continue;
                   const bx = Math.floor(m.x + dx), by = Math.floor(m.y + dy), bz = Math.floor(m.z + dz);
                   const id = world.getBlock(bx, by, bz);
-                  if (id !== BlockId.Air && id !== BlockId.Water && id !== BlockId.Stone && id !== BlockId.Cobble && id !== BlockId.CoalOre) {
+                  if (id !== BlockId.Air && id !== BlockId.Water && id !== BlockId.Stone && id !== BlockId.Cobble && id !== BlockId.CoalOre
+                    && id !== BlockId.Bedrock && id !== BlockId.Chest && id !== BlockId.Furnace) {
                     world.setBlock(bx, by, bz, BlockId.Air);
                   }
                 }
@@ -177,12 +203,14 @@ export class MobSystem {
         } else if (m.kind !== 'knallbolle') {
           m.fuse = 0;
         }
+        // MC SwellGoal: a hissing creeper stands still (no melee — it only explodes)
+        if (fusing) { tx = 0; tz = 0; }
         const sees = () => lineOfSight(world, m.x, m.y + m.height * 0.85, m.z, player.x, player.y + 1.62, player.z);
         if (m.kind === 'bueskytt' && distP < 14 && distP > 4 && m.attackCool <= 0) {
           m.attackCool = 1.6;
           // No arrows through shelter walls/roofs (was 55 % hit chance regardless of cover).
           if (sees() && Math.random() < 0.55) { onPlayerHurt(3, tx, tz); sound.bow(); }
-        } else if (m.kind !== 'bueskytt' && m.attackCool <= 0 && inMeleeReach(m, player) && sees()) {
+        } else if (m.kind !== 'bueskytt' && m.kind !== 'knallbolle' && m.attackCool <= 0 && inMeleeReach(m, player) && sees()) {
           m.attackCool = 1.0;
           onPlayerHurt(m.kind === 'vever' ? 3 : 4, tx, tz);
           sound.mobHit();
@@ -289,11 +317,16 @@ export class MobSystem {
   private dropLoot(m: Mob, drops: DropSystem): void {
     const x = Math.floor(m.x), y = Math.floor(m.y), z = Math.floor(m.z);
     if (m.kind === 'gris') drops.spawn(x, y, z, stack(ItemId.RawMeat, 1));
-    if (m.kind === 'ku') drops.spawn(x, y, z, stack(ItemId.Leather, 1));
+    if (m.kind === 'ku') { drops.spawn(x, y, z, stack(ItemId.Leather, 1)); drops.spawn(x, y, z, stack(ItemId.RawMeat, 1 + (Math.random() * 2 | 0))); }
     if (m.kind === 'sau') drops.spawn(x, y, z, stack(ItemId.WoolItem, 1));
     if (m.kind === 'høne') drops.spawn(x, y, z, stack(ItemId.Feather, 1));
     if (m.kind === 'ulv') drops.spawn(x, y, z, stack(ItemId.Bone, 1 + (Math.random() * 2 | 0)));
-    if (m.hostile) drops.spawn(x, y, z, stack(ItemId.Coal, 1));
+    if (m.kind === 'bueskytt') {
+      // MC skeleton: bones + arrows
+      drops.spawn(x, y, z, stack(ItemId.Bone, 1 + (Math.random() * 2 | 0)));
+      const a = Math.random() * 3 | 0;
+      if (a > 0) drops.spawn(x, y, z, stack(ItemId.Arrow, a));
+    } else if (m.hostile) drops.spawn(x, y, z, stack(ItemId.Coal, 1));
   }
 
   nearest(kind: MobKind | null, px: number, py: number, pz: number, r = 3): Mob | null {

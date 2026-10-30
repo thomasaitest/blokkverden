@@ -30,7 +30,7 @@ export const BlockId = {
   Stairs: 30, Slab: 31, GlassPane: 32, Ladder: 33, Sign: 34,
   RedDust: 35, Lever: 36, Button: 37, Lamp: 38, PressurePlate: 39,
   Helstein: 40, Sjelegrus: 41, Portal: 42, PortalFrame: 43,
-  Lava: 44, Glodstein: 45, Helkvarts: 46, Anvil: 47,
+  Lava: 44, Glodstein: 45, Helkvarts: 46, Anvil: 47, Bedrock: 48,
 } as const;
 
 export type BlockId = (typeof BlockId)[keyof typeof BlockId];
@@ -101,6 +101,8 @@ export const BLOCKS: Record<number, BlockDef> = {
   [45]: B(45, 'Glødstein', true, false, true, false, 0.6, { top: 65, bottom: 65, side: 65 }, 15),
   [46]: B(46, 'Helkvarts', true, true, false, false, 1.4, { top: 66, bottom: 66, side: 66 }),
   [47]: B(47, 'Ambolt', true, true, false, false, 2.5, { top: 67, bottom: 67, side: 67 }),
+  // Grunnfjell (MC bedrock): bunnen av verden, kan ikke knuses i overlevelse.
+  [48]: B(48, 'Grunnfjell', true, true, false, false, -1, { top: 71, bottom: 71, side: 71 }),
 };
 
 export function isSolid(id: number): boolean { return BLOCKS[id]?.solid ?? false; }

@@ -15,7 +15,7 @@ export const ItemId = {
   LeatherHelmet: 120, LeatherChest: 121, LeatherLegs: 122, LeatherBoots: 123,
   IronHelmet: 124, IronChest: 125, IronLegs: 126, IronBoots: 127,
   DiamondHelmet: 128, DiamondChest: 129, DiamondLegs: 130, DiamondBoots: 131,
-  Seeds: 63, Wheat: 64, Bread: 65, Boat: 66, FishingRod: 67, MapItem: 68, RawFish: 69, CookedFish: 70, Bone: 71,
+  Seeds: 63, Wheat: 64, Bread: 65, Boat: 66, FishingRod: 67, MapItem: 68, RawFish: 69, CookedFish: 70, Bone: 71, CookedMeat: 72,
   WoodHoe: 116, IronHoe: 117, EnchantTable: 24, Door: 26, Trapdoor: 27, Fence: 28, Gate: 29, Stairs: 30, Slab: 31, GlassPane: 32, Ladder: 33, Sign: 34, RedDust: 35, Lever: 36, Button: 37, Lamp: 38, PressurePlate: 39, Helstein: 40, Sjelegrus: 41, PortalFrame: 43,
 } as const;
 
@@ -110,6 +110,7 @@ export const ITEMS: Record<number, ItemDef> = {
   [69]: { id: 69, name: 'Råfisk', stackable: true, maxStack: 64, iconTile: 49, food: 2 },
   [70]: { id: 70, name: 'Stekt fisk', stackable: true, maxStack: 64, iconTile: 50, food: 5 },
   [71]: { id: 71, name: 'Bein', stackable: true, maxStack: 64, iconTile: 68 },
+  [72]: { id: 72, name: 'Stekt kjøtt', stackable: true, maxStack: 64, iconTile: 72, food: 8 },
   [25]: blk(25, 'Fremkaller', 46, 25),
   [26]: blk(26, 'Dør', 52, 26),
   [27]: blk(27, 'Falldør', 52, 27),
@@ -128,15 +129,15 @@ export const ITEMS: Record<number, ItemDef> = {
   [40]: blk(40, 'Helstein', 60, 40),
   [41]: blk(41, 'Sjelegrus', 61, 41),
   [43]: blk(43, 'Portalramme', 63, 43),
-  [116]: tool(116, 'Trehakkejord', 'hoe', 'wood', 60, 1, 1, 44),
-  [117]: tool(117, 'Jernhakkejord', 'hoe', 'iron', 250, 1, 1, 44),
+  [116]: tool(116, 'Trekrafse', 'hoe', 'wood', 60, 1, 1, 44),
+  [117]: tool(117, 'Jernkrafse', 'hoe', 'iron', 250, 1, 1, 44),
 };
 
 export function blockMaterial(blockId: number): BlockMaterial {
   switch (blockId) {
     case 1: case 2: case 8: case 19: return 'ground';
     case 5: case 6: case 11: case 13: case 20: case 21: return 'wood';
-    case 3: case 4: case 14: case 15: case 16: case 17: case 18: return 'stone';
+    case 3: case 4: case 14: case 15: case 16: case 17: case 18: case 46: case 47: return 'stone';
     case 7: return 'plant';
     case 9: case 12: return 'glass';
     default: return 'other';
@@ -149,24 +150,41 @@ export function preferredTool(mat: BlockMaterial): ToolKind {
   if (mat === 'plant') return 'sword';
   return 'none';
 }
+const TIER_RANK: Record<string, number> = { wood: 1, stone: 2, iron: 3, diamond: 4 };
+/** Minimum pickaxe tier to get a drop (MC): iron ore needs stone, gold/diamond need iron. */
+export function requiredPickTier(blockId: number): number {
+  if (blockId === 16) return 2;
+  if (blockId === 17 || blockId === 18) return 3;
+  return blockMaterial(blockId) === 'stone' ? 1 : 0;
+}
+/** True when the held item harvests the block (stone-type blocks need a good-enough pickaxe). */
+export function canHarvest(blockId: number, held: ItemStack | null): boolean {
+  const need = requiredPickTier(blockId);
+  if (need === 0) return true;
+  const def = held ? ITEMS[held.id] : undefined;
+  return def?.tool === 'pickaxe' && (TIER_RANK[def.tier ?? ''] ?? 0) >= need;
+}
 export function breakDuration(blockId: number, held: ItemStack | null): number {
   const base = BLOCKS[blockId]?.breakTime ?? 0.5;
-  if (base <= 0) return 0;
+  if (base < 0) return Infinity; // bedrock: unbreakable in survival
+  if (base === 0) return 0;
   const mat = blockMaterial(blockId);
   const pref = preferredTool(mat);
   const def = held ? ITEMS[held.id] : undefined;
   let mult = 1;
   if (def?.tool && def.tool === pref && def.mineSpeed) mult = def.mineSpeed;
   else if (mat === 'stone') mult = 0.2;
+  // MC: a pickaxe that's too weak still uses its speed but /100 instead of /30 (≈3.3× slower)
+  if (mult > 1 && !canHarvest(blockId, held)) mult /= 3.33;
   return base / mult;
 }
 export function dropForBlock(blockId: number, held: ItemStack | null): ItemStack | null {
   if (blockId === 0 || blockId === 10) return null;
-  const pick = ITEMS[held?.id ?? -1]?.tool === 'pickaxe';
-  if (blockId === 3) return pick ? stack(4, 1) : null;
-  if (blockId === 15) return pick ? stack(51, 1) : null;
-  if (blockId === 16 || blockId === 17) return pick ? stack(blockId, 1) : null;
-  if (blockId === 18) return pick ? stack(55, 1) : null;
+  if (blockId === 48) return null;
+  if (!canHarvest(blockId, held)) return null;
+  if (blockId === 3) return stack(4, 1);
+  if (blockId === 15) return stack(51, 1);
+  if (blockId === 18) return stack(55, 1);
   if (blockId === 1 || blockId === 19) {
     if (Math.random() < 0.12) return stack(63, 1);
     return stack(2, 1);

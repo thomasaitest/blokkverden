@@ -12,6 +12,7 @@ export const SMELT_RECIPES: SmeltRecipe[] = [
   { input: ItemId.IronOre, output: stack(ItemId.IronIngot, 1), time: 200 },
   { input: ItemId.GoldOre, output: stack(ItemId.GoldIngot, 1), time: 200 },
   { input: ItemId.Apple, output: stack(ItemId.CookedApple, 1), time: 100 },
+  { input: ItemId.RawMeat, output: stack(ItemId.CookedMeat, 1), time: 100 },
   { input: ItemId.RawFish, output: stack(ItemId.CookedFish, 1), time: 100 },
   { input: ItemId.Log, output: stack(ItemId.Coal, 1), time: 200 }, // charcoal-ish
 ];

@@ -88,6 +88,12 @@ canvas#game {
   color: #ddd;
   text-shadow: 0 1px 1px #000;
 }
+#held-name {
+  position: fixed; left: 50%; bottom: 152px; transform: translateX(-50%);
+  color: #fff; font-size: 15px; text-shadow: 2px 2px 0 #3a3a3a; z-index: 12;
+  pointer-events: none; opacity: 0; transition: opacity 0.4s; white-space: nowrap;
+}
+#held-name.show { opacity: 1; transition: none; }
 #debug {
   position: fixed;
   left: 8px;

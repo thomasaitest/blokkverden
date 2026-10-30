@@ -93,6 +93,7 @@ export function generateHelveteChunk(
       let id: number = BlockId.Helstein;
       if (y === h) id = Math.random() > 0.8 ? BlockId.Sjelegrus : BlockId.Helstein;
       if (y < 3) id = BlockId.Stone;
+      if (y === 0) id = BlockId.Bedrock; // MC nether also has a bedrock floor
       setBlock(wx, y, wz, id);
     }
     if (h < lavaTop) {

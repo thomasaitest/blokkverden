@@ -1236,7 +1236,11 @@ async function runGame(
           if (id !== BlockId.Air && id !== BlockId.Water) {
             const drop = dropForBlock(id, inv.held());
             world.setBlock(hit.x, hit.y, hit.z, BlockId.Air);
-            if (id === BlockId.Chest || id === BlockId.Furnace) containers.removeAt(hit.x, hit.y, hit.z);
+            if (id === BlockId.Chest || id === BlockId.Furnace) {
+              // MC: breaking a chest/furnace spills its contents instead of deleting them
+              for (const s of containers.contentsAt(hit.x, hit.y, hit.z)) drops.spawn(hit.x, hit.y, hit.z, s);
+              containers.removeAt(hit.x, hit.y, hit.z);
+            }
             if (drop) drops.spawn(hit.x, hit.y, hit.z, drop);
             if (!player.creative) inv.setHeld(damageTool(inv.held()));
             sound.breakBlock();

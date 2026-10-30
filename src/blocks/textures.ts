@@ -332,6 +332,21 @@ export function createAtlasCanvas(): HTMLCanvasElement {
     return [255, 250, 180, 255];
   });
 
+  // 71 bedrock (grunnfjell) — dark, mottled
+  fillTile(d, 71, (_lx, _ly, rnd) => {
+    const v = rnd < 0.3 ? 30 : rnd < 0.65 ? 62 : rnd < 0.9 ? 92 : 125;
+    return [v, v, v + 4, 255];
+  });
+  // 72 cooked meat item
+  fillTile(d, 72, (lx, ly) => {
+    const dx = lx - 8, dy = ly - 8;
+    const r = dx * dx * 0.7 + dy * dy;
+    if (r > 40) return [0, 0, 0, 0];
+    if (lx > 11 && ly < 7) return [235, 225, 200, 255];
+    if (r > 28) return [95, 50, 25, 255];
+    return [150 + ((lx * 7 + ly * 3) % 20), 85, 40, 255];
+  });
+
   ctx.putImageData(img, 0, 0);
   return canvas;
 }

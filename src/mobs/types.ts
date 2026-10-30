@@ -31,6 +31,8 @@ export interface Mob {
   height: number;
   color: number;
   hurtFlash?: number;
+  /** Burning in sunlight (zombie/skeleton). */
+  burning?: boolean;
   /** Seconds of AI-suppressed knockback. */
   knockBack?: number;
   deathT?: number;

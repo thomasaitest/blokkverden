@@ -27,7 +27,8 @@ export function createHud(root: HTMLElement, inv: Inventory, atlas: HTMLCanvasEl
     <div id="break-bar"><div id="break-fill"></div></div>
     <div id="vitals"><div id="hearts"></div><div id="hunger"></div><div id="bubbles"></div></div>
     <div id="hotbar"></div>
-    <pre id="debug"></pre>
+    <div id="held-name"></div>
+    <pre id="debug" style="display:none"></pre>
     <div id="hint" style="display:none">Klikk · WASD · dobbel-W · Space · Shift · E · 1–9 · høyreklikk ovn/kiste/benk<br/>Spis: høyreklikk mat i hotbar · På nettbrett: styrespak</div>
   `;
   root.appendChild(el);
@@ -43,7 +44,23 @@ export function createHud(root: HTMLElement, inv: Inventory, atlas: HTMLCanvasEl
 
   const hotbarEl = el.querySelector('#hotbar') as HTMLElement;
   let slot = inv.selected;
-  let showDebug = true;
+  let showDebug = false; // MC: F3 overlay is off until you press F3
+  const heldNameEl = el.querySelector('#held-name') as HTMLElement;
+  let lastHeldKey = '';
+  let heldNameTimer: ReturnType<typeof setTimeout> | null = null;
+  /** MC: the selected item's name pops up above the hotbar for ~2 s whenever it changes. */
+  const showHeldName = () => {
+    const s = inv.slots[slot];
+    const key = `${slot}:${s?.id ?? 0}`;
+    if (key === lastHeldKey) return;
+    const first = lastHeldKey === '';
+    lastHeldKey = key;
+    if (first || !s) { heldNameEl.classList.remove('show'); return; }
+    heldNameEl.textContent = ITEMS[s.id]?.name ?? '';
+    heldNameEl.classList.add('show');
+    if (heldNameTimer) clearTimeout(heldNameTimer);
+    heldNameTimer = setTimeout(() => heldNameEl.classList.remove('show'), 2000);
+  };
   let hotbarDirty = true;
   let lastBars = '';
 
@@ -76,6 +93,7 @@ export function createHud(root: HTMLElement, inv: Inventory, atlas: HTMLCanvasEl
       hotbarEl.appendChild(cell);
     }
     hotbarDirty = false;
+    showHeldName();
   };
 
   const breakFill = el.querySelector('#break-fill') as HTMLElement;
@@ -86,7 +104,8 @@ export function createHud(root: HTMLElement, inv: Inventory, atlas: HTMLCanvasEl
 
   window.addEventListener('keydown', (e) => {
     if (!el.isConnected) return; // stale HUD from a quit session
-    if (e.code === 'KeyF3') {
+    if (e.code === 'F3') { // was 'KeyF3' (never matches) → F3 did nothing
+      e.preventDefault(); // Chrome: F3 = find next
       showDebug = !showDebug;
       debugEl.style.display = showDebug ? 'block' : 'none';
       api.showDebug = showDebug;
@@ -111,15 +130,15 @@ export function createHud(root: HTMLElement, inv: Inventory, atlas: HTMLCanvasEl
       const cz = Math.floor(p.z / CHUNK_SIZE);
       const held = inv.held();
       debugEl.textContent = [
-        `Blokkverden it13`,
+        `Blokkverden it14`,
         `${fps.toFixed(0)} fps`,
         `xyz: ${p.x.toFixed(2)} / ${p.y.toFixed(2)} / ${p.z.toFixed(2)}`,
         `chunk: ${cx} ${cz}`,
         `facing: ${((p.yaw * 180) / Math.PI) | 0}°`,
         `chunks: ${chunks}`,
         `dag: ${(day * 100).toFixed(0)}%`,
-        `hp: ${p.health.toFixed(0)} hunger: ${p.hunger.toFixed(1)} air: ${p.air.toFixed(0)}`,
-        held ? `hold: ${ITEMS[held.id]?.name ?? held.id}` : `hold: —`,
+        `liv: ${p.health.toFixed(0)} sult: ${p.hunger.toFixed(1)} luft: ${p.air.toFixed(0)}`,
+        held ? `holder: ${ITEMS[held.id]?.name ?? held.id}` : `holder: —`,
         p.inWater ? 'i vann' : '',
         extra ?? '',
       ].filter(Boolean).join('\n');

@@ -10,7 +10,7 @@ describe('Chunk + terrain', () => {
   it('generates ground', () => {
     const c = new Chunk(0, 0);
     generateTerrain(c, new SeededNoise(42));
-    expect(c.get(8, 0, 8)).toBe(BlockId.Stone);
+    expect(c.get(8, 0, 8)).toBe(BlockId.Bedrock);
   });
   it('biomes vary', () => {
     const n = new SeededNoise(42);

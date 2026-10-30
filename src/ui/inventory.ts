@@ -23,6 +23,8 @@ export function createInventoryUi(
   inv: Inventory,
   atlas: HTMLCanvasElement,
   onChange: () => void,
+  /** Items that no longer fit when closing (craft grid / cursor) are thrown, not lost. */
+  onOverflow: (s: ItemStack) => void = () => {},
 ): InventoryUi {
   const el = document.createElement('div');
   el.id = 'inv-overlay';
@@ -337,9 +339,13 @@ export function createInventoryUi(
       el.style.display = 'flex'; document.exitPointerLock(); render();
     },
     close: () => {
-      for (const s of craft) if (s) inv.add(s);
+      const giveBack = (s: ItemStack) => {
+        const left = inv.add(s);
+        if (left > 0) onOverflow({ ...s, count: left });
+      };
+      for (const s of craft) if (s) giveBack(s);
       craft = Array(4).fill(null);
-      if (cursor) { inv.add(cursor); cursor = null; updateCursorVisual(); }
+      if (cursor) { giveBack(cursor); cursor = null; updateCursorVisual(); }
       mode = 'closed'; api.mode = mode; el.style.display = 'none';
       chestSlots = null; furnace = null; showBook = false; onChange();
     },

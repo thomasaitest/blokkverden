@@ -35,6 +35,8 @@ export interface SaveData {
   };
   chunks: { cx: number; cz: number; blocks: number[]; waterLevel?: number[] }[];
   xp?: { xp: number; level: number };
+  /** Chunk keys that already had their village/ruin/dungeon stamped (it12). */
+  structures?: string[];
   savedAt: number;
 }
 
@@ -90,6 +92,7 @@ export async function saveWorldNamed(
   dayTime: number,
   respawn: { x: number; y: number; z: number } | null,
   xp?: { xp: number; level: number },
+  structures?: string[],
 ): Promise<void> {
   const data: SaveData = {
     version: 5,
@@ -107,6 +110,7 @@ export async function saveWorldNamed(
     containers: containers.toJSON(),
     chunks: world.serializeModified(),
     xp,
+    structures,
     savedAt: Date.now(),
   };
   const db = await openDb();

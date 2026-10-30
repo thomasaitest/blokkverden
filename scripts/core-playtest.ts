@@ -10,8 +10,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-const OUT = 'public/progress/it10';
-const SHOTS = '/workspace/blokkverden-shots/it10';
+const OUT = process.env.BV_OUT || 'public/progress/it12';
+const SHOTS = process.env.BV_SHOTS || '/workspace/blokkverden-shots/it12';
 
 type Status = 'PASS' | 'FAIL' | 'PARTIAL' | 'UNTESTED';
 interface Row { id: string; status: Status; notes: string }

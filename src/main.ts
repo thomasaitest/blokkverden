@@ -1,7 +1,7 @@
 import './style.css';
 import { BlockId, isSolid } from './blocks/types';
 import { Inventory } from './items/inventory';
-import { ITEMS, breakDuration, dropForBlock, damageTool, armorPoints, ItemId, blockMaterial } from './items/types';
+import { type ItemStack, ITEMS, breakDuration, dropForBlock, damageTool, armorPoints, ItemId, blockMaterial } from './items/types';
 import { bindDesktopControls, consumeLook, consumePlace, createInput } from './player/controls';
 import { createPlayer, movePlayer, EYE_HEIGHT } from './player/physics';
 import { raycast } from './player/raycast';
@@ -26,7 +26,7 @@ import { loadSettings, saveSettings, type GameSettings } from './settings';
 import type { MobKind } from './mobs/types';
 import { WeatherSystem } from './world/weather';
 import { FishingSystem } from './world/fishing';
-import { tryPlaceStructures } from './world/structures';
+import { tryPlaceStructures, resetStructures, structuresToJSON } from './world/structures';
 import { createByttebonde, createTraderRig, tryTrade, type Byttebonde } from './mobs/trader';
 import { renderMapCanvas } from './world/mapitem';
 import { MusicBus } from './audio/music';
@@ -179,7 +179,7 @@ async function runGame(
   deathEl.style.display = 'none';
   app.appendChild(deathEl);
 
-  const doSave = () => saveWorldNamed(worldName, world, player, inv, drops, containers, dayTime, respawn, xp.toJSON());
+  const doSave = () => saveWorldNamed(worldName, world, player, inv, drops, containers, dayTime, respawn, xp.toJSON(), structuresToJSON());
   const markMesh = () => { meshesDirty = true; renderer.markChunksDirty(); };
 
   const applySettings = (s: GameSettings) => {
@@ -246,7 +246,7 @@ async function runGame(
 
   const invUi = createInventoryUi(app, inv, renderer.getAtlas(), () => {
     hud.markDirty(); hud.refreshHotbar();
-  });
+  }, (s) => throwFromPlayer(s));
   const toggleInv = () => {
     if (dead || paused) return;
     if (creativeOpen) { creativeOpen.close(); creativeOpen = null; input.inventoryOpen = false; return; }
@@ -272,14 +272,35 @@ async function runGame(
   try { renderer.canvas.focus({ preventScroll: true }); } catch { renderer.canvas.focus(); }
   window.addEventListener('keydown', (e) => {
     if (e.code === 'Escape') { e.preventDefault(); togglePause(); }
+    // MC: Q drops one of the held item, Ctrl+Q the whole stack.
+    if (e.code === 'KeyQ' && !e.repeat && !dead && !paused && !input.inventoryOpen) {
+      e.preventDefault();
+      dropHeld(e.ctrlKey || e.metaKey);
+    }
   });
+  function throwFromPlayer(s: ItemStack): void {
+    const cy = Math.cos(player.pitch);
+    const dx = -Math.sin(player.yaw) * cy, dz = -Math.cos(player.yaw) * cy, dy = Math.sin(player.pitch);
+    drops.throwItem(player.x + dx * 0.3, player.y + 1.3, player.z + dz * 0.3, dx * 4, dy * 4 + 2, dz * 4, s, 2);
+  }
+  function dropHeld(all: boolean): void {
+    const h = inv.held();
+    if (!h) return;
+    const n = all ? h.count : 1;
+    throwFromPlayer({ ...h, count: n });
+    if (h.count - n <= 0) inv.setHeld(null); else inv.setHeld({ ...h, count: h.count - n });
+    hud.markDirty(); hud.refreshHotbar();
+  }
 
   // Load / fresh
+  resetStructures(); // per-world (was leaking across worlds + lost on reload → re-stamped villages)
   if (!fresh) {
     try {
       const saved = await loadWorldNamed(worldName);
       if (saved && saved.version >= 2) {
         world.loadChunks(saved.chunks);
+        // Old saves (pre-it12) have no list: treat every saved chunk as already stamped.
+        resetStructures(saved.structures ?? saved.chunks.map((c) => `${c.cx},${c.cz}`));
         player = createPlayer(saved.player.x, saved.player.y, saved.player.z);
         player.yaw = saved.player.yaw; player.pitch = saved.player.pitch;
         player.health = saved.player.health; player.hunger = saved.player.hunger;
@@ -299,9 +320,9 @@ async function runGame(
     for (let i = 0; i < 80; i++) world.remeshDirty(12);
     Object.assign(player, world.findSpawn());
     respawn = { x: player.x, y: player.y, z: player.z };
-    inv.fillStarter();
+    // Minecraft survival: start with an empty inventory (punch a tree first).
+    if (player.creative) inv.fillStarter();
   }
-  if (!inv.slots.some(Boolean)) inv.fillStarter();
 
   world.updateAround(player.x, player.z);
   for (let i = 0; i < 60; i++) world.remeshDirty(10);
@@ -346,12 +367,23 @@ async function runGame(
     dead = true;
     deathEl.style.display = 'flex';
     document.exitPointerLock();
+    if (invUi.isOpen()) { invUi.close(); input.inventoryOpen = false; }
+    // MC: inventory + armour scatter as item entities where you died.
+    const scatter = (s: ItemStack) => {
+      const a = Math.random() * Math.PI * 2, v = 1 + Math.random() * 2;
+      drops.throwItem(player.x, player.y + 0.6, player.z, Math.cos(a) * v, 3 + Math.random() * 2, Math.sin(a) * v, s, 0.5);
+    };
     for (let i = 0; i < 36; i++) {
       const s = inv.slots[i];
-      if (s) drops.spawn(Math.floor(player.x), Math.floor(player.y), Math.floor(player.z), s);
+      if (s) scatter(s);
       inv.slots[i] = null;
     }
-    hud.markDirty();
+    for (let i = 0; i < inv.armor.length; i++) {
+      const s = inv.armor[i];
+      if (s) scatter(s);
+      inv.armor[i] = null;
+    }
+    hud.markDirty(); updateArmorUi();
   }
   function respawnPlayer(): void {
     dead = false;
@@ -359,7 +391,7 @@ async function runGame(
     player.health = 20; player.hunger = 20; player.air = 20;
     player.x = respawn.x; player.y = respawn.y; player.z = respawn.z;
     player.vx = player.vy = player.vz = 0;
-    inv.fillStarter();
+    if (player.creative) inv.fillStarter();
     hud.markDirty(); hud.refreshHotbar(); updateArmorUi();
   }
   deathEl.querySelector('#btn-respawn')!.addEventListener('click', () => respawnPlayer());
@@ -1085,7 +1117,7 @@ async function runGame(
     }
     if (meshesDirty) { renderer.syncChunks(world, true); meshesDirty = false; }
 
-    drops.update(dt, player, inv, groundY);
+    drops.update(dt, player, inv, (x, y, z) => isSolid(world.getBlock(Math.floor(x), Math.floor(y), Math.floor(z))));
     renderer.syncDrops(drops.drops);
     renderer.syncMobs(mobs.mobs, dt);
     renderer.syncWeather(weather.kind, weather.intensity, renderer.camera.position, weather.flash);

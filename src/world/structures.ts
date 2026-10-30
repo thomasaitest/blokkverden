@@ -4,7 +4,17 @@ import { CHUNK_SIZE } from './chunk';
 import { ItemId, stack } from '../items/types';
 import type { ContainerStore } from './containers';
 
+/** Chunk keys whose structure roll has been done for the CURRENT world (persisted in the save). */
 const placed = new Set<string>();
+
+/** Must be called when a world is started — the set is per-world, not per-session. */
+export function resetStructures(keys: Iterable<string> = []): void {
+  placed.clear();
+  for (const k of keys) placed.add(k);
+}
+export function structuresToJSON(): string[] {
+  return [...placed];
+}
 
 export function tryPlaceStructures(world: World, containers: ContainerStore, cx: number, cz: number): void {
   const key = `${cx},${cz}`;

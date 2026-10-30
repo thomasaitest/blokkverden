@@ -78,10 +78,11 @@ export function createTitleMenu(root: HTMLElement, cb: MenuCallbacks): {
     for (const w of worlds) {
       const row = document.createElement('div');
       row.className = 'world-row';
-      row.innerHTML = `<span>${w.name}</span><span class="muted">${new Date(w.savedAt).toLocaleString('nb-NO')}</span>
-        <button type="button" data-play="${w.name}">Åpne</button>
-        <button type="button" data-ren="${w.name}">Gi nytt navn</button>
-        <button type="button" data-del="${w.name}" class="danger">Slett</button>`;
+      const esc = (t: string) => t.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+      row.innerHTML = `<span>${esc(w.name)}</span><span class="muted">${new Date(w.savedAt).toLocaleString('nb-NO')}</span>
+        <button type="button" data-play="${esc(w.name)}">Åpne</button>
+        <button type="button" data-ren="${esc(w.name)}">Gi nytt navn</button>
+        <button type="button" data-del="${esc(w.name)}" class="danger">Slett</button>`;
       rows.appendChild(row);
     }
     worldList.querySelector('#btn-new-world')!.addEventListener('click', () => {

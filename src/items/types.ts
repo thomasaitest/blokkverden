@@ -15,7 +15,7 @@ export const ItemId = {
   LeatherHelmet: 120, LeatherChest: 121, LeatherLegs: 122, LeatherBoots: 123,
   IronHelmet: 124, IronChest: 125, IronLegs: 126, IronBoots: 127,
   DiamondHelmet: 128, DiamondChest: 129, DiamondLegs: 130, DiamondBoots: 131,
-  Seeds: 63, Wheat: 64, Bread: 65, Boat: 66, FishingRod: 67, MapItem: 68, RawFish: 69, CookedFish: 70, Bone: 71, CookedMeat: 72,
+  Seeds: 63, Wheat: 64, Bread: 65, Boat: 66, FishingRod: 67, MapItem: 68, RawFish: 69, CookedFish: 70, Bone: 71, CookedMeat: 72, String: 73, Gunpowder: 74, RottenFlesh: 75,
   WoodHoe: 116, IronHoe: 117, EnchantTable: 24, Door: 26, Trapdoor: 27, Fence: 28, Gate: 29, Stairs: 30, Slab: 31, GlassPane: 32, Ladder: 33, Sign: 34, RedDust: 35, Lever: 36, Button: 37, Lamp: 38, PressurePlate: 39, Helstein: 40, Sjelegrus: 41, PortalFrame: 43,
 } as const;
 
@@ -111,6 +111,9 @@ export const ITEMS: Record<number, ItemDef> = {
   [70]: { id: 70, name: 'Stekt fisk', stackable: true, maxStack: 64, iconTile: 50, food: 5 },
   [71]: { id: 71, name: 'Bein', stackable: true, maxStack: 64, iconTile: 68 },
   [72]: { id: 72, name: 'Stekt kjøtt', stackable: true, maxStack: 64, iconTile: 72, food: 8 },
+  [73]: { id: 73, name: 'Tråd', stackable: true, maxStack: 64, iconTile: 13 },
+  [74]: { id: 74, name: 'Krutt', stackable: true, maxStack: 64, iconTile: 26 },
+  [75]: { id: 75, name: 'Råttent kjøtt', stackable: true, maxStack: 64, iconTile: 27, food: 4 },
   [25]: blk(25, 'Fremkaller', 46, 25),
   [26]: blk(26, 'Dør', 52, 26),
   [27]: blk(27, 'Falldør', 52, 27),

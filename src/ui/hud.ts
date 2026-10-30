@@ -151,7 +151,7 @@ export function createHud(root: HTMLElement, inv: Inventory, atlas: HTMLCanvasEl
     },
     hideHintNow: () => { hintVisible = false; applyHint(); },
     updateBars: (p) => {
-      const key = `${p.health|0},${p.hunger|0},${p.air|0},${p.inWater?1:0}`;
+      const key = `${p.health|0},${p.hunger|0},${p.air|0},${p.inWater?1:0},${(p.hungerEffect ?? 0) > 0 ? 1 : 0}`;
       if (key === lastBars) return;
       lastBars = key;
       hearts.innerHTML = '';
@@ -169,7 +169,7 @@ export function createHud(root: HTMLElement, inv: Inventory, atlas: HTMLCanvasEl
         const full = p.hunger >= (i + 1) * 2;
         const half = !full && p.hunger >= i * 2 + 1;
         const span = document.createElement('span');
-        span.className = 'drum' + (full ? ' full' : half ? ' half' : ' empty');
+        span.className = 'drum' + (full ? ' full' : half ? ' half' : ' empty') + ((p.hungerEffect ?? 0) > 0 ? ' sick' : '');
         span.textContent = '🍗'; // empty = greyed drumstick, constant width (MC)
         hunger.appendChild(span);
       }

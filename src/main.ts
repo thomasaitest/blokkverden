@@ -199,6 +199,12 @@ async function runGame(
 
   const doSave = () => saveWorldNamed(worldName, world, player, inv, drops, containers, dayTime, respawn, xp.toJSON(), structuresToJSON());
   const markMesh = () => { meshesDirty = true; renderer.markChunksDirty(); };
+  // MC explosions: containers spill, chunks remesh, smoke puff
+  mobs.takeContainer = (x, y, z) => { const c = containers.contentsAt(x, y, z); containers.removeAt(x, y, z); return c; };
+  mobs.onBlast = (x, y, z, blocks) => {
+    particles.burst(x, y, z, 0x555555, 40, 'break');
+    if (blocks.length) { markMesh(); hud.markDirty(); }
+  };
 
   const applySettings = (s: GameSettings) => {
     settings = s;
@@ -1058,6 +1064,10 @@ async function runGame(
       }
 
       hungerAcc += dt * (player.sprinting ? 0.04 : (player.vx || player.vz) ? 0.008 : 0.001);
+      if (player.hungerEffect && player.hungerEffect > 0) {
+        hungerAcc += dt * 0.12; // ≈ 3–4 hunger points over 30 s
+        player.hungerEffect = Math.max(0, player.hungerEffect - dt);
+      }
       if (hungerAcc > 1) {
         hungerAcc = 0;
         if (player.hunger > 0) player.hunger = Math.max(0, player.hunger - 1);
@@ -1285,6 +1295,8 @@ async function runGame(
         if (eatTimer >= EAT_TIME) {
           eatTimer = 0;
           player.hunger = Math.min(20, player.hunger + (ITEMS[hf.id].food ?? 0));
+          // MC: rotten flesh gives Hunger for 30 s with 80 % chance
+          if (hf.id === ItemId.RottenFlesh && Math.random() < 0.8) player.hungerEffect = 30;
           hf.count -= 1;
           if (hf.count <= 0) inv.setHeld(null);
           sound.eat(); hud.markDirty(); hud.refreshHotbar();

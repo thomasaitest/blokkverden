@@ -22,6 +22,8 @@ export interface PlayerState {
   air: number; // 0–20
   creative: boolean;
   flying: boolean;
+  /** Seconds left of the Hunger effect (rotten flesh): hunger drains faster, bar turns green. */
+  hungerEffect?: number;
 }
 
 export interface MoveResult {

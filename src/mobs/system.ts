@@ -7,6 +7,11 @@ import type { DropSystem } from '../world/drops';
 import { ItemId, stack } from '../items/types';
 import type { SoundBus } from '../audio/sound';
 import type { XpSystem } from '../world/xp';
+import { explosionBlocks, explosionDamage, type Blasted } from '../world/explosion';
+import { dropForBlock, type ItemStack } from '../items/types';
+
+/** Explosion drops ignore tool tiers (MC: blocks blown up drop as if mined correctly). */
+const BEST_PICK: ItemStack = { id: ItemId.DiamondPickaxe, count: 1 };
 
 function collides(world: World, x: number, y: number, z: number, w: number, h: number): boolean {
   const hw = w / 2;
@@ -74,7 +79,54 @@ export class MobSystem {
   spawnCool = 0;
   dayTime = 0; // set from trySpawn each frame
 
+  /** Set by the game: takes out (and forgets) a container's contents so an explosion can spill them. */
+  takeContainer?: (x: number, y: number, z: number) => ItemStack[];
+  /** Called after an explosion changed blocks (remesh, particles). */
+  onBlast?: (x: number, y: number, z: number, blocks: Blasted[]) => void;
+
   clear(): void { this.mobs = []; }
+
+  /**
+   * MC explosion (creeper power 3): ray-marched block destruction by blast resistance,
+   * destroyed blocks drop with chance 1/power, containers always spill their contents,
+   * player damage by distance × exposure (walls shield you).
+   */
+  explode(
+    world: World, x: number, y: number, z: number, power: number, player: PlayerState, drops: DropSystem,
+    onPlayerHurt: (dmg: number, kx: number, kz: number) => void, rnd: () => number = Math.random,
+  ): Blasted[] {
+    const blocks = explosionBlocks((bx, by, bz) => world.getBlock(bx, by, bz), x, y, z, power, rnd);
+    for (const b of blocks) {
+      world.setBlock(b.x, b.y, b.z, BlockId.Air);
+      if (b.id === BlockId.Chest || b.id === BlockId.Furnace) {
+        for (const s of this.takeContainer?.(b.x, b.y, b.z) ?? []) drops.spawn(b.x, b.y, b.z, s);
+      }
+      if (rnd() < 1 / power) {
+        const d = dropForBlock(b.id, BEST_PICK);
+        if (d) drops.spawn(b.x, b.y, b.z, d);
+      }
+    }
+    // MC: torches / red dust left floating after the blast pop off
+    for (const b of blocks) {
+      const above = world.getBlock(b.x, b.y + 1, b.z);
+      if ((above === BlockId.Torch || above === BlockId.RedDust || above === BlockId.PressurePlate) && world.getBlock(b.x, b.y, b.z) === BlockId.Air) {
+        world.setBlock(b.x, b.y + 1, b.z, BlockId.Air);
+        const d = dropForBlock(above, null);
+        if (d) drops.spawn(b.x, b.y + 1, b.z, d);
+      }
+    }
+    // exposure: share of sample points on the player's body with a clear line to the blast
+    let seen = 0, total = 0;
+    for (const fy of [0.1, 0.9, 1.7]) for (const fx of [-0.3, 0.3]) for (const fz of [-0.3, 0.3]) {
+      total++;
+      if (lineOfSight(world, x, y + 0.1, z, player.x + fx, player.y + fy, player.z + fz)) seen++;
+    }
+    const dist = Math.hypot(player.x - x, player.y - y, player.z - z); // MC: entity position (feet)
+    const dmg = player.creative ? 0 : explosionDamage(dist, power, seen / total);
+    if (dmg > 0) onPlayerHurt(dmg, player.x - x, player.z - z);
+    this.onBlast?.(x, y, z, blocks);
+    return blocks;
+  }
 
   spawn(kind: MobKind, x: number, y: number, z: number): Mob {
     const d = MOB_DEFS[kind];
@@ -155,6 +207,9 @@ export class MobSystem {
   ): void {
     const day = this.dayTime >= 0.22 && this.dayTime <= 0.76;
     for (const m of this.mobs) {
+      // Dying mobs (death animation) are inert. Before: a creeper kept "exploding" every frame
+      // for the 0.45 s death animation (≈9 blasts, lethal at any range) and dying zombies still hit.
+      if (m.hp <= 0) continue;
       m.age += dt;
       // MC: zombies and skeletons burn in direct sunlight (open sky above the head, not in water).
       // Was applied in trySpawn with the frame dt once per 3 s → mobs effectively never burned.
@@ -185,18 +240,8 @@ export class MobSystem {
           m.fuse += dt;
           if (m.fuse > 1.5) { // MC: 30 ticks
             sound.explode();
-            if (distP < 5) onPlayerHurt(12 * (1 - distP / 5), tx, tz);
-            for (let dy = -1; dy <= 2; dy++)
-              for (let dx = -2; dx <= 2; dx++)
-                for (let dz = -2; dz <= 2; dz++) {
-                  if (dx * dx + dy * dy + dz * dz > 6) continue;
-                  const bx = Math.floor(m.x + dx), by = Math.floor(m.y + dy), bz = Math.floor(m.z + dz);
-                  const id = world.getBlock(bx, by, bz);
-                  if (id !== BlockId.Air && id !== BlockId.Water && id !== BlockId.Stone && id !== BlockId.Cobble && id !== BlockId.CoalOre
-                    && id !== BlockId.Bedrock && id !== BlockId.Chest && id !== BlockId.Furnace) {
-                    world.setBlock(bx, by, bz, BlockId.Air);
-                  }
-                }
+            m.exploded = true;
+            this.explode(world, m.x, m.y, m.z, 3, player, drops, onPlayerHurt); // MC: blast centre = creeper's feet
             m.hp = 0;
             continue;
           }
@@ -301,7 +346,7 @@ export class MobSystem {
         if (m.deathT == null) {
           m.deathT = 0.01;
           this.dropLoot(m, drops);
-          xp?.spawn(m.x, m.y + 0.5, m.z, m.hostile ? 5 : 2);
+          if (!m.exploded) xp?.spawn(m.x, m.y + 0.5, m.z, m.hostile ? 5 : 2);
         } else {
           m.deathT += dt;
         }
@@ -326,7 +371,19 @@ export class MobSystem {
       drops.spawn(x, y, z, stack(ItemId.Bone, 1 + (Math.random() * 2 | 0)));
       const a = Math.random() * 3 | 0;
       if (a > 0) drops.spawn(x, y, z, stack(ItemId.Arrow, a));
-    } else if (m.hostile) drops.spawn(x, y, z, stack(ItemId.Coal, 1));
+    } else if (m.kind === 'vandrer') {
+      // MC zombie: 0–2 rotten flesh (was: coal)
+      const n = Math.random() * 3 | 0;
+      if (n > 0) drops.spawn(x, y, z, stack(ItemId.RottenFlesh, n));
+    } else if (m.kind === 'vever') {
+      // MC spider: 0–2 string
+      const n = Math.random() * 3 | 0;
+      if (n > 0) drops.spawn(x, y, z, stack(ItemId.String, n));
+    } else if (m.kind === 'knallbolle') {
+      // MC creeper: 0–2 gunpowder (only when killed, not when it explodes)
+      const n = m.exploded ? 0 : Math.random() * 3 | 0;
+      if (n > 0) drops.spawn(x, y, z, stack(ItemId.Gunpowder, n));
+    }
   }
 
   nearest(kind: MobKind | null, px: number, py: number, pz: number, r = 3): Mob | null {

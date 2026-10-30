@@ -36,6 +36,8 @@ export interface Mob {
   /** Seconds of AI-suppressed knockback. */
   knockBack?: number;
   deathT?: number;
+  /** Creeper blew itself up (no drops / XP, like MC). */
+  exploded?: boolean;
   attacking?: boolean;
   /** Wolf: tamed companion */
   tamed?: boolean;

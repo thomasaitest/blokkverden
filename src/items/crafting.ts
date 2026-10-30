@@ -12,7 +12,7 @@ export interface Recipe {
 
 export const RECIPES: Recipe[] = [
   { w: 2, h: 2, pattern: [ItemId.Planks, ItemId.Planks, ItemId.Planks, 0], result: stack(ItemId.Boat, 1) },
-  { w: 3, h: 3, pattern: [0, 0, ItemId.Stick, 0, ItemId.Stick, ItemId.Feather, ItemId.Stick, 0, ItemId.Feather], result: stack(ItemId.FishingRod, 1, 64) },
+  { w: 3, h: 3, pattern: [0, 0, ItemId.Stick, 0, ItemId.Stick, ItemId.String, ItemId.Stick, 0, ItemId.String], result: stack(ItemId.FishingRod, 1, 64) },
   { w: 3, h: 3, pattern: [ItemId.Planks, ItemId.Planks, ItemId.Planks, ItemId.Planks, ItemId.IronIngot, ItemId.Planks, ItemId.Planks, ItemId.Planks, ItemId.Planks], result: stack(ItemId.MapItem, 1) },
   { w: 3, h: 2, pattern: [ItemId.Planks, ItemId.Planks, 0, 0, ItemId.Stick, 0], result: stack(ItemId.WoodHoe, 1, 60) },
   { w: 3, h: 2, pattern: [ItemId.IronIngot, ItemId.IronIngot, 0, 0, ItemId.Stick, 0], result: stack(ItemId.IronHoe, 1, 250) },
@@ -22,7 +22,8 @@ export const RECIPES: Recipe[] = [
   // bed
   { w: 3, h: 2, pattern: [ItemId.WoolItem, ItemId.WoolItem, ItemId.WoolItem, ItemId.Planks, ItemId.Planks, ItemId.Planks], result: stack(ItemId.Bed, 1) },
   // bow
-  { w: 3, h: 3, pattern: [0, ItemId.Stick, ItemId.Leather, ItemId.Stick, 0, ItemId.Leather, 0, ItemId.Stick, ItemId.Leather], result: stack(ItemId.Bow, 1, 200) },
+  { w: 3, h: 3, pattern: [0, ItemId.Stick, ItemId.String, ItemId.Stick, 0, ItemId.String, 0, ItemId.Stick, ItemId.String], result: stack(ItemId.Bow, 1, 200) },
+  { w: 2, h: 2, pattern: [ItemId.String, ItemId.String, ItemId.String, ItemId.String], result: stack(ItemId.WoolItem, 1) },
   // arrow
   { w: 1, h: 3, pattern: [ItemId.Cobble, ItemId.Stick, ItemId.Feather], result: stack(ItemId.Arrow, 4) },
   // iron tools

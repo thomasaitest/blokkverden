@@ -214,6 +214,9 @@ canvas#game {
 #hunger .drum.full { filter: none; }
 #hunger .drum { display: inline-block; width: 1em; text-align: center; }
 #hunger .drum.empty { opacity: 0.45; filter: grayscale(1) brightness(0.45); }
+/* MC Hunger effect (rotten flesh): bar turns sickly green */
+#hunger .drum.sick { filter: hue-rotate(70deg) saturate(1.6); }
+#hunger .drum.sick.empty { filter: grayscale(1) brightness(0.45); }
 
 .stack-count {
   position: absolute;

@@ -13,6 +13,9 @@ const TIER: Record<string, [RGB, RGB]> = {
   iron: [[226, 226, 232], [160, 160, 172]],
   diamond: [[92, 232, 236], [36, 160, 170]],
   leather: [[150, 96, 52], [104, 64, 32]],
+  string: [[238, 238, 240], [176, 176, 186]],
+  gunpowder: [[104, 104, 108], [58, 58, 64]],
+  rotten: [[150, 104, 70], [96, 128, 62]],
 };
 const STICK: [RGB, RGB] = [[132, 90, 42], [86, 56, 24]];
 
@@ -161,6 +164,60 @@ const P = {
     '................',
     '................',
   ],
+  string: [
+    '................',
+    '..........hH....',
+    '.........H..h...',
+    '........h...H...',
+    '.......H...h....',
+    '......h..hH.....',
+    '......HhH.......',
+    '.....h..........',
+    '....H...........',
+    '...h....hHh.....',
+    '...H...H...h....',
+    '....hHh.....H...',
+    '............h...',
+    '...........H....',
+    '................',
+    '................',
+  ],
+  gunpowder: [
+    '................',
+    '................',
+    '................',
+    '.......h........',
+    '......hHh..h....',
+    '....h.HHH.......',
+    '.....hHHHHh.....',
+    '....hHHHHHHh....',
+    '...hHHHhHHHHh...',
+    '...HHHHHHHHHH...',
+    '..hHHHHHHHHHHh..',
+    '..hhhhhhhhhhhh..',
+    '................',
+    '................',
+    '................',
+    '................',
+  ],
+  rotten: [
+    '................',
+    '................',
+    '.......hHH......',
+    '.....hHHhHH.....',
+    '....HHhHHHhH....',
+    '...hHHHHhHHH....',
+    '...HhHHHHHhHh...',
+    '...HHHhHHHHHH...',
+    '....HHHHhHHH....',
+    '....hHHHHHh.....',
+    '.....DSSh.......',
+    '....DSS.........',
+    '...DSs..........',
+    '...Ds...........',
+    '................',
+    '................',
+  ],
   chest: [
     '................',
     '..hHHh....hHHh..',
@@ -226,6 +283,9 @@ export function itemPattern(itemId: number): { rows: readonly string[]; head: [R
   }
   if (def.tool === 'bow') return { rows: P.bow, head: TIER.iron };
   if (itemId === 61) return { rows: P.arrow, head: TIER.stone };
+  if (itemId === 73) return { rows: P.string, head: TIER.string };
+  if (itemId === 74) return { rows: P.gunpowder, head: TIER.gunpowder };
+  if (itemId === 75) return { rows: P.rotten, head: TIER.rotten };
   if (def.armorSlot) {
     const mat = def.name.startsWith('Lær') ? 'leather' : def.name.startsWith('Jern') ? 'iron' : 'diamond';
     return { rows: P[def.armorSlot], head: TIER[mat] };

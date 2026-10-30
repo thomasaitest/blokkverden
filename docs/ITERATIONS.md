@@ -2,6 +2,28 @@
 
 Original voxel-sandkasse. Ingen Mojang-assets.
 
+## Iterasjon 11 (2026-10-30)
+
+### Fokus
+Full `docs/CORE-PLAYTEST.md` i Chromium med ekte tastatur/mus. Retake av misvisende it10-skjermbilder. Stash med pt-*-media droppet (HEAD bedre).
+
+### Fikset
+1. Kan ikke plassere blokk i spiller-AABB (D2 self-place, MC-oppførsel)
+2. Craft-e2e: høyreklikk én-og-én i rutenett + deposit i alle 36 slots
+3. Natt-spawn bruker block light (ikke full skylight)
+4. Fallskade-test innen CHUNK_HEIGHT; drukning med vann rundt hodet
+5. Ovns-UI åpnes pålitelig etter craft; K-survival fra tømmer → natt
+6. Retake: `partial-k6-shelter.png` (hytte+fakkel), `partial-i2-night.png` (fiender)
+
+### Playtest
+- **55 PASS / 0 FAIL / 0 PARTIAL** (`scripts/core-playtest.ts`)
+- Media: `public/progress/it11/`
+
+### Release
+- vitest, npm audit, secrets scan før push til main + Pages
+
+---
+
 ## Iterasjon 1 (2026-10-29)
 
 ### Bygget

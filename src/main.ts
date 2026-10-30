@@ -1,5 +1,6 @@
 import './style.css';
-import { BlockId, isSolid } from './blocks/types';
+import { BlockId, isSolid, BLOCKS } from './blocks/types';
+import { createAtlasCanvas, tileUV, ATLAS_W, ATLAS_H } from './blocks/textures';
 import { Inventory } from './items/inventory';
 import { updateGravityAround } from './world/gravity';
 import { LeafDecay, LEAF_PERSISTENT } from './world/leafdecay';
@@ -202,6 +203,32 @@ async function runGame(
   const doSave = () => saveWorldNamed(worldName, world, player, inv, drops, containers, dayTime, respawn, xp.toJSON(), structuresToJSON());
   const leafDecay = new LeafDecay();
   let suffocateAcc = 0;
+  // MC: with your head inside a block you see that block's texture (darkened), not through the world
+  const inBlockOverlay = document.createElement('div');
+  inBlockOverlay.id = 'in-block-overlay';
+  inBlockOverlay.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:5;display:none;image-rendering:pixelated;background-size:25vmin 25vmin;filter:brightness(0.3);';
+  document.body.appendChild(inBlockOverlay);
+  const inBlockUrls = new Map<number, string>();
+  let inBlockAtlas: HTMLCanvasElement | null = null;
+  let inBlockShown = -1;
+  const updateInBlockOverlay = () => {
+    const id = headInSolid(world, player.x, player.y, player.z)
+      ? world.getBlock(Math.floor(player.x), Math.floor(player.y + EYE_HEIGHT), Math.floor(player.z)) : -1;
+    if (id === inBlockShown) return;
+    inBlockShown = id;
+    if (id < 0) { inBlockOverlay.style.display = 'none'; return; }
+    let url = inBlockUrls.get(id);
+    if (!url) {
+      inBlockAtlas ??= createAtlasCanvas();
+      const uv = tileUV(BLOCKS[id]?.tiles.side ?? 0);
+      const c = document.createElement('canvas'); c.width = 16; c.height = 16;
+      c.getContext('2d')!.drawImage(inBlockAtlas, uv.u0 * ATLAS_W, uv.v0 * ATLAS_H, 16, 16, 0, 0, 16, 16);
+      url = c.toDataURL();
+      inBlockUrls.set(id, url);
+    }
+    inBlockOverlay.style.backgroundImage = `url(${url})`;
+    inBlockOverlay.style.display = 'block';
+  };
   const markMesh = () => { meshesDirty = true; renderer.markChunksDirty(); };
   // MC explosions: containers spill, chunks remesh, smoke puff
   mobs.takeContainer = (x, y, z) => { const c = containers.contentsAt(x, y, z); containers.removeAt(x, y, z); return c; };
@@ -1060,6 +1087,7 @@ async function runGame(
         suffocateAcc += dt;
         if (suffocateAcc >= 0.5) { suffocateAcc -= 0.5; hurtPlayer(1, 0, 0, true); }
       } else suffocateAcc = 0;
+      updateInBlockOverlay();
       boats.update(dt, world, player, wishX, wishZ, !!input.forward);
 
       if (player.onGround && (wishX || wishZ) && !boats.mounted) {

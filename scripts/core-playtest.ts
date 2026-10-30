@@ -825,13 +825,13 @@ async function main() {
   record('I1', Math.abs((await st(page)).dayTime - 0.9) < 0.05 ? 'PASS' : 'FAIL', '');
   await page.evaluate(() => {
     const bv = (window as any).__bv;
-    const kinds = ['zombi', 'skjelett', 'zombie', 'skeleton'];
+    const kinds = ['vandrer', 'bueskytt']; // it16: was 'zombi'/'skjelett' (unknown kinds → spawn threw → I2 only passed if natural mobs happened to exist)
     for (const k of kinds) {
       try { bv.mobs.spawn(k, bv.player.x + 4, bv.player.y, bv.player.z); break; } catch {}
     }
   });
-  const mobs = await page.evaluate(() => (window as any).__bv.getState().mobs);
-  record('I2', mobs > 0 ? 'PASS' : 'PARTIAL', `mobs=${mobs}`);
+  const mobs = await page.evaluate(() => (window as any).__bv.mobs.mobs.filter((m: any) => m.hostile && m.hp > 0).length);
+  record('I2', mobs > 0 ? 'PASS' : 'FAIL', `hostiles=${mobs}`);
   // combat — real LMB clicks (it15: was __bv.mobs.hitAt / hurtMob, i.e. faked)
   const realHit = async (kind: string, maxClicks: number) => {
     await page.evaluate((kind) => { const bv = (window as any).__bv;

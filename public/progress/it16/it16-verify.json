@@ -1,5 +1,5 @@
 {
-  "when": "2026-10-30T22:55:01.763Z",
+  "when": "2026-10-30T22:58:58.435Z",
   "results": [
     {
       "id": "V-lighting-shots",
@@ -17,9 +17,14 @@
       "notes": "{\"at49\":0,\"at46\":8,\"left\":4}"
     },
     {
+      "id": "S3-suffocation",
+      "status": "FAIL",
+      "notes": "buried={\"feet\":8,\"head\":8,\"above\":0} hpAfter1.8s=17.37499999999998 y=46.01 afterDig y=47.01 hp=16.758324999999957->17.05417499999994"
+    },
+    {
       "id": "L1-leaf-decay",
       "status": "PASS",
-      "notes": "logsBroken=3 leaves before=42 +1.5s=34 +9.5s=15 end=1"
+      "notes": "logsBroken=3 leaves before=42 +1.5s=33 +9.5s=20 end=1"
     },
     {
       "id": "L2-placed-leaf-persistent",
@@ -29,9 +34,10 @@
   ],
   "bugs": [],
   "marks": {
-    "V": 7.15,
-    "S1": 12.538,
-    "S2": 14.858,
-    "L": 16.78
+    "V": 6.806,
+    "S1": 10.784,
+    "S2": 13.284,
+    "S3": 15.204,
+    "L": 21.26
   }
 }

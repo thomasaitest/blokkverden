@@ -358,6 +358,43 @@ async function main() {
     record('S2-placed-sand-falls', v.at49 === 0 && v.at46 === 8 && v.left === 4 ? 'PASS' : 'FAIL', JSON.stringify(v));
   }
 
+  // S3 — dig the dirt over your head with 2 sand on it (real LMB): sand buries you, you suffocate, dig out (real LMB)
+  if (run('S3')) {
+    mark('S3');
+    await page.evaluate(() => {
+      const bv = (window as any).__bv;
+      bv.world.setBlock(15, 48, 15, 2); bv.world.setBlock(15, 49, 15, 8); bv.world.setBlock(15, 50, 15, 8);
+      bv.player.health = 20; bv.forceRemeshAround?.();
+    });
+    await setHeld(page, 102); // wooden shovel
+    await aim(page, 15.5, 46.05, 15.5, 15.5, 49, 15.5); // look straight up
+    await page.evaluate(() => (window as any).__bv.look((window as any).__bv.player.yaw, 1.5));
+    await sleep(300);
+    for (let t = 0; t < 10 && (await gb(15, 48, 15)) === 2; t++) await hold(page, 300);
+    await sleep(200);
+    const buried = { feet: await gb(15, 46, 15), head: await gb(15, 47, 15), above: await gb(15, 48, 15) };
+    await sleep(1600);
+    await shot(page, 'it16-08-begravd-i-sand.png');
+    const s1 = await st(page);
+    const ovl = () => page.evaluate(() => { const el = document.getElementById('in-block-overlay'); return !!el && getComputedStyle(el).display !== 'none'; });
+    const overlay = await ovl();
+    // dig out: keep looking up and hold LMB (shovel) until the head block is gone
+    for (let t = 0; t < 10 && (await gb(15, 47, 15)) === 8; t++) await hold(page, 300);
+    await sleep(1200);
+    const s2 = await st(page);
+    const hp2 = s2.health;
+    await sleep(1200);
+    const s3 = await st(page);
+    const overlayAfter = await ovl();
+    await page.evaluate(() => (window as any).__bv.look(0, -0.3));
+    await sleep(300);
+    await shot(page, 'it16-09-gravd-ut.png');
+    record('S3-suffocation', buried.feet === 8 && buried.head === 8 && buried.above === 0 && s1.health <= 18 && s1.health > 0 && overlay
+      && Math.abs(s1.y - 46) < 0.1 && (await gb(15, 47, 15)) === 0 && s3.health >= hp2 && s3.y > 46.9 && !overlayAfter ? 'PASS' : 'FAIL',
+      `overlay=${overlay}/${overlayAfter} buried=${JSON.stringify(buried)} hpAfter1.8s=${s1.health} y=${s1.y.toFixed(2)} afterDig y=${s3.y.toFixed(2)} hp=${hp2}->${s3.health}`);
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.player.health = 20; });
+  }
+
   // L — chop a tree with an axe (real LMB): natural leaves decay over ~20 s, a leaf placed by the player stays
   if (run('L')) {
     mark('L');

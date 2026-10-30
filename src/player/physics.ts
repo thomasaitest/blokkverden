@@ -1,4 +1,4 @@
-import { BlockId, collidesBlock } from '../blocks/types';
+import { BlockId, collidesBlock, isSolid, isOpaque } from '../blocks/types';
 import type { World } from '../world/world';
 import { CHUNK_HEIGHT } from '../world/chunk';
 
@@ -199,7 +199,14 @@ export function movePlayer(
   p.onGround = false;
 
   if (collidesAt(world, p.x, p.y, p.z, h)) {
-    if (p.vy <= 0) {
+    if (p.vy <= 0 && headInSolid(world, p.x, prevY, p.z) && collidesAt(world, p.x, prevY, p.z, h)) {
+      // MC: a block (e.g. falling sand) in your head cell traps you — you suffocate and must dig out.
+      // Was: the push-out loop below lifted the player up through the block onto its top.
+      p.y = prevY;
+      p.vy = 0;
+      p.onGround = true;
+      p.fallStartY = null;
+    } else if (p.vy <= 0) {
       let lo = Math.min(prevY, p.y);
       let hi = Math.max(prevY, p.y);
       for (let i = 0; i < 16; i++) {
@@ -223,4 +230,11 @@ export function movePlayer(
   }
 
   return { fallDamage };
+}
+
+/** True when the player's eye is inside a full opaque solid block (MC suffocation). */
+export function headInSolid(world: { getBlock(x: number, y: number, z: number): number }, x: number, y: number, z: number): boolean {
+  const id = world.getBlock(Math.floor(x), Math.floor(y + EYE_HEIGHT), Math.floor(z));
+  if (id === BlockId.Slab || id === BlockId.Stairs || id === BlockId.Door || id === BlockId.Trapdoor) return false;
+  return isSolid(id) && isOpaque(id);
 }

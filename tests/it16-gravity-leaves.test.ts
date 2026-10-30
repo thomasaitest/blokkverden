@@ -113,3 +113,35 @@ describe('leaf drops (MC oak rates)', () => {
     expect(none / N).toBeGreaterThan(0.96);
   });
 });
+
+import { createPlayer, movePlayer, headInSolid } from '../src/player/physics';
+import { World } from '../src/world/world';
+
+describe('sand on your head (MC suffocation)', () => {
+  const setup = () => {
+    const w = new World(3); w.ensureChunk(0, 0);
+    for (let x = 0; x < 16; x++) for (let z = 0; z < 16; z++) { w.setBlock(x, 20, z, BlockId.Stone); for (let y = 21; y < 30; y++) w.setBlock(x, y, z, 0); }
+    const p = createPlayer(8.5, 21, 8.5);
+    for (let i = 0; i < 30; i++) movePlayer(p, w, 0, 0, false, 1 / 60);
+    return { w, p };
+  };
+  it('sand landing in the head cell traps the player (no lift through the block)', () => {
+    const { w, p } = setup();
+    w.setBlock(8, 22, 8, BlockId.Sand);
+    for (let i = 0; i < 60; i++) movePlayer(p, w, 0, 0, false, 1 / 60);
+    expect(p.y).toBeCloseTo(21, 1);
+    expect(headInSolid(w, p.x, p.y, p.z)).toBe(true);
+    w.setBlock(8, 22, 8, 0); // dug out
+    expect(headInSolid(w, p.x, p.y, p.z)).toBe(false);
+  });
+  it('sand in the feet cell still pushes the player up onto it', () => {
+    const { w, p } = setup();
+    w.setBlock(8, 21, 8, BlockId.Sand);
+    for (let i = 0; i < 60; i++) movePlayer(p, w, 0, 0, false, 1 / 60);
+    expect(p.y).toBeCloseTo(22, 1);
+  });
+  it('glass/leaves/slabs in the head cell do not suffocate', () => {
+    const { w, p } = setup();
+    for (const id of [BlockId.Glass, BlockId.Leaves, BlockId.Slab]) { w.setBlock(8, 22, 8, id); expect(headInSolid(w, p.x, p.y, p.z)).toBe(false); }
+  });
+});

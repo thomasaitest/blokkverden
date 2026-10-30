@@ -296,7 +296,7 @@ async function main() {
   if (run('V')) {
     mark('V');
     await page.evaluate(() => { const bv = (window as any).__bv; bv.look(0.6, -0.25); });
-    for (const [t, name] of [[0.5, 'it16-00a-middag.png'], [0.75, 'it16-00b-solnedgang.png'], [0.0, 'it16-00c-midnatt.png']] as const) {
+    for (const [t, name] of [[0.5, 'it16-00a-middag.png'], [0.0, 'it16-00c-midnatt.png']] as const) {
       await page.evaluate((t) => (window as any).__bv.setDay(t), t);
       await sleep(900);
       await shot(page, name);

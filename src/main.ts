@@ -5,7 +5,7 @@ import { updateGravityAround } from './world/gravity';
 import { LeafDecay, LEAF_PERSISTENT } from './world/leafdecay';
 import { type ItemStack, ITEMS, breakDuration, dropForBlock, damageTool, armorPoints, ItemId, blockMaterial } from './items/types';
 import { bindDesktopControls, consumeLook, consumePlace, createInput } from './player/controls';
-import { createPlayer, movePlayer, EYE_HEIGHT } from './player/physics';
+import { createPlayer, movePlayer, EYE_HEIGHT, headInSolid } from './player/physics';
 import { raycast } from './player/raycast';
 import { GameRenderer } from './render/renderer';
 import { loadWorldNamed, saveWorldNamed, listWorlds } from './storage/save';
@@ -201,6 +201,7 @@ async function runGame(
 
   const doSave = () => saveWorldNamed(worldName, world, player, inv, drops, containers, dayTime, respawn, xp.toJSON(), structuresToJSON());
   const leafDecay = new LeafDecay();
+  let suffocateAcc = 0;
   const markMesh = () => { meshesDirty = true; renderer.markChunksDirty(); };
   // MC explosions: containers spill, chunks remesh, smoke puff
   mobs.takeContainer = (x, y, z) => { const c = containers.contentsAt(x, y, z); containers.removeAt(x, y, z); return c; };
@@ -1054,6 +1055,11 @@ async function runGame(
         const move = movePlayer(player, world, wishX, wishZ, input.jump, dt);
         if (move.fallDamage > 0) hurtPlayer(move.fallDamage, 0, 0, true);
       }
+      // MC suffocation: eye inside a full solid block → 1 damage every 0.5 s (dig out!)
+      if (!player.creative && !dead && headInSolid(world, player.x, player.y, player.z)) {
+        suffocateAcc += dt;
+        if (suffocateAcc >= 0.5) { suffocateAcc -= 0.5; hurtPlayer(1, 0, 0, true); }
+      } else suffocateAcc = 0;
       boats.update(dt, world, player, wishX, wishZ, !!input.forward);
 
       if (player.onGround && (wishX || wishZ) && !boats.mounted) {

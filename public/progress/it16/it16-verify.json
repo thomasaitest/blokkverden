@@ -1,0 +1,37 @@
+{
+  "when": "2026-10-30T22:55:01.763Z",
+  "results": [
+    {
+      "id": "V-lighting-shots",
+      "status": "PASS",
+      "notes": "see screenshots"
+    },
+    {
+      "id": "S1-sand-falls",
+      "status": "PASS",
+      "notes": "col46..49=8,8,8,0"
+    },
+    {
+      "id": "S2-placed-sand-falls",
+      "status": "PASS",
+      "notes": "{\"at49\":0,\"at46\":8,\"left\":4}"
+    },
+    {
+      "id": "L1-leaf-decay",
+      "status": "PASS",
+      "notes": "logsBroken=3 leaves before=42 +1.5s=34 +9.5s=15 end=1"
+    },
+    {
+      "id": "L2-placed-leaf-persistent",
+      "status": "PASS",
+      "notes": "placed=7 after=7"
+    }
+  ],
+  "bugs": [],
+  "marks": {
+    "V": 7.15,
+    "S1": 12.538,
+    "S2": 14.858,
+    "L": 16.78
+  }
+}

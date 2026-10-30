@@ -1,4 +1,4 @@
-import { BlockId, collidesBlock, isSolid, isOpaque } from '../blocks/types';
+import { BlockId, collidesBlock, isSolid, isOpaque, isCrossPlant } from '../blocks/types';
 import type { World } from '../world/world';
 import { CHUNK_HEIGHT } from '../world/chunk';
 
@@ -74,7 +74,7 @@ function hasGroundSupport(world: World, x: number, y: number, z: number): boolea
     const bx = Math.floor(sx), by = Math.floor(y - 0.05), bz = Math.floor(sz);
     const id = world.getBlock(bx, by, bz);
     if (id !== BlockId.Air && id !== BlockId.Water && id !== BlockId.Lava && id !== BlockId.Torch
-      && id !== BlockId.Crop && id !== BlockId.RedDust && id !== BlockId.Portal) {
+      && id !== BlockId.Crop && id !== BlockId.RedDust && id !== BlockId.Portal && !isCrossPlant(id)) {
       return true;
     }
   }

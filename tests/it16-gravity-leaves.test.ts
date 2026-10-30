@@ -101,16 +101,17 @@ describe('leaf decay (MC)', () => {
 });
 
 describe('leaf drops (MC oak rates)', () => {
-  it('apple ≈0.5 %, sticks ≈2 %, usually nothing', () => {
-    let apples = 0, sticks = 0, none = 0;
+  it('sapling 5 %, apple ≈0.5 %, sticks ≈2 %, usually nothing', () => {
+    let apples = 0, sticks = 0, none = 0, saplings = 0;
     const N = 40000;
     for (let i = 0; i < N; i++) {
       const d = dropForBlock(BlockId.Leaves, null);
-      if (!d) none++; else if (d.id === ItemId.Apple) apples++; else if (d.id === ItemId.Stick) sticks++;
+      if (!d) none++; else if (d.id === ItemId.Apple) apples++; else if (d.id === ItemId.Stick) sticks++; else if (d.id === ItemId.Sapling) saplings++;
     }
     expect(apples / N).toBeGreaterThan(0.003); expect(apples / N).toBeLessThan(0.008);
     expect(sticks / N).toBeGreaterThan(0.014); expect(sticks / N).toBeLessThan(0.027);
-    expect(none / N).toBeGreaterThan(0.96);
+    expect(saplings / N).toBeGreaterThan(0.04); expect(saplings / N).toBeLessThan(0.06);
+    expect(none / N).toBeGreaterThan(0.91);
   });
 });
 

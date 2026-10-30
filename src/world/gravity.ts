@@ -7,11 +7,17 @@ export interface BlockAccess {
 }
 
 /** MC: sand (and gravel) are gravity blocks. */
-export function isGravityBlock(id: number): boolean { return id === BlockId.Sand; }
+export function isGravityBlock(id: number): boolean { return id === BlockId.Sand || id === BlockId.Gravel; }
+
+/** MC: blocks that need the block below them and pop off as an item when it goes. */
+export function needsSupportBelow(id: number): boolean {
+  return id === BlockId.Torch || id === BlockId.RedDust || id === BlockId.PressurePlate
+    || id === BlockId.Crop || id === BlockId.Sapling || id === BlockId.TallGrass;
+}
 
 /** Cells a falling block passes through (MC: air, water, lava, fire). */
 function passable(id: number): boolean {
-  return id === BlockId.Air || id === BlockId.Water || id === BlockId.Lava;
+  return id === BlockId.Air || id === BlockId.Water || id === BlockId.Lava || id === BlockId.TallGrass;
 }
 
 export type FallResult = { landedY: number } | { popped: true; atY: number } | null;

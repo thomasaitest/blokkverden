@@ -4,6 +4,8 @@ export interface InputState {
   left: boolean;
   right: boolean;
   jump: boolean;
+  /** Space was pressed since the last physics step (a tap shorter than one frame still jumps). */
+  jumpTap?: boolean;
   sneak: boolean;
   sprint: boolean;
   breakHeld: boolean;
@@ -127,6 +129,7 @@ export function bindDesktopControls(
       return;
     }
     if (!shouldCaptureKeys()) return;
+    if (e.code === 'Space' && !e.repeat) input.jumpTap = true;
 
     // Stop Space/arrows from scrolling the page or activating a focused button.
     if (

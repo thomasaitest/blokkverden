@@ -347,6 +347,39 @@ export function createAtlasCanvas(): HTMLCanvasElement {
     return [150 + ((lx * 7 + ly * 3) % 20), 85, 40, 255];
   });
 
+
+  // 73 gravel (grus) — grey pebbles, original
+  fillTile(d, 73, (lx, ly, rnd) => {
+    const peb = ((lx * 5 + ly * 3) % 7 === 0) || ((lx + ly * 7) % 11 === 0);
+    if (peb) { const v = 150 + (rnd * 40) | 0; return [v, v - 6, v - 10, 255]; }
+    const v = 105 + (rnd * 45) | 0;
+    return [v, v - 4, v - 6, 255];
+  });
+  // 74 flint item — dark shard
+  fillTile(d, 74, (lx, ly) => {
+    const dx = lx - 8, dy = ly - 8;
+    if (Math.abs(dx) + Math.abs(dy) * 0.8 > 6 || ly < 2) return [0, 0, 0, 0];
+    if (dx - dy > 3) return [95, 95, 105, 255];
+    return [45 + ((lx * 3 + ly) % 3) * 8, 45, 52, 255];
+  });
+  // 75 sapling (spire) — small oak: thin stem + leafy top, transparent background
+  fillTile(d, 75, (lx, ly, rnd) => {
+    if (ly >= 9 && (lx === 7 || lx === 8)) return [100, 72, 40, 255];
+    const dx = lx - 7.5, dy = ly - 5.5;
+    if (dx * dx + dy * dy * 1.3 < 22 && rnd > 0.15) return [40 + (rnd * 40 | 0), 115 + (rnd * 50 | 0), 35, 255];
+    return [0, 0, 0, 0];
+  });
+  // 76 tall grass (høyt gress) — blades, transparent background
+  fillTile(d, 76, (lx, ly, rnd) => {
+    const blade = (lx * 7 + 3) % 5;
+    const top = 2 + ((lx * 13) % 7);
+    if (ly >= top && blade < 2 && lx > 0 && lx < 15) {
+      const v = (rnd * 30) | 0;
+      return [70 + v, 150 + v, 50, 255];
+    }
+    return [0, 0, 0, 0];
+  });
+
   ctx.putImageData(img, 0, 0);
   return canvas;
 }

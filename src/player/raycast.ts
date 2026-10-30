@@ -1,4 +1,4 @@
-import { isSolid, BlockId } from '../blocks/types';
+import { isSolid, BlockId, BLOCKS } from '../blocks/types';
 import type { World } from '../world/world';
 import type { PlayerState } from './physics';
 import { EYE_HEIGHT } from './physics';
@@ -48,7 +48,8 @@ export function raycast(world: World, p: PlayerState, maxDist = 6): Hit | null {
 
   for (let i = 0; i < 100 && t <= maxDist; i++) {
     const id = world.getBlock(ix, iy, iz);
-    if (id !== BlockId.Air && id !== BlockId.Water && (isSolid(id) || id === BlockId.Leaves || id === BlockId.Glass)) {
+    // MC: every block with an outline is targetable — incl. torches, crops, plants, ladders, red dust (it17: were skipped)
+    if (id !== BlockId.Air && id !== BlockId.Water && id !== BlockId.Lava && id !== BlockId.Portal && (isSolid(id) || BLOCKS[id] != null)) {
       return { x: ix, y: iy, z: iz, nx, ny, nz, dist: t };
     }
 

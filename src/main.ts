@@ -1,8 +1,9 @@
 import './style.css';
-import { BlockId, isSolid, BLOCKS } from './blocks/types';
+import { BlockId, isSolid, BLOCKS, isReplaceable } from './blocks/types';
 import { createAtlasCanvas, tileUV, ATLAS_W, ATLAS_H } from './blocks/textures';
 import { Inventory } from './items/inventory';
-import { updateGravityAround } from './world/gravity';
+import { updateGravityAround, needsSupportBelow } from './world/gravity';
+import { canPlantSapling, growOak, SAPLING_GROW_CHANCE, SAPLING_MIN_LIGHT } from './world/saplings';
 import { LeafDecay, LEAF_PERSISTENT } from './world/leafdecay';
 import { type ItemStack, ITEMS, breakDuration, dropForBlock, damageTool, armorPoints, ItemId, blockMaterial } from './items/types';
 import { bindDesktopControls, consumeLook, consumePlace, createInput } from './player/controls';
@@ -230,6 +231,26 @@ async function runGame(
     inBlockOverlay.style.display = 'block';
   };
   const markMesh = () => { meshesDirty = true; renderer.markChunksDirty(); };
+  let saplingChance = SAPLING_GROW_CHANCE;
+  /** Scan chunks near the player for saplings; each grows with saplingChance per tick. */
+  const tickSaplings = (): boolean => {
+    let grew = false;
+    const pcx = Math.floor(player.x / CHUNK_SIZE), pcz = Math.floor(player.z / CHUNK_SIZE);
+    for (const c of world.chunks.values()) {
+      if (Math.abs(c.cx - pcx) > 3 || Math.abs(c.cz - pcz) > 3) continue;
+      const b = c.blocks;
+      for (let i = 0; i < b.length; i++) {
+        if (b[i] !== BlockId.Sapling) continue;
+        if (Math.random() >= saplingChance) continue;
+        // decode index → local coords (Chunk.index = lx + lz*S + y*S*S)
+        const lx = i % CHUNK_SIZE, lz = Math.floor(i / CHUNK_SIZE) % CHUNK_SIZE, ly = Math.floor(i / (CHUNK_SIZE * CHUNK_SIZE));
+        const wx = c.cx * CHUNK_SIZE + lx, wz = c.cz * CHUNK_SIZE + lz;
+        if (world.getLight(wx, ly, wz) < SAPLING_MIN_LIGHT) continue;
+        if (growOak(world, wx, ly, wz, Math.random, CHUNK_HEIGHT - 1)) grew = true;
+      }
+    }
+    return grew;
+  };
   // MC explosions: containers spill, chunks remesh, smoke puff
   mobs.takeContainer = (x, y, z) => { const c = containers.contentsAt(x, y, z); containers.removeAt(x, y, z); return c; };
   mobs.onBlast = (x, y, z, blocks) => {
@@ -516,6 +537,8 @@ async function runGame(
       glLost: renderer.renderer.getContext()?.isContextLost?.() ?? null,
     }),
     forceSave: () => doSave(),
+    /** Test setup only: speed up sapling growth (MC bone-meal stand-in). */
+    setSaplingChance: (c: number) => { saplingChance = c; },
     openInv: () => { invUi.openPlayer(); input.inventoryOpen = true; },
     closeInv: () => { invUi.close(); input.inventoryOpen = false; },
     look: (y: number, p: number) => { player.yaw = y; player.pitch = p; },
@@ -1079,7 +1102,9 @@ async function runGame(
         boats.dismount(player);
       }
       if (!boats.mounted) {
-        const move = movePlayer(player, world, wishX, wishZ, input.jump, dt);
+        // it17: latch short taps — a <1-frame Space press (low fps) was lost and the player didn't jump
+        const move = movePlayer(player, world, wishX, wishZ, input.jump || !!input.jumpTap, dt);
+        input.jumpTap = false;
         if (move.fallDamage > 0) hurtPlayer(move.fallDamage, 0, 0, true);
       }
       // MC suffocation: eye inside a full solid block → 1 damage every 0.5 s (dig out!)
@@ -1167,7 +1192,12 @@ async function runGame(
     waterAcc += dt;
     if (waterAcc > 0.8) { waterAcc = 0; tickWater(world, 20); }
     cropAcc += dt;
-    if (cropAcc > 1.2) { cropAcc = 0; if (tickCrops(world, 16) > 0) markMesh(); }
+    if (cropAcc > 1.2) {
+      cropAcc = 0;
+      if (tickCrops(world, 16) > 0) markMesh();
+      // MC: saplings (light ≥ 9, room above) grow into an oak after a few minutes
+      if (tickSaplings()) markMesh();
+    }
     containers.tick(dt);
     mobs.trySpawn(world, player, dayTime, dt);
     mobs.update(world, player, dt, drops, sound, (d, kx, kz) => hurtPlayer(d, kx, kz), xp);
@@ -1310,10 +1340,11 @@ async function runGame(
             if (id === BlockId.Log || id === BlockId.Leaves) leafDecay.onRemoved(world, hit.x, hit.y, hit.z);
             // MC: sand above the broken block falls
             updateGravityAround(world, hit.x, hit.y, hit.z, (gx, gy, gz, gid) => { const gd = dropForBlock(gid, null); if (gd) drops.spawn(gx, gy, gz, gd); });
-            // MC: a torch / red dust / pressure plate standing on the broken block pops off as an item
+            // MC: a torch / red dust / pressure plate / crop / sapling / tall grass on the broken block pops off as an item
             {
               const above = world.getBlock(hit.x, hit.y + 1, hit.z);
-              if (above === BlockId.Torch || above === BlockId.RedDust || above === BlockId.PressurePlate) {
+              if (above === BlockId.Crop) harvestCrop(world, hit.x, hit.y + 1, hit.z, drops);
+              else if (needsSupportBelow(above)) {
                 world.setBlock(hit.x, hit.y + 1, hit.z, BlockId.Air);
                 const d2 = dropForBlock(above, null);
                 if (d2) drops.spawn(hit.x, hit.y + 1, hit.z, d2);
@@ -1454,7 +1485,9 @@ async function runGame(
           } else if (boats.nearest(player.x, player.y, player.z, 2.2)) {
             boats.tryMount(player);
           } else {
-            const px = hit.x + hit.nx, py = hit.y + hit.ny, pz = hit.z + hit.nz;
+            // MC: aiming at a replaceable block (tall grass) places into that cell instead of next to it
+            const intoHit = isReplaceable(tid);
+            const px = intoHit ? hit.x : hit.x + hit.nx, py = intoHit ? hit.y : hit.y + hit.ny, pz = intoHit ? hit.z : hit.z + hit.nz;
             const taken = inv.takeOneFromSelected();
             if (taken) {
               const placeId = ITEMS[taken.id]?.placeBlock;
@@ -1467,7 +1500,12 @@ async function runGame(
                 py + 1 <= player.y || py >= player.y + ph ||
                 pz + 1 <= player.z - hw || pz >= player.z + hw
               );
-              if (placeId != null && (dest === BlockId.Air || dest === BlockId.Water) && !intersectsPlayer) {
+              // MC: plants / torches need a supporting block; saplings only on grass/dirt/farmland
+              const below = world.getBlock(px, py - 1, pz);
+              const supportOk = placeId === BlockId.Sapling ? canPlantSapling(below)
+                : placeId === BlockId.TallGrass ? below === BlockId.Grass
+                : true;
+              if (placeId != null && isReplaceable(dest) && !intersectsPlayer && supportOk) {
                 world.setBlock(px, py, pz, placeId);
                 // MC: player-placed leaves are persistent (never decay)
                 if (placeId === BlockId.Leaves) world.setMeta(px, py, pz, LEAF_PERSISTENT);

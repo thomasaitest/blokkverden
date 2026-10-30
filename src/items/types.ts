@@ -17,6 +17,7 @@ export const ItemId = {
   DiamondHelmet: 128, DiamondChest: 129, DiamondLegs: 130, DiamondBoots: 131,
   Seeds: 63, Wheat: 64, Bread: 65, Boat: 66, FishingRod: 67, MapItem: 68, RawFish: 69, CookedFish: 70, Bone: 71, CookedMeat: 72, String: 73, Gunpowder: 74, RottenFlesh: 75,
   WoodHoe: 116, IronHoe: 117, EnchantTable: 24, Door: 26, Trapdoor: 27, Fence: 28, Gate: 29, Stairs: 30, Slab: 31, GlassPane: 32, Ladder: 33, Sign: 34, RedDust: 35, Lever: 36, Button: 37, Lamp: 38, PressurePlate: 39, Helstein: 40, Sjelegrus: 41, PortalFrame: 43,
+  Gravel: 49, Sapling: 76, Flint: 77,
 } as const;
 
 export type ItemId = (typeof ItemId)[keyof typeof ItemId];
@@ -134,14 +135,17 @@ export const ITEMS: Record<number, ItemDef> = {
   [43]: blk(43, 'Portalramme', 63, 43),
   [116]: tool(116, 'Trekrafse', 'hoe', 'wood', 60, 1, 1, 44),
   [117]: tool(117, 'Jernkrafse', 'hoe', 'iron', 250, 1, 1, 44),
+  [49]: blk(49, 'Grus', 73, 49),
+  [76]: blk(76, 'Spire', 75, 76, { fuel: 100 }),
+  [77]: { id: 77, name: 'Flint', stackable: true, maxStack: 64, iconTile: 74 },
 };
 
 export function blockMaterial(blockId: number): BlockMaterial {
   switch (blockId) {
-    case 1: case 2: case 8: case 19: return 'ground';
+    case 1: case 2: case 8: case 19: case 22: case 49: return 'ground';
     case 5: case 6: case 11: case 13: case 20: case 21: return 'wood';
     case 3: case 4: case 14: case 15: case 16: case 17: case 18: case 46: case 47: return 'stone';
-    case 7: return 'plant';
+    case 7: case 76: case 78: return 'plant';
     case 9: case 12: return 'glass';
     default: return 'other';
   }
@@ -188,15 +192,17 @@ export function dropForBlock(blockId: number, held: ItemStack | null): ItemStack
   if (blockId === 3) return stack(4, 1);
   if (blockId === 15) return stack(51, 1);
   if (blockId === 18) return stack(55, 1);
-  if (blockId === 1 || blockId === 19) {
-    if (Math.random() < 0.12) return stack(63, 1);
-    return stack(2, 1);
-  }
+  // MC: a grass block always drops dirt; seeds come from tall grass (12.5 %)
+  if (blockId === 1 || blockId === 19) return stack(2, 1);
+  if (blockId === 78) return Math.random() < 0.125 ? stack(63, 1) : null;
+  // MC gravel: 10 % flint, otherwise gravel
+  if (blockId === 49) return Math.random() < 0.1 ? stack(77, 1) : stack(49, 1);
   if (blockId === 7) {
-    // MC oak leaves (no silk/shears): apple 0.5 %, 1–2 sticks 2 %
+    // MC oak leaves (no silk/shears): sapling 5 %, 1–2 sticks 2 %, apple 0.5 %
     const r = Math.random();
-    if (r < 0.005) return stack(52, 1);
-    if (r < 0.025) return stack(50, 1 + (Math.random() < 0.5 ? 1 : 0));
+    if (r < 0.05) return stack(76, 1);
+    if (r < 0.07) return stack(50, 1 + (Math.random() < 0.5 ? 1 : 0));
+    if (r < 0.075) return stack(52, 1);
     return null;
   }
   if (blockId === 23) return null; // crops handled by harvestCrop

@@ -31,6 +31,7 @@ export const BlockId = {
   RedDust: 35, Lever: 36, Button: 37, Lamp: 38, PressurePlate: 39,
   Helstein: 40, Sjelegrus: 41, Portal: 42, PortalFrame: 43,
   Lava: 44, Glodstein: 45, Helkvarts: 46, Anvil: 47, Bedrock: 48,
+  Gravel: 49, Sapling: 76, TallGrass: 78,
 } as const;
 
 export type BlockId = (typeof BlockId)[keyof typeof BlockId];
@@ -103,7 +104,16 @@ export const BLOCKS: Record<number, BlockDef> = {
   [47]: B(47, 'Ambolt', true, true, false, false, 2.5, { top: 67, bottom: 67, side: 67 }),
   // Grunnfjell (MC bedrock): bunnen av verden, kan ikke knuses i overlevelse.
   [48]: B(48, 'Grunnfjell', true, true, false, false, -1, { top: 71, bottom: 71, side: 71 }),
+  // it17 (MC): grus faller som sand; spire (eik) og høyt gress er kryss-planter uten kollisjon
+  [49]: B(49, 'Grus', true, true, false, false, 0.6, { top: 73, bottom: 73, side: 73 }),
+  [76]: B(76, 'Spire', false, false, true, false, 0.05, { top: 75, bottom: 75, side: 75 }),
+  [78]: B(78, 'Høyt gress', false, false, true, false, 0.05, { top: 76, bottom: 76, side: 76 }),
 };
+
+/** Cross-shaped plants (MC "X" models): no collision, break instantly, pop when the ground goes. */
+export function isCrossPlant(id: number): boolean { return id === BlockId.Sapling || id === BlockId.TallGrass; }
+/** MC "replaceable" blocks: placing a block into them overwrites them (tall grass). */
+export function isReplaceable(id: number): boolean { return id === BlockId.Air || id === BlockId.Water || id === BlockId.TallGrass; }
 
 export function isSolid(id: number): boolean { return BLOCKS[id]?.solid ?? false; }
 export function isOpaque(id: number): boolean { return BLOCKS[id]?.opaque ?? false; }
@@ -122,7 +132,7 @@ export function collidesBlock(
   minX: number, minY: number, maxX: number, maxY: number, minZ: number, maxZ: number,
   meta = 0,
 ): boolean {
-  if (id === 0 || id === BlockId.Water || id === BlockId.Lava || id === BlockId.Torch || id === BlockId.Crop || id === BlockId.RedDust || id === BlockId.Ladder || id === BlockId.Sign || id === BlockId.Portal) return false;
+  if (id === 0 || isCrossPlant(id) || id === BlockId.Water || id === BlockId.Lava || id === BlockId.Torch || id === BlockId.Crop || id === BlockId.RedDust || id === BlockId.Ladder || id === BlockId.Sign || id === BlockId.Portal) return false;
   if (id === BlockId.PressurePlate || id === BlockId.Button || id === BlockId.Lever) return false;
   if ((id === BlockId.Door || id === BlockId.Gate || id === BlockId.Trapdoor) && (meta & 1)) return false;
   if (id === BlockId.Slab) {

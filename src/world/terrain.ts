@@ -47,7 +47,8 @@ export function generateTerrain(chunk: Chunk, noise: SeededNoise): void {
         } else if (y === h) {
           if (biome === 'desert' || biome === 'beach') id = BlockId.Sand;
           else if (biome === 'snow') id = BlockId.SnowGrass;
-          else if (biome === 'ocean' && h < SEA_LEVEL) id = BlockId.Dirt;
+          // MC: ocean floors are patchy gravel
+          else if (biome === 'ocean' && h < SEA_LEVEL) id = noise.hash2(Math.floor(wx / 3) * 7 + 11, Math.floor(wz / 3) * 5 - 3) < 0.55 ? BlockId.Gravel : BlockId.Dirt;
           else id = BlockId.Grass;
         } else if (y <= SEA_LEVEL && y > h) {
           id = BlockId.Water;
@@ -68,6 +69,9 @@ export function generateTerrain(chunk: Chunk, noise: SeededNoise): void {
       // Ores in stone
       for (let y = 1; y < h; y++) {
         if (chunk.get(lx, y, lz) !== BlockId.Stone) continue;
+        // MC: gravel blobs in stone (≈4×4×4 cells, ragged edges)
+        if (y > 4 && y < h - 5 && noise.hash2(Math.floor(wx / 4) * 131 + Math.floor(y / 4) * 977, Math.floor(wz / 4) * 59 - Math.floor(y / 4) * 13) > 0.985
+          && noise.hash2(wx * 3 + y * 5, wz * 7 - y) > 0.25) { chunk.set(lx, y, lz, BlockId.Gravel); continue; }
         const r = noise.hash2(wx * 31 + y * 7, wz * 17 + y);
         if (y < 12 && r > 0.985) chunk.set(lx, y, lz, BlockId.DiamondOre);
         else if (y < 28 && r > 0.975) chunk.set(lx, y, lz, BlockId.GoldOre);
@@ -104,7 +108,15 @@ export function placeTreesForChunk(chunk: Chunk, noise: SeededNoise, setAbs: Set
       if (surface < 0 || surface <= SEA_LEVEL) continue;
       const dens = biome === 'forest' ? 0.92 : 0.97;
       const t = noise.hash2(wx, wz);
-      if (t <= dens) continue;
+      if (t <= dens) {
+        // MC: tall grass tufts on grass (plains denser than forest; none on snow)
+        const g = noise.hash2(wx * 3 + 101, wz * 5 - 77);
+        const gd = biome === 'snow' ? 0 : biome === 'forest' ? 0.08 : 0.14;
+        if (g < gd && chunk.get(lx, surface, lz) === BlockId.Grass && surface + 1 < CHUNK_HEIGHT && chunk.get(lx, surface + 1, lz) === BlockId.Air) {
+          chunk.set(lx, surface + 1, lz, BlockId.TallGrass);
+        }
+        continue;
+      }
       placeTreeAbs(wx, surface + 1, wz, noise.hash2(wx + 7, wz + 3), setAbs);
     }
   }

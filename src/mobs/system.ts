@@ -8,6 +8,7 @@ import { ItemId, stack } from '../items/types';
 import type { SoundBus } from '../audio/sound';
 import type { XpSystem } from '../world/xp';
 import { explosionBlocks, explosionDamage, type Blasted } from '../world/explosion';
+import { needsSupportBelow } from '../world/gravity';
 import { dropForBlock, type ItemStack } from '../items/types';
 
 /** Explosion drops ignore tool tiers (MC: blocks blown up drop as if mined correctly). */
@@ -68,7 +69,7 @@ export function burnsInSun(world: World, m: { x: number; y: number; z: number; h
   if (world.getBlock(bx, Math.floor(m.y), bz) === BlockId.Water || world.getBlock(bx, head, bz) === BlockId.Water) return false;
   for (let y = head + 1; y < CHUNK_HEIGHT; y++) {
     const id = world.getBlock(bx, y, bz);
-    if (id !== BlockId.Air && id !== BlockId.Torch) return false;
+    if (id !== BlockId.Air && id !== BlockId.Torch && id !== BlockId.TallGrass && id !== BlockId.Sapling) return false;
   }
   return true;
 }
@@ -109,7 +110,7 @@ export class MobSystem {
     // MC: torches / red dust left floating after the blast pop off
     for (const b of blocks) {
       const above = world.getBlock(b.x, b.y + 1, b.z);
-      if ((above === BlockId.Torch || above === BlockId.RedDust || above === BlockId.PressurePlate) && world.getBlock(b.x, b.y, b.z) === BlockId.Air) {
+      if (needsSupportBelow(above) && world.getBlock(b.x, b.y, b.z) === BlockId.Air) {
         world.setBlock(b.x, b.y + 1, b.z, BlockId.Air);
         const d = dropForBlock(above, null);
         if (d) drops.spawn(b.x, b.y + 1, b.z, d);
@@ -147,7 +148,7 @@ export class MobSystem {
       const id = world.getBlock(Math.floor(x), y, Math.floor(z));
       // MC: nothing spawns on leaves (before: skeletons/zombies spawned on tree canopies and shot down from there)
       if (id === BlockId.Leaves) return -1;
-      if (isSolid(id) && world.getBlock(Math.floor(x), y + 1, Math.floor(z)) === BlockId.Air
+      if (isSolid(id) && [BlockId.Air, BlockId.TallGrass].includes(world.getBlock(Math.floor(x), y + 1, Math.floor(z)) as 0)
           && world.getBlock(Math.floor(x), y + 1, Math.floor(z)) !== BlockId.Water) {
         if (world.getBlock(Math.floor(x), y + 1, Math.floor(z)) === BlockId.Water) continue;
         // skip underwater surfaces

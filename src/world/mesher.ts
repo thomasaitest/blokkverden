@@ -1,4 +1,4 @@
-import { BLOCKS, isOpaque, BlockId } from '../blocks/types';
+import { BLOCKS, isOpaque, BlockId, isCrossPlant } from '../blocks/types';
 import { tileUV } from '../blocks/textures';
 import { CHUNK_HEIGHT, CHUNK_SIZE, type Chunk } from './chunk';
 
@@ -56,7 +56,7 @@ function emptyMesh(): MeshData {
 
 function isFullCube(id: number): boolean {
   if (id === BlockId.Air || id === BlockId.Water || id === BlockId.Lava) return false;
-  if (id === BlockId.Torch || id === BlockId.Crop || id === BlockId.RedDust) return false;
+  if (id === BlockId.Torch || id === BlockId.Crop || id === BlockId.RedDust || isCrossPlant(id)) return false;
   if (id === BlockId.Ladder || id === BlockId.Sign || id === BlockId.Portal) return false;
   if (id === BlockId.PressurePlate || id === BlockId.Button || id === BlockId.Lever) return false;
   if (id === BlockId.Slab || id === BlockId.Stairs || id === BlockId.Fence || id === BlockId.GlassPane) return false;
@@ -175,6 +175,30 @@ function emitQuad(
   a.vBase += 4;
 }
 
+/** MC "X" plant model: two diagonal double-sided quads (sapling, tall grass). */
+function emitCross(a: Arrays, wx: number, y: number, wz: number, tile: number, light: number): void {
+  const uv = tileUV(tile);
+  const col = Math.min(1.5, lightCurve(light) * 0.95);
+  const k = 0.15, K = 0.85; // MC inset
+  const planes: [number, number, number, number][] = [[k, k, K, K], [k, K, K, k]];
+  for (const [x0, z0, x1, z1] of planes) {
+    for (const side of [1, -1]) {
+      const p = side === 1
+        ? [[x0, 0, z0], [x1, 0, z1], [x1, 1, z1], [x0, 1, z0]]
+        : [[x1, 0, z1], [x0, 0, z0], [x0, 1, z0], [x1, 1, z1]];
+      for (const c of p) {
+        a.positions.push(wx + c[0], y + c[1], wz + c[2]);
+        a.normals.push(0, 1, 0); // MC: plants lit uniformly (no side shading)
+        a.colors.push(col, col, col, 1);
+      }
+      a.uvs.push(uv.u0, uv.v1, uv.u1, uv.v1, uv.u1, uv.v0, uv.u0, uv.v0);
+      const vb = a.vBase;
+      a.indices.push(vb, vb + 1, vb + 2, vb, vb + 2, vb + 3);
+      a.vBase += 4;
+    }
+  }
+}
+
 /** Greedy mesh opaque full cubes; naive mesh for specials/transparent. */
 function buildMesh(
   chunk: Chunk,
@@ -201,6 +225,7 @@ function buildMesh(
         if (id === BlockId.Door || id === BlockId.Lamp) continue;
         const wx = ox + lx;
         const wz = oz + lz;
+        if (isCrossPlant(id)) { emitCross(a, wx, y, wz, def.tiles.side, getLight(wx, y, wz)); continue; }
         const wLevel = id === BlockId.Water || id === BlockId.Lava || id === BlockId.Crop
           ? (chunk.waterLevel[chunk.index(lx, y, lz)] || (id === BlockId.Crop ? 0 : 7)) : 7;
         let hTop = id === BlockId.Water || id === BlockId.Lava ? Math.max(0.125, wLevel / 7)

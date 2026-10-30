@@ -14,7 +14,7 @@ export function openCreativeInventory(
   el.style.cssText = 'position:absolute;inset:0;background:rgba(0,0,0,0.55);z-index:45;display:flex;align-items:center;justify-content:center';
   const panel = document.createElement('div');
   panel.style.cssText = 'background:#1a1a1a;border:2px solid #555;padding:12px;max-width:640px;max-height:80vh;overflow:auto;color:#eee';
-  panel.innerHTML = `<h3>Kreativ inventar</h3><input id="cr-search" placeholder="Søk…" style="width:100%;margin-bottom:8px;padding:6px"/><div id="cr-grid" style="display:grid;grid-template-columns:repeat(9,48px);gap:4px"></div><button type="button" id="cr-close">Lukk</button>`;
+  panel.innerHTML = `<h3>Kreativt inventar</h3><input id="cr-search" placeholder="Søk…" style="width:100%;margin-bottom:8px;padding:6px"/><div id="cr-grid" style="display:grid;grid-template-columns:repeat(9,48px);gap:4px"></div><button type="button" id="cr-close">Lukk</button>`;
   el.appendChild(panel);
   root.appendChild(el);
   const grid = panel.querySelector('#cr-grid') as HTMLElement;

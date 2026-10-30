@@ -1,3 +1,4 @@
+import { proceduralIcon } from './itemIcons';
 import * as THREE from 'three';
 import { createAtlasCanvas, tileUV, ATLAS_W, ATLAS_H } from '../blocks/textures';
 import type { ChunkMeshes, MeshData } from '../world/mesher';
@@ -751,8 +752,10 @@ export function drawItemIcon(
   dx: number, dy: number, size: number,
 ): void {
   const def = ITEMS[itemId];
+  ctx.imageSmoothingEnabled = false;
+  const proc = proceduralIcon(itemId);
+  if (proc) { ctx.drawImage(proc, 0, 0, 16, 16, dx, dy, size, size); return; }
   const tile = def?.iconTile ?? 1;
   const uv = tileUV(tile);
-  ctx.imageSmoothingEnabled = false;
   ctx.drawImage(atlas, uv.u0 * ATLAS_W, uv.v0 * ATLAS_H, 16, 16, dx, dy, size, size);
 }

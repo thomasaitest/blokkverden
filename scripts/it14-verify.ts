@@ -307,8 +307,14 @@ async function main() {
     const v1 = await page.evaluate(() => { const bv = (window as any).__bv; return {
       y: +bv.player.y.toFixed(2), bottom: bv.world.getBlock(8, 0, 8), y1: bv.world.getBlock(8, 1, 8),
       cobble: bv.inv.slots.reduce((n: number, s: any) => n + (s?.id === 4 ? s.count : 0), 0), dead: bv.getState().dead }; });
-    await page.evaluate(() => (window as any).__bv.look(0.3, -0.9));
-    await sleep(500);
+    // screenshot: open a small lit chamber at the bottom so the bedrock floor is visible
+    await page.evaluate(async () => { const bv = (window as any).__bv;
+      for (let x = 6; x <= 10; x++) for (let z = 6; z <= 10; z++) for (let y = 1; y <= 3; y++) bv.world.setBlock(x, y, z, 0);
+      bv.world.setBlock(10, 1, 10, 12); bv.world.setBlock(6, 1, 6, 12);
+      for (let x = 5; x <= 11; x++) for (let z = 5; z <= 11; z++) { if (x === 5 || x === 11 || z === 5 || z === 11) for (let y = 1; y <= 3; y++) bv.world.setBlock(x, y, z, 3); }
+      bv.teleport(8.5, 1.05, 10.3); bv.lookAt(8.5, 0.6, 6.5);
+      await bv.forceRemeshAround(); });
+    await sleep(1200);
     await shot(page, 'it14-01-grunnfjell.png');
     record('V1-bedrock-floor', v1.bottom === 48 && v1.y1 === 0 && Math.abs(v1.y - 1) < 0.1 && v1.cobble >= 3 && !v1.dead ? 'PASS' : 'FAIL', JSON.stringify(v1));
   }
@@ -463,7 +469,7 @@ async function main() {
   if (run('V7')) {
     await flatPad(page, 45);
     await page.evaluate(() => { const bv = (window as any).__bv;
-      for (let x = -20; x <= 16; x++) for (let z = 0; z <= 16; z++) { bv.world.setBlock(x, 45, z, 1); for (let y = 46; y <= 50; y++) bv.world.setBlock(x, y, z, 0); }
+      for (let x = -4; x <= 34; x++) for (let z = 0; z <= 16; z++) { bv.world.setBlock(x, 45, z, 1); for (let y = 46; y <= 50; y++) bv.world.setBlock(x, y, z, 0); }
       bv.mobs.clear(); bv.setDay(0.3); bv.player.health = 20;
       bv.teleport(8.5, 46.05, 8.5); bv.look(Math.PI / 2, 0);
       const c = bv.spawnMob('knallbolle', 0, 0, 0); c.x = 5.3; c.z = 8.5; c.y = 46.02; c.__test = true; });
@@ -514,6 +520,40 @@ async function main() {
     const dbg2 = await page.evaluate(() => getComputedStyle(document.getElementById('debug')!).display);
     record('V8-held-name-f3', dbg0 === 'none' && n1.t === 'Trekrafse' && n1.o === '1' && n2 === '0' && n3 === 'Steinhakke' && dbg1.d === 'block' && dbg2 === 'none' ? 'PASS' : 'FAIL',
       `debug0=${dbg0} name=${JSON.stringify(n1)} after2.8s=${n2} slot1=${n3} F3=${JSON.stringify(dbg1)} F3again=${dbg2}`);
+  }
+
+  // V9 — walking over a drop shows it in the hotbar immediately (DOM), not only in the inventory data
+  if (run('V9')) {
+    await closeUi(page);
+    await flatPad(page, 45);
+    await killMobs();
+    await setHeld(page, 104);
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.drops.drops.length = 0; bv.drops.spawn(8, 46, 6, { id: 52, count: 3 }); bv.hud.refreshHotbar(); });
+    await ensureLocked(page);
+    await page.evaluate(() => (window as any).__bv.look(0, -0.5));
+    await sleep(800);
+    const before = await page.evaluate(() => document.querySelectorAll('#hotbar .hb-slot')[1]?.querySelector('canvas') ? 1 : 0);
+    await walk(page, 'KeyW', 900); await sleep(700);
+    const inv = await countItem(page, 52);
+    const dom = await page.evaluate(() => ({ icon: !!document.querySelectorAll('#hotbar .hb-slot')[1]?.querySelector('canvas'), n: document.querySelectorAll('#hotbar .hb-slot')[1]?.querySelector('.stack-count')?.textContent }));
+    await shot(page, 'it14-10-plukket-opp.png');
+    record('V9-pickup-shows-in-hotbar', before === 0 && inv === 3 && dom.icon && dom.n === '3' ? 'PASS' : 'FAIL', `before=${before} inv=${inv} dom=${JSON.stringify(dom)}`);
+  }
+
+  // V10 — tools have their own icons (pickaxe/axe/shovel/sword/hoe per tier), hotbar + inventory
+  if (run('V10')) {
+    await closeUi(page);
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.inv.slots.fill(null);
+      const ids = [100, 104, 108, 112, 109, 110, 111, 116, 62, 61, 124, 125, 126, 127, 129, 121, 53, 55];
+      ids.forEach((id, i) => { bv.inv.slots[i] = { id, count: id === 61 || id === 53 || id === 55 ? 8 : 1 }; });
+      bv.inv.selected = 0; bv.hud.markDirty(); bv.hud.refreshHotbar(); });
+    await ensureLocked(page);
+    await page.keyboard.press('KeyE'); await sleep(500);
+    await shot(page, 'it14-11-verktoy-ikoner.png');
+    const urls = await page.evaluate(() => [...document.querySelectorAll('#hotbar .hb-slot canvas')].map((c) => (c as HTMLCanvasElement).toDataURL()));
+    await closeUi(page);
+    const distinct = new Set(urls).size;
+    record('V10-distinct-tool-icons', urls.length === 9 && distinct === 9 ? 'PASS' : 'FAIL', `hotbar icons=${urls.length} distinct=${distinct}`);
   }
 
   const report = { when: new Date().toISOString(), results, bugs };

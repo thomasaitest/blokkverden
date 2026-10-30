@@ -44,16 +44,19 @@ export class DropSystem {
    * first solid block *below their own position* (not the column top — that teleported
    * items mined under a roof/in caves up onto the surface).
    */
-  update(dt: number, player: PlayerState, inv: Inventory, solidAt: (x: number, y: number, z: number) => boolean): void {
+  /** Returns how many stacks were (partly) picked up this frame. */
+  update(dt: number, player: PlayerState, inv: Inventory, solidAt: (x: number, y: number, z: number) => boolean): number {
+    let picked = 0;
     // Sub-step so frame hitches can't tunnel items through floors.
     let rest = dt;
     while (rest > 1e-6) {
       const h = Math.min(rest, 1 / 30);
-      this.step(h, player, inv, solidAt);
+      picked += this.step(h, player, inv, solidAt);
       rest -= h;
     }
     this.mergeAcc += dt;
     if (this.mergeAcc >= 0.5) { this.mergeAcc = 0; this.mergeNearby(); }
+    return picked;
   }
 
   private mergeAcc = 0;
@@ -81,7 +84,8 @@ export class DropSystem {
     if (merged) this.drops = ds.filter((d) => d.stack.count > 0);
   }
 
-  private step(dt: number, player: PlayerState, inv: Inventory, solidAt: (x: number, y: number, z: number) => boolean): void {
+  private step(dt: number, player: PlayerState, inv: Inventory, solidAt: (x: number, y: number, z: number) => boolean): number {
+    let picked = 0;
     const keep: DropEntity[] = [];
     for (const d of this.drops) {
       d.age += dt;
@@ -112,6 +116,7 @@ export class DropSystem {
         const dist = Math.hypot(d.x - player.x, d.y - (player.y + 0.9), d.z - player.z);
         if (dist < 1.6) {
           const left = inv.add(d.stack);
+          if (left < d.stack.count) picked++;
           if (left <= 0) continue;
           d.stack.count = left;
         }
@@ -119,6 +124,7 @@ export class DropSystem {
       if (d.age < DROP_DESPAWN_SEC) keep.push(d);
     }
     this.drops = keep;
+    return picked;
   }
 
   toJSON() {

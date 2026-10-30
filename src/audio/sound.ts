@@ -93,6 +93,11 @@ export class SoundBus {
     this.noise(0.04, 0.1, 600);
   }
 
+  /** MC item pickup "pop" */
+  pickup(): void {
+    this.beep(900 + Math.random() * 300, 0.05, 'sine', 0.06, 500);
+  }
+
   hurt(): void {
     this.beep(200, 0.15, 'sawtooth', 0.2, -120);
   }

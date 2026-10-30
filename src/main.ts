@@ -1178,7 +1178,10 @@ async function runGame(
     }
     if (meshesDirty) { renderer.syncChunks(world, true); meshesDirty = false; }
 
-    drops.update(dt, player, inv, (x, y, z) => isSolid(world.getBlock(Math.floor(x), Math.floor(y), Math.floor(z))));
+    // Picked-up items must show in the hotbar right away (hotbar only redraws when marked dirty).
+    if (drops.update(dt, player, inv, (x, y, z) => isSolid(world.getBlock(Math.floor(x), Math.floor(y), Math.floor(z)))) > 0) {
+      hud.markDirty(); sound.pickup();
+    }
     renderer.syncDrops(drops.drops);
     renderer.syncMobs(mobs.mobs, dt);
     renderer.syncWeather(weather.kind, weather.intensity, renderer.camera.position, weather.flash);

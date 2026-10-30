@@ -161,17 +161,17 @@ const KIND_LAYOUT: Record<MobKind, Layout> = {
     colors: { body: 0x222222, head: 0x333333, leg: 0x1a1a1a },
   },
   knallbolle: {
-    body: [0.55, 1.1, 0.4], bodyY: 0.85,
-    head: [0.5, 0.45, 0.4], headY: 1.55,
+    // MC creeper silhouette: tall narrow body, cube head, four short legs (front + back), no arms
+    body: [0.5, 0.75, 0.26], bodyY: 0.75,
+    head: [0.5, 0.5, 0.5], headY: 1.37,
     legs: [
-      { name: 'legL', s: [0.22, 0.35, 0.22], p: [0.14, 0.18, 0] },
-      { name: 'legR', s: [0.22, 0.35, 0.22], p: [-0.14, 0.18, 0] },
+      // names chosen so diagonal pairs swing together (FL+BR, FR+BL), like MC
+      { name: 'legA1', s: [0.24, 0.375, 0.24], p: [0.125, 0.19, 0.25] },
+      { name: 'legB', s: [0.24, 0.375, 0.24], p: [-0.125, 0.19, 0.25] },
+      { name: 'legC', s: [0.24, 0.375, 0.24], p: [0.125, 0.19, -0.25] },
+      { name: 'legD3', s: [0.24, 0.375, 0.24], p: [-0.125, 0.19, -0.25] },
     ],
-    arms: [
-      { name: 'armL', s: [0.18, 0.45, 0.18], p: [0.4, 0.9, 0] },
-      { name: 'armR', s: [0.18, 0.45, 0.18], p: [-0.4, 0.9, 0] },
-    ],
-    colors: { body: 0x2ecc71, head: 0x27ae60, leg: 0x1e8449, arm: 0x2ecc71 },
+    colors: { body: 0x2ecc71, head: 0x27ae60, leg: 0x1e8449 },
   },
   ulv: {
     body: [0.7, 0.5, 1.0], bodyY: 0.55,
@@ -256,10 +256,9 @@ function skinFor(kind: MobKind): THREE.CanvasTexture {
     px(ctx, 2, 2, '#7a8088', 12, 2);
   } else if (kind === 'knallbolle') {
     shadeFill(ctx, '#2ecc71', '#1e8449', '#58d68d');
-    // face feet pattern on body
-    px(ctx, 4, 3, '#111', 2, 2); px(ctx, 10, 3, '#111', 2, 2);
-    px(ctx, 5, 7, '#111', 6, 1);
-    px(ctx, 4, 9, '#111', 2, 2); px(ctx, 7, 10, '#111', 2, 2); px(ctx, 10, 9, '#111', 2, 2);
+    // mottled leafy skin (the face belongs on the head only — before, every limb wore a face)
+    const mott = ['#1e8449', '#58d68d', '#239b56', '#82e0aa', '#196f3d'];
+    for (let i = 0; i < 40; i++) px(ctx, (i * 7 + (i >> 2) * 3) % 16, (i * 5 + (i >> 1)) % 16, mott[i % mott.length], 1 + (i % 2), 1);
   }
 
   t = new THREE.CanvasTexture(c);

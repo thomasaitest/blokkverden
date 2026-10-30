@@ -120,6 +120,16 @@ Last run: 2026-10-30 20:45–20:55 CET · it14 (55 PASS / 0 FAIL) + scripts/it14
 | L10 | Tool icons | Pickaxe/axe/shovel/sword/hoe/armor distinguishable, per tier | PASS | V10 |
 | L11 | Torches | Torch placeable in own cell (1×1 shaft); pops off when its block is mined | PASS | V11 |
 
+## M. Explosions, mob loot, string (it15, `scripts/it15-verify.ts`, real input)
+| # | Check | Minecraft-expected | Status | Notes |
+|---|--------|-------------------|--------|-------|
+| M1 | Creeper blast | Walk up → hiss → one explosion: crater in grass *and* stone, chest in range spills contents, torches pop, damage by distance/cover (survivable at ~4 blocks) | PASS | X1 + vitest (explodes exactly once) |
+| M2 | Hostile loot | Zombie → rotten flesh, spider → string, creeper (killed) → gunpowder; exploded creeper drops nothing; never coal | PASS | X2 (real sword clicks) |
+| M3 | Rotten flesh | Hold RMB: +4 hunger; 80 % Hunger effect → green hunger bar, drains faster for 30 s | PASS | X3 |
+| M4 | String recipes | Bow = 3 sticks + 3 string (table); 4 string → wool (2×2); fishing rod uses string | PASS | X4 + vitest |
+| M5 | Creeper look | Four legs, no arms, face only on the head | PASS | screenshot it15-00 |
+| M6 | Real combat in core run | I3/I4 now use real LMB clicks (were faked with `__bv.mobs.hitAt`) | PASS | core-playtest I3/I4 |
+
 ## Method rules
 1. **Real input:** synthesized keyboard/mouse via pointer lock. `__bv` may set up a scenario only — never perform the action under test.
 2. Log every bug and every deviation from Minecraft.

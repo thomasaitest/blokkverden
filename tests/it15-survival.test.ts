@@ -4,6 +4,7 @@ import { ItemId, stack, ITEMS } from '../src/items/types';
 import { matchRecipe } from '../src/items/crafting';
 import { MobSystem } from '../src/mobs/system';
 import { World } from '../src/world/world';
+import { chunkKey } from '../src/world/chunk';
 import { createPlayer } from '../src/player/physics';
 import { SoundBus } from '../src/audio/sound';
 import { DropSystem } from '../src/world/drops';
@@ -126,4 +127,40 @@ describe('it15 creeper explodes exactly once', () => {
     expect(blasts).toBe(1);
     expect(hurt).toBeLessThan(30);
   });
+});
+
+describe('it15 cave spawns (MC: hostiles in the dark underground)', () => {
+  function cave(torch: boolean, roof: number) {
+    // world-gen style: write chunk data directly (setBlock relights per call → far too slow for a test)
+    const w = new World(3);
+    for (let cx = -3; cx <= 2; cx++) for (let cz = -3; cz <= 2; cz++) w.ensureChunk(cx, cz);
+    const set = (x: number, y: number, z: number, id: number) => {
+      const ch = w.getChunk(Math.floor(x / 16), Math.floor(z / 16))!;
+      ch.set(((x % 16) + 16) % 16, y, ((z % 16) + 16) % 16, id);
+    };
+    for (let x = -40; x < 40; x++) for (let z = -40; z < 40; z++) {
+      for (let y = 0; y < 128; y++) set(x, y, z, BlockId.Air);
+      for (let y = 10; y < 20; y++) set(x, y, z, BlockId.Stone);
+      for (let y = 22; y < 22 + roof; y++) set(x, y, z, roof === 1 ? BlockId.Leaves : BlockId.Stone);
+    }
+    if (torch) for (let x = -40; x < 40; x += 4) for (let z = -40; z < 40; z += 4) set(x, 20, z, BlockId.Torch);
+    for (let cx = -3; cx <= 2; cx++) for (let cz = -3; cz <= 2; cz++) { w.getChunk(cx, cz)!.lightDirty = true; w.remeshSync(chunkKey(cx, cz)); }
+    return w;
+  }
+  it('spawns in a dark, deep cave; not when lit; not under a leaf canopy', () => {
+    const p = { x: 0.5, y: 20, z: 0.5 };
+    const sys = new MobSystem();
+    const rnd = seq(7);
+    let dark = 0, under = 0;
+    const deep = cave(false, 10);
+    for (let i = 0; i < 40; i++) if (sys.findCaveSpawn(deep, p, rnd)) dark++;
+    const leafy = cave(false, 1);
+    for (let i = 0; i < 40; i++) if (sys.findCaveSpawn(leafy, p, rnd)) under++;
+    expect(dark).toBeGreaterThan(20);
+    expect(under).toBe(0);
+    const lit = cave(true, 10);
+    let litN = 0;
+    for (let i = 0; i < 40; i++) { if (sys.findCaveSpawn(lit, p, rnd)) litN++; }
+    expect(litN).toBe(0);
+  }, 30000);
 });

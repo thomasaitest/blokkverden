@@ -319,6 +319,8 @@ async function main() {
     await page.evaluate(async () => { await (window as any).__bv.forceRemeshAround(); });
     await ensureLocked(page);
     await page.evaluate(() => (window as any).__bv.lookAt(8.5, 47, 5.5));
+    await sleep(500);
+    await shot(page, 'it15-00-knallbolle-ny-modell.png');
     // walk toward it until it starts to hiss, then stand (player reaction time)
     await page.keyboard.down('KeyW');
     let fuse = 0;

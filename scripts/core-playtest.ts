@@ -221,6 +221,20 @@ async function uiCraft(page: Page, pattern: (number | 0)[], grid = 2) {
   return true;
 }
 
+async function ensureLocked(page: Page) {
+  for (let i = 0; i < 8; i++) {
+    if (await page.evaluate(() => (window as any).__bv.input.pointerLocked)) return true;
+    await acquireLock(page); await sleep(250);
+  }
+  return false;
+}
+async function setHeld(page: Page, id: number) {
+  await page.evaluate((id) => { const bv = (window as any).__bv;
+    const i = bv.inv.slots.findIndex((s: any) => !s);
+    bv.inv.slots[0] && i >= 0 && (bv.inv.slots[i] = bv.inv.slots[0]);
+    bv.inv.slots[0] = { id, count: 1 }; bv.inv.selected = 0; bv.hud.markDirty(); bv.hud.refreshHotbar(); }, id);
+}
+
 async function main() {
   fs.mkdirSync(OUT, { recursive: true });
   fs.mkdirSync(SHOTS, { recursive: true });
@@ -818,30 +832,43 @@ async function main() {
   });
   const mobs = await page.evaluate(() => (window as any).__bv.getState().mobs);
   record('I2', mobs > 0 ? 'PASS' : 'PARTIAL', `mobs=${mobs}`);
-  // combat
-  const kb = await page.evaluate(() => {
-    const bv = (window as any).__bv;
-    const m = bv.mobs.mobs[0];
-    if (!m) return null;
-    const x0 = m.x;
-    bv.mobs.hitAt(bv.player.x, bv.player.y + 1.6, bv.player.z, 5, bv.player.yaw, bv.player.pitch, 5, bv.sound);
-    return { dx: Math.abs(m.x - x0) + Math.abs(m.z - (m.z)), hp: m.hp };
-  });
-  record('I4', kb && (kb.hp < 20) ? 'PASS' : 'PARTIAL', JSON.stringify(kb));
-  const i3drops = await page.evaluate(() => {
-    const bv = (window as any).__bv;
-    bv.clearMobs();
-    bv.drops.loadJSON([]);
-    const x = bv.player.x + 1.2, y = bv.player.y, z = bv.player.z;
-    const m = bv.mobs.spawn('gris', x, y, z);
-    if (!m) return { ok: false, reason: 'no spawn' };
-    bv.mobs.hurtMob(m, 999, 1, 0);
-    // Force death tick once
-    bv.mobs.update(bv.world, bv.player, 0.05, bv.drops, bv.sound, () => {}, bv.xp);
-    bv.mobs.update(bv.world, bv.player, 0.5, bv.drops, bv.sound, () => {}, bv.xp);
-    const ids = bv.drops.toJSON().map((d: any) => d.stack?.id);
-    return { ok: ids.includes(60), ids };
-  });
+  // combat — real LMB clicks (it15: was __bv.mobs.hitAt / hurtMob, i.e. faked)
+  const realHit = async (kind: string, maxClicks: number) => {
+    await page.evaluate((kind) => { const bv = (window as any).__bv;
+      bv.clearMobs(); bv.drops.loadJSON([]);
+      const m = bv.mobs.spawn(kind, bv.player.x, bv.player.y, bv.player.z - 2.2); m.__core = true; }, kind);
+    await ensureLocked(page);
+    let first: { hp: number; moved: number } | null = null;
+    for (let i = 0; i < maxClicks; i++) {
+      const info = await page.evaluate(() => { const bv = (window as any).__bv; const m = bv.mobs.mobs.find((m: any) => m.__core && m.hp > 0);
+        if (!m) return null; bv.lookAt(m.x, m.y + m.height * 0.6, m.z);
+        return { x: m.x, z: m.z, d: Math.hypot(m.x - bv.player.x, m.z - bv.player.z) }; });
+      if (!info) break;
+      if (info.d > 2.4) { // chase it like a player would (real W)
+        await page.keyboard.down('KeyW'); await sleep(Math.min(1200, (info.d - 1.8) * 230)); await page.keyboard.up('KeyW');
+        await page.evaluate(() => { const bv = (window as any).__bv; const m = bv.mobs.mobs.find((m: any) => m.__core && m.hp > 0);
+          if (m) bv.lookAt(m.x, m.y + m.height * 0.6, m.z); });
+      }
+      await page.mouse.down(); await sleep(40); await page.mouse.up();
+      await sleep(450);
+      if (!first) first = await page.evaluate((info) => { const bv = (window as any).__bv; const m = bv.mobs.mobs.find((m: any) => m.__core);
+        return m ? { hp: m.hp, moved: +Math.hypot(m.x - info.x, m.z - info.z).toFixed(2) } : { hp: 0, moved: 0 }; }, info);
+    }
+    await sleep(700);
+    const ids = await page.evaluate(() => { const bv = (window as any).__bv;
+      return bv.drops.toJSON().map((d: any) => d.stack?.id).concat(bv.inv.slots.filter(Boolean).map((s: any) => s.id)); });
+    return { first, ids };
+  };
+  await ensureRespawn(page);
+  await flatPad(page, 45);
+  await setHeld(page, 107);
+  await page.evaluate(() => { const bv = (window as any).__bv; bv.setDay(0.9); bv.player.health = 20; });
+  const kb = await realHit('vandrer', 1);
+  record('I4', kb.first && kb.first.hp < 20 && kb.first.moved > 0.3 ? 'PASS' : 'FAIL', JSON.stringify(kb.first));
+  await page.evaluate(() => (window as any).__bv.setDay(0.3));
+  await page.evaluate(() => { const bv = (window as any).__bv; bv.inv.slots.forEach((s: any, i: number) => { if (s?.id === 60) bv.inv.slots[i] = null; }); });
+  const pig = await realHit('gris', 12);
+  const i3drops = { ok: pig.ids.includes(60), ids: pig.ids };
   record('I3', i3drops.ok ? 'PASS' : 'FAIL', JSON.stringify(i3drops));
   await page.evaluate(() => {
     const bv = (window as any).__bv;

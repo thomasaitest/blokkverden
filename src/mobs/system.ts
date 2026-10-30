@@ -160,6 +160,27 @@ export class MobSystem {
     return 40;
   }
 
+  /**
+   * One random cave spawn attempt near the player (MC: ≥ 24 blocks away; here 16–28 horizontally, ±10 vertically).
+   * Needs: solid floor, 2 air blocks, combined sky+block light < 8.
+   */
+  findCaveSpawn(world: World, player: { x: number; y: number; z: number }, rnd: () => number): { x: number; y: number; z: number } | null {
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const ang = rnd() * Math.PI * 2, dist = 16 + rnd() * 12;
+      const x = Math.floor(player.x + Math.cos(ang) * dist), z = Math.floor(player.z + Math.sin(ang) * dist);
+      const y0 = Math.floor(player.y) + Math.floor(rnd() * 21) - 10;
+      for (let y = y0; y > Math.max(1, y0 - 8); y--) {
+        if (!isSolid(world.getBlock(x, y - 1, z))) continue;
+        if (world.getBlock(x, y, z) !== BlockId.Air || world.getBlock(x, y + 1, z) !== BlockId.Air) break;
+        // MC light check: sky light (stored at daytime strength, so caves/houses only) and torch light both < 8.
+        // Under trees the sky light is still ≈13 → no daytime spawns there.
+        if (world.getLight(x, y, z) >= 8) break;
+        return { x, y, z };
+      }
+    }
+    return null;
+  }
+
   trySpawn(world: World, player: PlayerState, dayTime: number, dt: number): void {
     this.dayTime = dayTime;
     this.spawnCool -= dt;
@@ -191,6 +212,14 @@ export class MobSystem {
       const blockLit = world.getBlockLight(bx, y, bz);
       if (y > 2 && blockLit < 8) {
         this.spawn(kind, x, y, z);
+      }
+    }
+    // MC: hostiles also spawn in dark caves, day or night (light < 8, roofed, 2 free blocks, solid floor)
+    if (hostile < 10 && this.mobs.filter((m) => m.hostile).length < 10) {
+      const c = this.findCaveSpawn(world, player, Math.random);
+      if (c) {
+        const kinds: MobKind[] = ['vandrer', 'bueskytt', 'vever', 'knallbolle'];
+        this.spawn(kinds[(Math.random() * kinds.length) | 0], c.x + 0.5, c.y + 0.02, c.z + 0.5);
       }
     }
     this.mobs = this.mobs.filter((m) => {

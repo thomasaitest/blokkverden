@@ -145,7 +145,9 @@ function emitQuad(
         ao = aoCorner(getWorld, wx + c[0], y + c[1], wz + face.dir[2], c[0] === 0 ? -1 : 1, c[1] === 0 ? -1 : 1, 0);
       }
     }
-    aos.push(ao / 3);
+    // MC smooth lighting: each occluding neighbour (side, side, corner) costs ~20 % → darkest corner 0.4.
+    // Was ao/3 → a fully enclosed corner went pitch black (1×1 shafts/tunnels were black even with a torch).
+    aos.push(1 - 0.2 * (3 - ao));
     a.positions.push(corners[i][0], corners[i][1], corners[i][2]);
     a.normals.push(face.normal[0], face.normal[1], face.normal[2]);
   }

@@ -1245,6 +1245,15 @@ async function runGame(
               containers.removeAt(hit.x, hit.y, hit.z);
             }
             if (drop) drops.spawn(hit.x, hit.y, hit.z, drop);
+            // MC: a torch / red dust / pressure plate standing on the broken block pops off as an item
+            {
+              const above = world.getBlock(hit.x, hit.y + 1, hit.z);
+              if (above === BlockId.Torch || above === BlockId.RedDust || above === BlockId.PressurePlate) {
+                world.setBlock(hit.x, hit.y + 1, hit.z, BlockId.Air);
+                const d2 = dropForBlock(above, null);
+                if (d2) drops.spawn(hit.x, hit.y + 1, hit.z, d2);
+              }
+            }
             if (!player.creative) inv.setHeld(damageTool(inv.held()));
             sound.breakBlock();
             particles.burst(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5, 0x8b6914, 14, 'break');
@@ -1385,7 +1394,8 @@ async function runGame(
               const dest = world.getBlock(px, py, pz);
               // Minecraft: cannot place a block that intersects the player
               const hw = 0.3, ph = player.sneaking ? 1.5 : 1.8;
-              const intersectsPlayer = !(
+              // …but non-colliding blocks (torch, ladder, red dust, sign…) may go where you stand
+              const intersectsPlayer = placeId != null && isSolid(placeId) && !(
                 px + 1 <= player.x - hw || px >= player.x + hw ||
                 py + 1 <= player.y || py >= player.y + ph ||
                 pz + 1 <= player.z - hw || pz >= player.z + hw

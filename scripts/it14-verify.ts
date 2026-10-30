@@ -556,6 +556,43 @@ async function main() {
     record('V10-distinct-tool-icons', urls.length === 9 && distinct === 9 ? 'PASS' : 'FAIL', `hotbar icons=${urls.length} distinct=${distinct}`);
   }
 
+  // V11 — at the bottom of a 1×1 shaft: right-click the wall with a torch places it (not blocked by your own body);
+  // then mining the block under a torch pops the torch off as an item (MC)
+  if (run('V11')) {
+    await closeUi(page);
+    await page.evaluate(() => { const bv = (window as any).__bv;
+      for (let x = 6; x <= 10; x++) for (let z = 6; z <= 10; z++) for (let y = 1; y <= 12; y++) bv.world.setBlock(x, y, z, 3);
+      for (let y = 2; y <= 12; y++) bv.world.setBlock(8, y, 8, 0);
+      bv.teleport(8.5, 2.05, 8.5); bv.player.vy = 0; bv.mobs.clear(); bv.drops.drops.length = 0; });
+    await setHeld(page, 12, { 104: 1 });
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.inv.slots[0].count = 4; bv.hud.markDirty(); });
+    await page.evaluate(async () => { await (window as any).__bv.forceRemeshAround(); });
+    await ensureLocked(page);
+    await page.evaluate(() => (window as any).__bv.look(0, -0.35)); // the wall in front, low
+    await hold(page, 80, 'right'); await sleep(700);
+    const placed = await page.evaluate(() => { const w = (window as any).__bv.world; return w.getBlock(8, 2, 8) === 12 || w.getBlock(8, 3, 8) === 12 ? 12 : -1; });
+    const left = await countItem(page, 12);
+    await page.evaluate(() => (window as any).__bv.look(0, -0.15));
+    await sleep(300);
+    if (process.env.BV_DBG) for (let k = 0; k < 4; k++) { console.log('light', await page.evaluate(() => { const w = (window as any).__bv.world; return [w.getBlock(8,2,8), w.getBlock(8,3,8), w.getBlockLight(8,2,8), w.getBlockLight(8,3,8), w.getBlockLight(8,4,8), w.getLight(8,3,8), w.chunks.get('0,0')?.lightDirty, w.dirtyMeshes.size]; })); await sleep(1000); }
+    await shot(page, 'it14-12-fakkel-i-sjakt.png');
+    record('V11a-torch-in-own-cell', placed === 12 && left === 3 ? 'PASS' : 'FAIL', `torchInShaft=${placed === 12} torchesLeft=${left}`);
+    // torch on a block on a flat pad; mine the block under it with a real held LMB
+    await flatPad(page, 45);
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.world.setBlock(8, 46, 6, 3); bv.world.setBlock(8, 47, 6, 12); bv.drops.drops.length = 0; });
+    await setHeld(page, 104);
+    await aim(page, 8.5, 46.05, 8.5, 8.5, 46.5, 6.5);
+    await ensureLocked(page); await page.evaluate(() => (window as any).__bv.lookAt(8.5, 46.5, 6.5));
+    await page.mouse.down();
+    for (let i = 0; i < 40; i++) { await sleep(100); if (await page.evaluate(() => (window as any).__bv.world.getBlock(8, 46, 6) === 0)) break; }
+    await page.mouse.up();
+    await sleep(400);
+    const torchBlock = await page.evaluate(() => (window as any).__bv.world.getBlock(8, 47, 6));
+    await walk(page, 'KeyW', 900); await sleep(700);
+    const got = await countItem(page, 12);
+    record('V11b-torch-pops-off', torchBlock === 0 && got === 1 ? 'PASS' : 'FAIL', `torchBlockAfter=${torchBlock} torchItems=${got}`);
+  }
+
   const report = { when: new Date().toISOString(), results, bugs };
   fs.writeFileSync(path.join(OUT, 'it14-verify.json'), JSON.stringify(report, null, 2));
   const summary: Record<string, number> = { PASS: 0, FAIL: 0, PARTIAL: 0 };

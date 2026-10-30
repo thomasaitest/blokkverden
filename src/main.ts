@@ -150,7 +150,7 @@ async function runGame(
   let breakTarget: string | null = null;
   let lastSave = 0;
   let frames = 0, fps = 0, fpsT = performance.now();
-  let hungerAcc = 0, waterAcc = 0, cropAcc = 0;
+  let hungerAcc = 0, waterAcc = 0, cropAcc = 0, starveAcc = 0;
   let respawn = { x: 8.5, y: 40, z: 8.5 };
   let dead = false;
   let attackCool = 0;
@@ -352,9 +352,10 @@ async function runGame(
     renderer.setArmorVisible(pts > 0, pts >= 10 ? 0x55eeee : pts >= 5 ? 0xcccccc : 0xaa8866);
   }
 
-  function hurtPlayer(dmg: number, kx = 0, kz = 0): void {
+  function hurtPlayer(dmg: number, kx = 0, kz = 0, bypassArmor = false): void {
     if (dead) return;
-    const armor = armorPoints(inv.armor);
+    // MC: armour reduces mob/attack damage, not fall damage or starvation.
+    const armor = bypassArmor ? 0 : armorPoints(inv.armor);
     const reduced = Math.max(0.5, dmg * (1 - armor / 25));
     player.health = Math.max(0, player.health - reduced);
     const len = Math.hypot(kx, kz) || 1;
@@ -383,7 +384,7 @@ async function runGame(
       if (s) scatter(s);
       inv.armor[i] = null;
     }
-    hud.markDirty(); updateArmorUi();
+    hud.markDirty(); hud.refreshHotbar(); updateArmorUi();
   }
   function respawnPlayer(): void {
     dead = false;
@@ -954,7 +955,8 @@ async function runGame(
         if (Math.hypot(wishX, wishZ) > 0.85) input.sprint = true;
       }
       player.sneaking = input.sneak;
-      player.sprinting = input.sprint && !input.sneak && !!input.forward;
+      // MC: cannot sprint with hunger ≤ 6 (3 drumsticks).
+      player.sprinting = input.sprint && !input.sneak && !!input.forward && (player.creative || player.hunger > 6);
       if (player.creative && input.jump) {
         if (flyTap > 0 && flyTap < 0.35) { player.flying = !player.flying; flyTap = -1; }
         else if (flyTap <= 0) flyTap = 0.001;
@@ -985,7 +987,7 @@ async function runGame(
       }
       if (!boats.mounted) {
         const move = movePlayer(player, world, wishX, wishZ, input.jump, dt);
-        if (move.fallDamage > 0) hurtPlayer(move.fallDamage);
+        if (move.fallDamage > 0) hurtPlayer(move.fallDamage, 0, 0, true);
       }
       boats.update(dt, world, player, wishX, wishZ, !!input.forward);
 
@@ -1008,8 +1010,16 @@ async function runGame(
       if (hungerAcc > 1) {
         hungerAcc = 0;
         if (player.hunger > 0) player.hunger = Math.max(0, player.hunger - 1);
-        else hurtPlayer(0.5);
       }
+      // MC: at empty hunger, ½ heart starvation damage every 4 s (Normal: stops at ½ heart left),
+      // independent of how fast the hunger bar drains.
+      if (player.hunger <= 0) {
+        starveAcc += dt;
+        if (starveAcc >= 4) {
+          starveAcc = 0;
+          if (player.health > 1) hurtPlayer(Math.min(1, player.health - 1), 0, 0, true);
+        }
+      } else starveAcc = 0;
       if (player.hunger > 17 && player.health < 20) player.health = Math.min(20, player.health + dt * 0.25);
     }
 

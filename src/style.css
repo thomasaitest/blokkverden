@@ -187,7 +187,7 @@ canvas#game {
 #vitals {
   position: fixed;
   left: 50%;
-  bottom: 72px;
+  bottom: 96px;
   transform: translateX(-50%);
   display: flex;
   gap: 28px;
@@ -196,9 +196,13 @@ canvas#game {
   text-shadow: 0 1px 2px #000;
   font-size: 16px;
 }
-#hearts .heart.full, #hearts .heart.half { color: #e33; }
+#hearts .heart.full { color: #e33; }
+/* MC-style half heart / half drumstick (left half filled) */
+#hearts .heart.half { color: transparent; background: linear-gradient(90deg, #e33 50%, #6a2a2a 50%); -webkit-background-clip: text; background-clip: text; text-shadow: none; }
+#hunger { display: flex; flex-direction: row-reverse; } /* MC: hunger drains from the left, fills from the right */
+#hunger .drum.half { clip-path: inset(0 0 0 50%); }
 #hearts .heart.empty { color: #422; opacity: 0.7; }
-#hunger .drum.full, #hunger .drum.half { filter: none; }
+#hunger .drum.full { filter: none; }
 #hunger .drum.empty { opacity: 0.35; }
 
 .stack-count {
@@ -360,18 +364,18 @@ button.primary { background: #3a6aaa; border-color: #1a3a5a; }
 }
 .settings-panel input[type=range], #p-settings input[type=range] { flex: 1; }
 #xp-bar {
-  position: fixed; bottom: 78px; left: 50%; transform: translateX(-50%);
+  position: fixed; bottom: 82px; left: 50%; transform: translateX(-50%);
   width: min(420px, 90vw); height: 8px; background: #222; border: 1px solid #555;
   border-radius: 4px; z-index: 12; overflow: hidden; pointer-events: none;
 }
 #xp-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #3c3, #8f8); }
 #xp-label {
-  position: fixed; bottom: 88px; left: 50%; transform: translateX(-50%);
+  position: fixed; bottom: 79px; left: 50%; transform: translateX(-50%);
   color: #9f9; font-size: 12px; z-index: 12; pointer-events: none;
   text-shadow: 0 1px 2px #000;
 }
 #armor-row {
-  position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%);
+  position: fixed; bottom: 124px; left: 50%; transform: translateX(-50%);
   display: flex; gap: 4px; z-index: 12; pointer-events: none;
 }
 #armor-row .arm { width: 20px; height: 20px; background: #333; border: 2px solid #666; border-radius: 3px; opacity: 0.9; }

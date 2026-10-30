@@ -377,9 +377,15 @@ async function main() {
   // S7 — sprint ~10 s across natural terrain / chunk borders: no fall-through, fps
   await page.evaluate(() => {
     const bv = (window as any).__bv;
-    const x = 200, z = 200;
-    bv.world.updateAround?.(x, z);
-    let gy = 60; for (let y = 63; y > 1; y--) { const b = bv.world.getBlock(x, y, z); if (b !== 0 && b !== 9 && b !== 10 && b !== 7) { gy = y + 1; break; } }
+    // pick a dry-land start (sea floor runs gave terrain-dependent 'stuck' results)
+    let x = 200, z = 200, gy = 60;
+    for (let tries = 0; tries < 12; tries++, z += 24) {
+      bv.world.updateAround?.(x, z);
+      let top = 0, topId = 0;
+      for (let y = 63; y > 1; y--) { const b = bv.world.getBlock(x, y, z); if (b !== 0 && b !== 7) { top = y; topId = b; break; } }
+      gy = top + 1;
+      if (topId !== 10 && top > 30) break;
+    }
     bv.player.vy = 0;
     bv.teleport(x + 0.5, gy + 0.05, z + 0.5);
     bv.look(Math.PI / 2, 0);
@@ -466,11 +472,30 @@ async function main() {
     record('S9-village-no-restamp', minedNow === 0 && after === 0 ? 'PASS' : 'FAIL', `wall=${JSON.stringify(wall)} minedNow=${minedNow} afterReload=${after}`);
   }
 
+  // S10 — MC: no sprinting at hunger ≤ 6 (real Ctrl+W input)
+  await acquireLock(page);
+  const sprintDist = async (hunger: number) => {
+    await flatPad(page, 45);
+    await page.evaluate((h) => { const bv = (window as any).__bv; bv.player.hunger = h; bv.look(0, 0); bv.teleport(8.5, 46.05, 15.5); }, hunger);
+    await sleep(300);
+    await focusGame(page);
+    const a = await st(page);
+    await page.keyboard.down('Control'); await page.keyboard.down('KeyW'); await sleep(1500);
+    await page.keyboard.up('KeyW'); await page.keyboard.up('Control');
+    await sleep(200);
+    const b = await st(page);
+    return a.z - b.z;
+  };
+  const dFed = await sprintDist(20);
+  const dHungry = await sprintDist(5);
+  record('S10-no-sprint-hungry', dFed > dHungry * 1.15 ? 'PASS' : 'FAIL', `fed=${dFed.toFixed(2)} hungry=${dHungry.toFixed(2)}`);
+
   const report = { when: new Date().toISOString(), results, bugs };
   fs.writeFileSync(path.join(OUT, 'it12-session.json'), JSON.stringify(report, null, 2));
   const summary: Record<string, number> = { PASS: 0, FAIL: 0, PARTIAL: 0 };
   for (const r of results) summary[r.status] = (summary[r.status] ?? 0) + 1;
   console.log('=== SUMMARY ===', summary);
+  setTimeout(() => process.exit(0), 20000);
   await ctx.close();
   const vid = await page.video()?.path().catch(() => null);
   if (vid) console.log('VIDEO', vid);

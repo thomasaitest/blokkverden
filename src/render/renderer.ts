@@ -287,9 +287,27 @@ export class GameRenderer {
     this.outline.position.set(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
   }
 
+  private dropMats = new Map<number, THREE.Material>();
+  /** Item-entity material with the item's real atlas icon (was an arbitrary id-hash colour: cobble showed blue). */
+  private dropMaterial(id: number): THREE.Material {
+    let m = this.dropMats.get(id);
+    if (m) return m;
+    const c = document.createElement('canvas');
+    c.width = c.height = 16;
+    const ctx = c.getContext('2d')!;
+    drawItemIcon(ctx, this.atlasCanvas, id, 0, 0, 16);
+    const tex = new THREE.CanvasTexture(c);
+    tex.magFilter = THREE.NearestFilter;
+    tex.minFilter = THREE.NearestFilter;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    m = new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.5, side: THREE.DoubleSide });
+    this.dropMats.set(id, m);
+    return m;
+  }
+
   syncDrops(drops: DropEntity[]): void {
     while (this.dropPool.length < drops.length) {
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.28, 0.28), new THREE.MeshLambertMaterial({ color: 0xcccccc }));
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.28, 0.28), this.dropMaterial(1));
       this.dropPool.push(mesh);
       this.dropGroup.add(mesh);
     }
@@ -300,10 +318,9 @@ export class GameRenderer {
       mesh.visible = true;
       mesh.position.set(d.x, d.y + 0.15 + Math.sin(d.age * 3) * 0.08, d.z);
       mesh.rotation.y = d.age * 2.2;
-      const mat = mesh.material as THREE.MeshStandardMaterial;
       const id = d.stack?.id ?? 0;
-      // stable color from id
-      mat.color.setHex(0x404040 + ((id * 97) % 0xbfbfbf));
+      const mat = this.dropMaterial(id);
+      if (mesh.material !== mat) mesh.material = mat;
     }
   }
 
@@ -473,7 +490,7 @@ export class GameRenderer {
     this.projScreen.multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse);
     this.frustum.setFromProjectionMatrix(this.projScreen);
     const maxDist = this.viewRadius * 16;
-    const lodDist = maxDist * 0.55;
+    const lodDist = maxDist + 24;
     const cam = this.camera.position;
     for (const mesh of this.opaqueMeshes.values()) {
       mesh.visible = true; // culling off — was hiding meshes with bad spheres
@@ -481,6 +498,8 @@ export class GameRenderer {
     for (const mesh of this.transparentMeshes.values()) {
       const sp = mesh.geometry.boundingSphere;
       if (!sp) { mesh.visible = true; continue; }
+      // MC renders leaves/water out to the full render distance (fog hides the edge).
+      // The old 55 % LOD cut-off left bare log 'pillars' on the horizon.
       const dist = cam.distanceTo(sp.center);
       mesh.visible = !(dist > lodDist && Number.isFinite(dist));
     }

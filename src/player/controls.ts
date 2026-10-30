@@ -61,6 +61,28 @@ export function filterLookDelta(m: number): number {
   return m;
 }
 
+/**
+ * Hotbar scroll like MC: one notch = one slot. Mac trackpads (and momentum) fire dozens of
+ * tiny wheel events per swipe — stepping on each spun the hotbar uncontrollably.
+ * Chrome reports trackpad (precise) scrolling with wheelDeltaY === -3·deltaY; those deltas
+ * are accumulated. Mouse wheels (Mac: deltaY≈4 but wheelDeltaY=±120) step once per event.
+ */
+export const WHEEL_PX_PER_SLOT = 50;
+export interface WheelAcc { acc: number; lastT: number }
+export function wheelSteps(st: WheelAcc, deltaY: number, deltaMode: number, wheelDeltaY: number | undefined, t: number): number {
+  if (!deltaY) return 0;
+  const precise = deltaMode === 0 && (typeof wheelDeltaY === 'number' && wheelDeltaY !== 0
+    ? Math.abs(wheelDeltaY + 3 * deltaY) < 0.5
+    : true);
+  if (!precise) { st.acc = 0; st.lastT = t; return deltaY > 0 ? 1 : -1; }
+  if (t - st.lastT > 250 || Math.sign(st.acc) !== Math.sign(deltaY)) st.acc = 0;
+  st.lastT = t;
+  st.acc += deltaY;
+  const n = Math.trunc(st.acc / WHEEL_PX_PER_SLOT);
+  st.acc -= n * WHEEL_PX_PER_SLOT;
+  return Math.max(-1, Math.min(1, n)); // never skip slots in one event
+}
+
 /** Prefer KeyboardEvent.code so Norwegian/Mac layouts keep WASD on physical keys. */
 export function bindDesktopControls(
   canvas: HTMLElement,
@@ -74,6 +96,7 @@ export function bindDesktopControls(
   let lastDragX = 0;
   let lastDragY = 0;
   let wantBreak = false;
+  const wheel: WheelAcc = { acc: 0, lastT: -1e9 };
 
   const sync = () => {
     input.forward = down.has('KeyW') || down.has('ArrowUp');
@@ -170,7 +193,10 @@ export function bindDesktopControls(
       draggingLook = true;
       lastDragX = e.clientX;
       lastDragY = e.clientY;
-      // Dig/place must work even if pointer lock is denied (headless / some browsers).
+      // MC: the click that (re)captures the mouse is swallowed — it must not mine or
+      // place a block (right-click-to-refocus used to drop a block in your face).
+      // Only when lock is denied/unavailable do clicks act directly (drag-look mode).
+      if (!input.dragLookFallback) return;
       if (e.button === 0) {
         wantBreak = true;
         input.breakHeld = true;
@@ -240,7 +266,8 @@ export function bindDesktopControls(
   const onWheel = (e: WheelEvent) => {
     if (input.inventoryOpen) return;
     e.preventDefault();
-    const dir = e.deltaY > 0 ? 1 : -1;
+    const dir = wheelSteps(wheel, e.deltaY, e.deltaMode, (e as WheelEvent & { wheelDeltaY?: number }).wheelDeltaY, performance.now());
+    if (!dir) return;
     input.hotbarSlot = (input.hotbarSlot + dir + 9) % 9;
     onSlot(input.hotbarSlot);
   };

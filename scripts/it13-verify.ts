@@ -226,6 +226,43 @@ async function main() {
   record('P4-no-stuck-keys', p4a.f && !p4.f ? 'PASS' : 'FAIL', `held=${JSON.stringify(p4a)} afterLockLoss=${JSON.stringify(p4)}`);
   if (await isPaused(page)) { await page.locator('#p-resume').click(); await sleep(400); }
 
+  // P6 — hotbar wheel: one wheel notch = one slot; a trackpad swipe (many tiny deltas) doesn't spin it
+  await acquireLock(page);
+  const slotOf = () => page.evaluate(() => (window as any).__bv.inv.selected);
+  const w0 = await slotOf();
+  await page.evaluate(() => { (window as any).__wd = []; window.addEventListener('wheel', (e: any) => (window as any).__wd.push([e.deltaY, e.wheelDeltaY]), { once: true }); });
+  await page.mouse.wheel(0, 100); await sleep(350);
+  const w1 = await slotOf();
+  const wd = await page.evaluate(() => (window as any).__wd);
+  await page.evaluate(() => { (window as any).__wd2 = []; window.addEventListener('wheel', (e: any) => (window as any).__wd2.push([+e.deltaY.toFixed(2), e.wheelDeltaY, e.deltaMode])); });
+  for (let i = 0; i < 30; i++) { await page.mouse.wheel(0, 2); await sleep(16); }
+  await sleep(300);
+  const w2 = await slotOf();
+  const swipe = ((w2 - w1) + 9) % 9;
+  // CDP can only synthesize mouse-wheel notches (wheelDeltaY=±120), so 30 notches = 30 slots (mod 9 = 3).
+  // The trackpad accumulation path (wheelDeltaY = -3·deltaY) is covered by tests/controls.test.ts.
+  record('P6-wheel', (w1 - w0 + 9) % 9 === 1 && swipe === 3 ? 'PASS' : 'FAIL', `notch ${w0}→${w1} (deltaY/wheelDeltaY ${JSON.stringify(wd)}) 30 notches ${w1}→${w2} ev=${JSON.stringify(await page.evaluate(() => (window as any).__wd2.slice(0, 6)))} n=${await page.evaluate(() => (window as any).__wd2.length)}`);
+
+  // P7 — the click that captures the mouse doesn't place a block (right-click while unlocked)
+  await flatPad(page, 45);
+  await page.evaluate(() => { const bv = (window as any).__bv; bv.inv.slots[0] = { id: 2, count: 5 }; bv.inv.selected = 0; bv.hud.markDirty(); bv.hud.refreshHotbar(); bv.look(0, -1.2); });
+  await page.keyboard.press('Escape'); await sleep(300);
+  if (await isPaused(page)) await page.locator('#p-resume').click();
+  await page.evaluate(() => document.exitPointerLock()); await sleep(300);
+  if (await isPaused(page)) await page.evaluate(() => (window as any).__bv.hidePause());
+  await sleep(200);
+  const unlocked = !(await st(page)).locked;
+  await page.mouse.move(640, 360);
+  await page.mouse.down({ button: 'right' }); await sleep(80); await page.mouse.up({ button: 'right' });
+  await sleep(400);
+  const p7 = { unlocked, dirt: await countItem(page, 2), locked: (await st(page)).locked };
+  record('P7-focus-click-swallowed', p7.unlocked && p7.dirt === 5 ? 'PASS' : 'FAIL', JSON.stringify(p7));
+  // …and once captured, the next right-click places normally
+  await page.mouse.down({ button: 'right' }); await sleep(80); await page.mouse.up({ button: 'right' });
+  await sleep(300);
+  const after = await countItem(page, 2);
+  record('P7b-then-places', p7.locked && after === 4 ? 'PASS' : 'FAIL', `dirt ${p7.dirt}→${after}`);
+
   // P5 — quit to title, reopen the same world: old session must be gone (no loop, no autosave
   // over the reopened world, WebGL context freed), and the world/position must reload.
   await flatPad(page, 45);

@@ -17,6 +17,13 @@ import type { Boat } from '../world/boats';
 import type { XpOrb } from '../world/xp';
 
 export class GameRenderer {
+  private resizeHandler = () => this.onResize();
+  /** Free the WebGL context (Chrome caps live contexts at ~16) when leaving a world. */
+  dispose(): void {
+    window.removeEventListener('resize', this.resizeHandler);
+    try { this.renderer.dispose(); this.renderer.forceContextLoss(); } catch { /* lost */ }
+  }
+
   readonly renderer: THREE.WebGLRenderer;
   readonly scene: THREE.Scene;
   readonly camera: THREE.PerspectiveCamera;
@@ -152,7 +159,7 @@ export class GameRenderer {
     helm.position.y = 0.25;
     this.armorVis.add(helm);
 
-    window.addEventListener('resize', () => this.onResize());
+    window.addEventListener('resize', this.resizeHandler);
   }
 
   getAtlas(): HTMLCanvasElement { return this.atlasCanvas; }

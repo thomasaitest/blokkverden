@@ -85,6 +85,7 @@ export function createHud(root: HTMLElement, inv: Inventory, atlas: HTMLCanvasEl
   const bubbles = el.querySelector('#bubbles') as HTMLElement;
 
   window.addEventListener('keydown', (e) => {
+    if (!el.isConnected) return; // stale HUD from a quit session
     if (e.code === 'KeyF3') {
       showDebug = !showDebug;
       debugEl.style.display = showDebug ? 'block' : 'none';

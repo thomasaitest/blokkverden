@@ -354,9 +354,8 @@ export function createInventoryUi(
     el,
   };
 
-  window.addEventListener('keydown', (e) => {
-    if (e.code === 'Escape' && mode !== 'closed') api.close();
-  });
+  // Esc is handled by main.togglePause (closes the screen AND clears input.inventoryOpen;
+  // a separate close here left inventoryOpen=true → WASD dead + pause menu popped up).
 
   // Periodic refresh for furnace progress while open
   setInterval(() => {

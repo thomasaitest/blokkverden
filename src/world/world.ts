@@ -20,6 +20,8 @@ export class World {
   meshes = new Map<string, ChunkMeshes>();
   private dirtyMeshes = new Set<string>();
   private pending = new Map<string, { lx: number; y: number; lz: number; id: number }[]>();
+  /** Stop the mesh worker (session ended / quit to title). */
+  dispose(): void { try { this.worker?.terminate(); } catch { /* gone */ } this.worker = null; this.useWorker = false; }
   private worker: Worker | null = null;
   private meshing = new Set<string>();
   private useWorker = true;

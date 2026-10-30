@@ -50,6 +50,17 @@ export function createInput(): InputState {
   };
 }
 
+/**
+ * Pointer-lock look delta filter. Chrome on macOS coalesces mousemove to one event per
+ * frame, so a fast real flick easily gives 150–300 px per event — clamping that (old ±40)
+ * made fast turns feel capped. Only drop absurd one-event spikes (OS cursor warps).
+ */
+export const LOOK_SPIKE_PX = 600;
+export function filterLookDelta(m: number): number {
+  if (!Number.isFinite(m) || Math.abs(m) > LOOK_SPIKE_PX) return 0;
+  return m;
+}
+
 /** Prefer KeyboardEvent.code so Norwegian/Mac layouts keep WASD on physical keys. */
 export function bindDesktopControls(
   canvas: HTMLElement,
@@ -185,9 +196,9 @@ export function bindDesktopControls(
   const onMove = (e: MouseEvent) => {
     if (input.inventoryOpen) return;
     if (input.pointerLocked) {
-      // Clamp one-frame spikes (Playwright / OS warps) so dig aim is not thrown skyward.
-      const mx = Math.max(-40, Math.min(40, e.movementX));
-      const my = Math.max(-40, Math.min(40, e.movementY));
+      // Drop one-frame warp spikes only; keep real fast flicks (Mac coalesced events).
+      const mx = filterLookDelta(e.movementX);
+      const my = filterLookDelta(e.movementY);
       input.lookDX += mx;
       input.lookDY += my;
       return;
@@ -212,6 +223,12 @@ export function bindDesktopControls(
         input.breakHeld = true;
         wantBreak = false;
       }
+    } else {
+      // Lock lost (Esc, Cmd+Tab, inventory): Mac Chrome never sends keyup for keys
+      // released in another app, so drop held keys/buttons (MC also stops on pause).
+      clearMovement();
+      wantBreak = false;
+      draggingLook = false;
     }
   };
 

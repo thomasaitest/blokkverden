@@ -92,6 +92,11 @@ async function runGame(
   creativeMode = false,
 ): Promise<void> {
   setViewRadius(settings.renderDistance);
+  // Session lifetime: quitting to title must stop the loop, listeners and autosave of this
+  // world (a zombie session kept rendering and later saved stale state over the reopened world).
+  const life = new AbortController();
+  const gameActive = () => !life.signal.aborted;
+  const sig = { signal: life.signal };
   const world = new World(seed);
   const renderer = new GameRenderer(app);
   renderer.applySettings(settings.renderDistance, settings.fov);
@@ -245,6 +250,7 @@ async function runGame(
     }
   };
 
+  let endSession: () => Promise<void> = async () => { /* set once the loop is running */ };
   const pause = createPauseMenu(app, {
     onResume: () => {
       paused = false;
@@ -254,16 +260,28 @@ async function runGame(
       try { renderer.canvas.requestPointerLock(); } catch { /* drag-look fallback in controls */ }
     },
     onSettingsChange: applySettings,
-    onQuit: () => { void doSave(); onQuit(); },
+    onQuit: () => { void endSession().then(onQuit); },
   });
 
   const invUi = createInventoryUi(app, inv, renderer.getAtlas(), () => {
     hud.markDirty(); hud.refreshHotbar();
   }, (s) => throwFromPlayer(s));
+  /** MC: closing a container screen returns straight to the game (mouse recaptured). */
+  const relock = () => {
+    try { renderer.canvas.focus({ preventScroll: true }); } catch { renderer.canvas.focus(); }
+    try {
+      const r = renderer.canvas.requestPointerLock() as unknown;
+      if (r && typeof (r as Promise<void>).then === 'function') (r as Promise<void>).catch(() => { /* click-to-look overlay */ });
+    } catch { /* click-to-look overlay */ }
+  };
+  const closeScreens = (): boolean => {
+    if (creativeOpen) { creativeOpen.close(); creativeOpen = null; input.inventoryOpen = false; relock(); return true; }
+    if (invUi.isOpen() || input.inventoryOpen) { invUi.close(); input.inventoryOpen = false; relock(); return true; }
+    return false;
+  };
   const toggleInv = () => {
     if (dead || paused) return;
-    if (creativeOpen) { creativeOpen.close(); creativeOpen = null; input.inventoryOpen = false; return; }
-    if (invUi.isOpen()) { invUi.close(); input.inventoryOpen = false; return; }
+    if (closeScreens()) return;
     if (player.creative) {
       creativeOpen = openCreativeInventory(app, inv, renderer.getAtlas(), () => { hud.markDirty(); hud.refreshHotbar(); });
       input.inventoryOpen = true; input.breakHeld = false;
@@ -271,16 +289,27 @@ async function runGame(
     }
     invUi.openPlayer(); input.inventoryOpen = true; input.breakHeld = false;
   };
+  let autoPauseAt = -1e9;
   const togglePause = () => {
     if (dead) return;
-    if (invUi.isOpen()) { invUi.close(); input.inventoryOpen = false; return; }
+    if (closeScreens()) return;
+    // Lock loss already opened the menu for this same Esc press — don't toggle it shut.
+    if (paused && performance.now() - autoPauseAt < 400) return;
     paused = !paused;
     if (paused) { pause.show(); document.exitPointerLock(); }
     else pause.hide();
   };
 
-  setupTouchControls(app, input, { onInventory: toggleInv, onPause: togglePause });
-  bindDesktopControls(renderer.canvas, input, (s) => hud.setSlot(s), toggleInv);
+  // Chrome (headed) swallows the Esc keydown that exits pointer lock, and Cmd+Tab /
+  // window switches drop the lock too. MC opens the Game Menu on focus loss.
+  document.addEventListener('pointerlockchange', () => {
+    if (!gameActive()) return;
+    if (document.pointerLockElement === renderer.canvas) return;
+    if (paused || dead || input.inventoryOpen || creativeOpen || !gameActive()) return;
+    paused = true; autoPauseAt = performance.now(); pause.show();
+  }, sig);
+  const unbindTouch = setupTouchControls(app, input, { onInventory: toggleInv, onPause: togglePause });
+  const unbindDesktop = bindDesktopControls(renderer.canvas, input, (s) => hud.setSlot(s), toggleInv);
   renderer.canvas.addEventListener('pointerdown', () => sound.unlock());
   try { renderer.canvas.focus({ preventScroll: true }); } catch { renderer.canvas.focus(); }
   window.addEventListener('keydown', (e) => {
@@ -290,7 +319,7 @@ async function runGame(
       e.preventDefault();
       dropHeld(e.ctrlKey || e.metaKey);
     }
-  });
+  }, sig);
   function throwFromPlayer(s: ItemStack): void {
     const cy = Math.cos(player.pitch);
     const dx = -Math.sin(player.yaw) * cy, dz = -Math.cos(player.yaw) * cy, dy = Math.sin(player.pitch);
@@ -937,6 +966,7 @@ async function runGame(
 
   let prev = performance.now();
   const loop = (now: number) => {
+    if (!gameActive()) return;
     requestAnimationFrame(loop);
     let dt = Math.min(0.05, (now - prev) / 1000);
     prev = now;
@@ -1385,7 +1415,18 @@ async function runGame(
   requestAnimationFrame(loop);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') void doSave();
-  });
+  }, sig);
+  // Final save, then tear the session down so nothing from it can run or save again.
+  endSession = async () => {
+    if (!gameActive()) return;
+    try { await doSave(); } catch { /* keep quitting */ }
+    life.abort();
+    unbindDesktop(); unbindTouch();
+    try { music.stop(); } catch { /* */ }
+    if (document.pointerLockElement) document.exitPointerLock();
+    world.dispose();
+    renderer.dispose();
+  };
 }
 
 async function waitMeshesInner(world: World, renderer: GameRenderer, ms: number): Promise<boolean> {

@@ -1,6 +1,7 @@
 import type { ItemStack } from '../items/types';
 import type { PlayerState } from '../player/physics';
 import type { Inventory } from '../items/inventory';
+import { ITEMS } from '../items/types';
 
 export interface DropEntity {
   id: number;
@@ -51,6 +52,33 @@ export class DropSystem {
       this.step(h, player, inv, solidAt);
       rest -= h;
     }
+    this.mergeAcc += dt;
+    if (this.mergeAcc >= 0.5) { this.mergeAcc = 0; this.mergeNearby(); }
+  }
+
+  private mergeAcc = 0;
+  /** MC: identical stackable item entities lying close together merge into one stack. */
+  mergeNearby(): void {
+    const ds = this.drops;
+    let merged = false;
+    for (let i = 0; i < ds.length; i++) {
+      const a = ds[i];
+      if (a.stack.count <= 0) continue;
+      const def = ITEMS[a.stack.id];
+      if (!def?.stackable) continue;
+      for (let j = i + 1; j < ds.length; j++) {
+        const b = ds[j];
+        if (b.stack.id !== a.stack.id || b.stack.count <= 0) continue;
+        if (Math.abs(a.x - b.x) > 0.75 || Math.abs(a.y - b.y) > 0.5 || Math.abs(a.z - b.z) > 0.75) continue;
+        if (a.stack.count + b.stack.count > def.maxStack) continue;
+        a.stack.count += b.stack.count;
+        b.stack.count = 0;
+        a.age = Math.min(a.age, b.age);
+        a.pickupDelay = Math.max(a.pickupDelay ?? 0, b.pickupDelay ?? 0) || a.pickupDelay;
+        merged = true;
+      }
+    }
+    if (merged) this.drops = ds.filter((d) => d.stack.count > 0);
   }
 
   private step(dt: number, player: PlayerState, inv: Inventory, solidAt: (x: number, y: number, z: number) => boolean): void {

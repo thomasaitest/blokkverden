@@ -372,6 +372,16 @@ async function main() {
   const a2 = await countItem(page, 52);
   record('V7-hold-to-eat', e0.hunger === 10 && e1.hunger === 14 && a1 === 2 && a2 === 2 && heldMs >= 1500 ? 'PASS' : 'FAIL', `click=${e0.hunger} heldMs=${heldMs} hold=${e1.hunger} apples=${a1} fullHungerApples=${a2}`);
 
+  // V8 — item entities merge (MC): Q three dirt (real key) → one entity ×3 on the ground
+  await flatPad(page, 45);
+  await page.evaluate(() => { const bv = (window as any).__bv; bv.drops.drops.length = 0; bv.inv.slots.fill(null); bv.give(2, 3); bv.look(0, -0.3); });
+  await acquireLock(page);
+  for (let i = 0; i < 3; i++) { await page.keyboard.press('KeyQ'); await sleep(120); }
+  await sleep(1500);
+  const md = await page.evaluate(() => (window as any).__bv.drops.drops.filter((d: any) => d.stack.id === 2).map((d: any) => d.stack.count));
+  await shot(page, 'it12-16-drop-samlet.png');
+  record('V8-drop-merge', md.length === 1 && md[0] === 3 ? 'PASS' : 'FAIL', `dirtEntities=${JSON.stringify(md)}`);
+
   const report = { when: new Date().toISOString(), results, bugs };
   fs.writeFileSync(path.join(OUT, 'it12-verify.json'), JSON.stringify(report, null, 2));
   const summary: Record<string, number> = { PASS: 0, FAIL: 0, PARTIAL: 0 };

@@ -53,4 +53,23 @@ describe('look-aligned movement', () => {
     for (let i = 0; i < 30; i++) movePlayer(p, w, 0, -1, false, 1 / 60); // forward
     expect(p.x).toBeGreaterThan(x0 + 0.5);
   });
+
+  it('cannot walk or fall into an unloaded chunk (MC)', () => {
+    const w = new World(3);
+    w.ensureChunk(0, 0);
+    for (let x = 0; x < 16; x++) for (let z = 0; z < 16; z++) {
+      w.setBlock(x, 20, z, BlockId.Stone);
+      for (let y = 21; y < 30; y++) w.setBlock(x, y, z, BlockId.Air);
+    }
+    w.chunks.delete('1,0'); w.chunks.delete('1,-1'); w.chunks.delete('1,1');
+    expect(w.hasChunkAt(20, 8)).toBe(false);
+    const p = createPlayer(14.5, 21, 8.5);
+    for (let i = 0; i < 300; i++) movePlayer(p, w, 1, 0, false, 1 / 60);
+    expect(p.x).toBeLessThan(16);
+    expect(p.y).toBeGreaterThan(20.9);
+    const q = createPlayer(40.5, 25, 8.5); // spawned inside an unloaded chunk: frozen, not falling
+    for (let i = 0; i < 60; i++) movePlayer(q, w, 0, 0, false, 1 / 60);
+    expect(q.y).toBeGreaterThan(24.9);
+  });
 });
+

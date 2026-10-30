@@ -260,6 +260,11 @@ export class World {
     return c.get(lx, y, lz);
   }
 
+  /** True when the chunk containing (wx, wz) exists (generated). */
+  hasChunkAt(wx: number, wz: number): boolean {
+    return this.chunks.has(chunkKey(Math.floor(wx / CHUNK_SIZE), Math.floor(wz / CHUNK_SIZE)));
+  }
+
   getLight(wx: number, y: number, wz: number): number {
     if (y < 0 || y >= CHUNK_HEIGHT) return 15;
     const { cx, cz, lx, lz } = this.worldToChunk(wx, wz);

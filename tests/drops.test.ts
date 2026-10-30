@@ -33,4 +33,25 @@ describe('drops', () => {
     expect(d.drops.length).toBe(0);
     expect(inv.slots.find((s) => s?.id === 4)?.count).toBe(3);
   });
+  it('identical nearby stacks merge (MC); different items and tools do not', () => {
+    const d = new DropSystem();
+    d.spawn(0, 11, 0, { id: 4, count: 1 });
+    d.spawn(0, 11, 0, { id: 4, count: 2 });
+    d.spawn(0, 11, 0, { id: 2, count: 1 });
+    d.spawn(0, 11, 0, { id: 100, count: 1, durability: 60 });
+    d.spawn(0, 11, 0, { id: 100, count: 1, durability: 60 });
+    for (let i = 0; i < 60; i++) d.update(1 / 60, farPlayer, new Inventory(), solid);
+    const cobble = d.drops.filter((x) => x.stack.id === 4);
+    expect(cobble.length).toBe(1);
+    expect(cobble[0].stack.count).toBe(3);
+    expect(d.drops.filter((x) => x.stack.id === 2).length).toBe(1);
+    expect(d.drops.filter((x) => x.stack.id === 100).length).toBe(2);
+  });
+  it('far-apart stacks stay separate', () => {
+    const d = new DropSystem();
+    d.spawn(0, 11, 0, { id: 4, count: 1 });
+    d.spawn(5, 11, 5, { id: 4, count: 1 });
+    for (let i = 0; i < 60; i++) d.update(1 / 60, farPlayer, new Inventory(), solid);
+    expect(d.drops.length).toBe(2);
+  });
 });

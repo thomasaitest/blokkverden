@@ -394,7 +394,7 @@ async function main() {
   await page.evaluate(async () => { await (window as any).__bv.waitForMeshes(5000); });
   await sleep(2500);
   await focusGame(page);
-  const fpsS: number[] = []; let minY = 1e9; let stuck = 0; let lastX = 0;
+  const fpsS: number[] = []; let minY = 1e9; let stuck = 0; let lastX = 0; let embedded = 0;
   const startX = (await st(page)).x;
   await page.keyboard.down('KeyW'); await sleep(80); await page.keyboard.up('KeyW'); await sleep(60);
   await page.keyboard.down('KeyW');
@@ -403,8 +403,11 @@ async function main() {
     await sleep(380);
     const s = await st(page);
     fpsS.push(s.fps);
-    const ground = await page.evaluate(({ x, z }) => { const bv = (window as any).__bv; for (let y = 120; y > 0; y--) { const b = bv.world.getBlock(Math.floor(x), y, Math.floor(z)); if (b !== 0 && b !== 9 && b !== 10) return y; } return 0; }, { x: s.x, z: s.z });
-    minY = Math.min(minY, s.y - ground);
+    // fall-through check: feet/head inside a solid block = embedded (caves/overhangs above are legit)
+    const emb = await page.evaluate(({ x, y, z }) => { const bv = (window as any).__bv; const ok = (b: number) => b === 0 || b === 9 || b === 10 || b === 7;
+      return !ok(bv.world.getBlock(Math.floor(x), Math.floor(y + 0.2), Math.floor(z))) || !ok(bv.world.getBlock(Math.floor(x), Math.floor(y + 1.5), Math.floor(z))); }, { x: s.x, y: s.y, z: s.z });
+    if (emb) embedded++;
+    minY = Math.min(minY, s.y);
     if (i > 0 && Math.abs(s.x - lastX) < 0.05) stuck++;
     lastX = s.x;
   }
@@ -413,7 +416,7 @@ async function main() {
   const dist = Math.hypot(endS.x - startX, 0);
   await shot(page, 'it12-07-sprint.png');
   const avg = fpsS.reduce((a, b) => a + b, 0) / fpsS.length;
-  record('S7-sprint-borders', minY > -0.6 && dist > 20 ? 'PASS' : (dist > 8 ? 'PARTIAL' : 'FAIL'), `dist=${dist.toFixed(1)} minAboveGround=${minY.toFixed(2)} fpsAvg=${avg.toFixed(0)} fpsMin=${Math.min(...fpsS)} stuckSamples=${stuck}`);
+  record('S7-sprint-borders', embedded === 0 && dist > 20 ? 'PASS' : (embedded === 0 && dist > 8 ? 'PARTIAL' : 'FAIL'), `dist=${dist.toFixed(1)} embedded=${embedded} minY=${minY.toFixed(2)} fpsAvg=${avg.toFixed(0)} fpsMin=${Math.min(...fpsS)} stuckSamples=${stuck}`);
 
   // S8 — save/reload keeps a thrown drop
   await setSlots(page, { 0: { id: 6, count: 3 } }, 0);

@@ -1,5 +1,6 @@
 import { BlockId, collidesBlock } from '../blocks/types';
 import type { World } from '../world/world';
+import { CHUNK_HEIGHT } from '../world/chunk';
 
 export const PLAYER_WIDTH = 0.6;
 export const PLAYER_HEIGHT = 1.8;
@@ -46,6 +47,8 @@ function collidesAt(world: World, x: number, y: number, z: number, h: number): b
   for (let by = minY; by <= maxY; by++) {
     for (let bz = minZ; bz <= maxZ; bz++) {
       for (let bx = minX; bx <= maxX; bx++) {
+        // MC: entities can't move into chunks that aren't loaded yet (would fall through 'air').
+        if (by >= 0 && by < CHUNK_HEIGHT && typeof world.hasChunkAt === 'function' && !world.hasChunkAt(bx, bz)) return true;
         const id = world.getBlock(bx, by, bz);
         const meta = world.getWaterLevel(bx, by, bz);
         if (collidesBlock(id, bx, by, bz, minXf, minYf, maxXf, maxYf, minZf, maxZf, meta)) return true;

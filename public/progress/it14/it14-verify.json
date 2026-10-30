@@ -1,5 +1,5 @@
 {
-  "when": "2026-10-30T19:43:32.557Z",
+  "when": "2026-10-30T19:53:08.473Z",
   "results": [
     {
       "id": "V1-bedrock-floor",
@@ -9,7 +9,7 @@
     {
       "id": "V2-pick-tiers",
       "status": "PASS",
-      "notes": "woodOnIron={\"broken\":true,\"items\":[],\"took\":3775} stoneOnIron={\"broken\":true,\"items\":[\"16x1\"],\"took\":649} stoneOnDiamond={\"broken\":true,\"items\":[],\"took\":2307} ironOnDiamond={\"broken\":true,\"items\":[\"55x1\"],\"took\":594}"
+      "notes": "woodOnIron={\"broken\":true,\"items\":[],\"took\":3686} stoneOnIron={\"broken\":true,\"items\":[\"16x1\"],\"took\":627} stoneOnDiamond={\"broken\":true,\"items\":[],\"took\":2502} ironOnDiamond={\"broken\":true,\"items\":[\"55x1\"],\"took\":674}"
     },
     {
       "id": "V3-iron-chain",
@@ -34,12 +34,12 @@
     {
       "id": "V7-creeper-defuse",
       "status": "PASS",
-      "notes": "fuseNear=1.27 after={\"fuse\":0,\"alive\":true,\"dist\":13.4,\"hp\":20,\"ground\":1}"
+      "notes": "fuseNear=1.35 after={\"fuse\":0,\"alive\":true,\"dist\":14.2,\"hp\":20,\"ground\":1}"
     },
     {
       "id": "V8-held-name-f3",
       "status": "PASS",
-      "notes": "debug0=none name={\"t\":\"Trekrafse\",\"o\":\"1\"} after2.8s=0 slot1=Steinhakke F3={\"d\":\"block\",\"t\":\"Blokkverden it14\\n28 fps\\nxyz: 22.90 / 46.\"} F3again=none"
+      "notes": "debug0=none name={\"t\":\"Trekrafse\",\"o\":\"1\"} after2.8s=0 slot1=Steinhakke F3={\"d\":\"block\",\"t\":\"Blokkverden it14\\n30 fps\\nxyz: 23.84 / 46.\"} F3again=none"
     },
     {
       "id": "V9-pickup-shows-in-hotbar",
@@ -64,7 +64,12 @@
     {
       "id": "V12-creative-instant-break",
       "status": "PASS",
-      "notes": "bedrockGone=true in 137 ms"
+      "notes": "bedrockGone=true in 229 ms"
+    },
+    {
+      "id": "V13-save-reopen",
+      "status": "PASS",
+      "notes": "{\"meat\":true,\"pick\":true,\"dia\":true,\"y0\":48,\"y1\":0}"
     }
   ],
   "bugs": []

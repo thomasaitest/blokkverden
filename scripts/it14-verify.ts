@@ -616,6 +616,24 @@ async function main() {
     record('V12-creative-instant-break', gone && ms < 1200 ? 'PASS' : 'FAIL', `bedrockGone=${gone} in ${ms} ms`);
   }
 
+  // V13 — save & reopen via the real pause menu: new items (cooked meat, iron pickaxe) and a dug-out bedrock floor survive
+  if (run('V13')) {
+    await closeUi(page);
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.inv.slots.fill(null);
+      bv.inv.slots[0] = { id: 72, count: 5 }; bv.inv.slots[1] = { id: 108, count: 1, durability: 200 }; bv.inv.slots[2] = { id: 55, count: 2 };
+      bv.world.setBlock(3, 1, 3, 0); bv.hud.markDirty(); (window as any).__oldbv = bv; });
+    await ensureLocked(page);
+    await page.keyboard.press('Escape'); await sleep(400);
+    await page.locator('#p-quit').click(); await sleep(1500);
+    await page.locator('#btn-single').click(); await sleep(600);
+    await page.locator('[data-play="It14Verify"]').first().click();
+    for (let i = 0; i < 80; i++) { if (await page.evaluate(() => (window as any).__bv && (window as any).__bv !== (window as any).__oldbv)) break; await sleep(250); }
+    await sleep(2500);
+    const v = await page.evaluate(() => { const bv = (window as any).__bv; const s = bv.inv.slots;
+      return { meat: s[0]?.id === 72 && s[0].count === 5, pick: s[1]?.id === 108 && s[1].durability === 200, dia: s[2]?.id === 55, y0: bv.world.getBlock(3, 0, 3), y1: bv.world.getBlock(3, 1, 3) }; });
+    record('V13-save-reopen', v.meat && v.pick && v.dia && v.y0 === 48 && v.y1 === 0 ? 'PASS' : 'FAIL', JSON.stringify(v));
+  }
+
   const report = { when: new Date().toISOString(), results, bugs };
   fs.writeFileSync(path.join(OUT, 'it14-verify.json'), JSON.stringify(report, null, 2));
   const summary: Record<string, number> = { PASS: 0, FAIL: 0, PARTIAL: 0 };

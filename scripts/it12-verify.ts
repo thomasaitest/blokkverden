@@ -40,7 +40,7 @@ function freePort(): Promise<number> {
 async function startPreview() {
   const PORT = await freePort();
   const base = `http://127.0.0.1:${PORT}`;
-  const child = spawn('npx', ['vite', 'preview', '--host', '127.0.0.1', '--port', String(PORT), '--strictPort'], {
+  const child = spawn('node_modules/.bin/vite', ['preview', '--host', '127.0.0.1', '--port', String(PORT), '--strictPort'], {
     cwd: process.cwd(), stdio: 'pipe',
   });
   for (let i = 0; i < 80; i++) {
@@ -242,6 +242,7 @@ function overlap(a: DOMRect | any, b: DOMRect | any) {
 async function main() {
   fs.mkdirSync(OUT, { recursive: true });
   const { base, child } = await startPreview();
+  process.on('exit', () => { try { child.kill('SIGKILL'); } catch { /* gone */ } });
   const browser = await chromium.launch({
     headless: true, channel: 'chrome',
     args: ['--use-angle=swiftshader', '--use-gl=angle', '--enable-webgl', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader'],
@@ -322,13 +323,62 @@ async function main() {
   record('V4-starvation', (Math.abs(h1 - 2) < 0.01 || Math.abs(h1 - 3) < 0.01) && Math.abs(h2.hp - 1) < 0.01 && !h2.dead ? 'PASS' : 'FAIL', `after8.8s=${h1} (½-heart steps; swiftshader dt clamp may give 1 tick) floor=${JSON.stringify(h2)}`);
   await shot(page, 'it12-13-sult.png');
 
+  // V5 — bed by day (real RMB): can't sleep, but respawn point is set (MC 1.15+) + action-bar text
+  await flatPad(page, 45);
+  await page.evaluate(() => { const bv = (window as any).__bv; bv.player.hunger = 20; bv.player.health = 20; bv.setDay(0.4);
+    bv.mobs.mobs.length = 0; });
+  const bed = await page.evaluate(() => { const bv = (window as any).__bv; bv.look(0, 0); return bv.placeBedFront(); });
+  await aim(page, 8.5, 46.05, 8.5, bed.x + 0.5, bed.y + 0.3, bed.z + 0.5);
+  await acquireLock(page);
+  await page.mouse.down({ button: 'right' }); await sleep(80); await page.mouse.up({ button: 'right' });
+  await sleep(300);
+  const day1 = await page.evaluate(() => ({ t: (window as any).__bv.getState().dayTime, msg: document.getElementById('action-bar')?.textContent, op: document.getElementById('action-bar')?.style.opacity }));
+  await shot(page, 'it12-14-seng-dag.png');
+  // walk away, die, respawn → should be at bed
+  await page.evaluate(() => { const bv = (window as any).__bv; bv.teleport(30.5, 60, 30.5); bv.kill(); });
+  await sleep(400);
+  await ensureRespawn(page);
+  await sleep(400);
+  const rp = await st(page);
+  const atBed = Math.hypot(rp.x - (bed.x + 0.5), rp.z - (bed.z + 0.5)) < 1.5;
+  record('V5-bed-day-spawn', day1.t > 0.3 && day1.t < 0.5 && /sove om natten/.test(day1.msg || '') && atBed ? 'PASS' : 'FAIL',
+    `day=${day1.t.toFixed(2)} msg="${day1.msg}" respawn=${rp.x.toFixed(1)},${rp.y.toFixed(1)},${rp.z.toFixed(1)} bed=${JSON.stringify(bed)}`);
+
+  // V6 — bed at night (real RMB) skips to morning
+  await page.evaluate(() => { const bv = (window as any).__bv; bv.setDay(0.9); bv.mobs.mobs.length = 0; });
+  await aim(page, 8.5, 46.05, 8.5, bed.x + 0.5, bed.y + 0.3, bed.z + 0.5);
+  await acquireLock(page);
+  await page.mouse.down({ button: 'right' }); await sleep(80); await page.mouse.up({ button: 'right' });
+  await sleep(400);
+  const day2 = await page.evaluate(() => (window as any).__bv.getState().dayTime);
+  record('V6-bed-night-sleep', day2 > 0.25 && day2 < 0.35 ? 'PASS' : 'FAIL', `dayAfter=${day2.toFixed(3)}`);
+
+  // V7 — hold-to-eat: click doesn't eat; ~1.6 s hold eats one; full hunger can't eat
+  await page.evaluate(() => { const bv = (window as any).__bv; bv.inv.slots[0] = { id: 52, count: 3 }; bv.inv.selected = 0; bv.player.hunger = 10; bv.hud.markDirty(); bv.hud.refreshHotbar(); bv.look(0, 0.6); });
+  await acquireLock(page);
+  await page.mouse.down({ button: 'right' }); await sleep(80); await page.mouse.up({ button: 'right' });
+  await sleep(300);
+  const e0 = await st(page);
+  await page.mouse.down({ button: 'right' }); await sleep(900);
+  await shot(page, 'it12-15-spiser.png');
+  const holdT0 = Date.now();
+  for (let i = 0; i < 40; i++) { await sleep(100); if ((await st(page)).hunger > 10) break; }
+  const heldMs = Date.now() - holdT0 + 900;
+  await page.mouse.up({ button: 'right' });
+  await sleep(200);
+  const e1 = await st(page); const a1 = await countItem(page, 52);
+  await page.evaluate(() => { (window as any).__bv.player.hunger = 20; });
+  await page.mouse.down({ button: 'right' }); await sleep(2600); await page.mouse.up({ button: 'right' });
+  const a2 = await countItem(page, 52);
+  record('V7-hold-to-eat', e0.hunger === 10 && e1.hunger === 14 && a1 === 2 && a2 === 2 && heldMs >= 1500 ? 'PASS' : 'FAIL', `click=${e0.hunger} heldMs=${heldMs} hold=${e1.hunger} apples=${a1} fullHungerApples=${a2}`);
+
   const report = { when: new Date().toISOString(), results, bugs };
   fs.writeFileSync(path.join(OUT, 'it12-verify.json'), JSON.stringify(report, null, 2));
   const summary: Record<string, number> = { PASS: 0, FAIL: 0, PARTIAL: 0 };
   for (const r of results) summary[r.status] = (summary[r.status] ?? 0) + 1;
   console.log('=== SUMMARY ===', summary);
   await browser.close();
-  child.kill();
+  child.kill('SIGKILL');
   process.exit(0);
 }
 main().catch((e) => { console.error(e); process.exit(1); });

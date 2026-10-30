@@ -151,6 +151,8 @@ async function runGame(
   let lastSave = 0;
   let frames = 0, fps = 0, fpsT = performance.now();
   let hungerAcc = 0, waterAcc = 0, cropAcc = 0, starveAcc = 0;
+  let eatTimer = 0, eatSoundAcc = 0;
+  const EAT_TIME = 1.6;
   let respawn = { x: 8.5, y: 40, z: 8.5 };
   let dead = false;
   let attackCool = 0;
@@ -172,6 +174,17 @@ async function runGame(
     const a = document.createElement('div'); a.className = 'arm'; armorRow.appendChild(a);
   }
   app.appendChild(xpBar); app.appendChild(xpLabel); app.appendChild(armorRow);
+  // MC-style action-bar message above the hotbar (bed feedback etc.)
+  const actionBar = document.createElement('div');
+  actionBar.id = 'action-bar';
+  app.appendChild(actionBar);
+  let actionBarT: ReturnType<typeof setTimeout> | null = null;
+  function showActionBar(text: string): void {
+    actionBar.textContent = text;
+    actionBar.style.opacity = '1';
+    if (actionBarT) clearTimeout(actionBarT);
+    actionBarT = setTimeout(() => { actionBar.style.opacity = '0'; }, 2500);
+  }
 
   const deathEl = document.createElement('div');
   deathEl.id = 'death-screen';
@@ -398,13 +411,20 @@ async function runGame(
   deathEl.querySelector('#btn-respawn')!.addEventListener('click', () => respawnPlayer());
 
   function trySleep(hx: number, hy: number, hz: number): boolean {
+    // MC (Java 1.15+): using a bed always sets the respawn point, even when you can't sleep.
+    const bedSpawn = { x: hx + 0.5, y: hy + 1, z: hz + 0.5 };
+    const changed = respawn.x !== bedSpawn.x || respawn.y !== bedSpawn.y || respawn.z !== bedSpawn.z;
+    respawn = bedSpawn;
     const night = dayTime < 0.25 || dayTime > 0.75;
-    if (!night) return false;
-    if (mobs.mobs.some((m) => m.hostile && Math.hypot(m.x - player.x, m.z - player.z) < 12)) return false;
+    if (!night) { showActionBar(changed ? 'Gjenopplivingspunkt satt · Du kan bare sove om natten' : 'Du kan bare sove om natten'); return false; }
+    if (mobs.mobs.some((m) => m.hostile && Math.hypot(m.x - player.x, m.y - player.y, m.z - player.z) < 8)) {
+      showActionBar('Du kan ikke hvile nå, det er monstre i nærheten');
+      return false;
+    }
     dayTime = 0.28;
-    respawn = { x: hx + 0.5, y: hy + 1, z: hz + 0.5 };
+    renderer.setDayTime(dayTime);
     player.x = respawn.x; player.y = respawn.y; player.z = respawn.z;
-    player.health = Math.min(20, player.health + 4);
+    showActionBar('God morgen!');
     return true;
   }
 
@@ -1201,6 +1221,33 @@ async function runGame(
       breakAcc = 0; breakTarget = null; hud.setBreakProgress(0);
     }
 
+    // ---- Hold-to-eat (MC: 32 ticks = 1.6 s with RMB held) ----
+    {
+      const hf = inv.held();
+      const tidE = hit ? world.getBlock(hit.x, hit.y, hit.z) : BlockId.Air;
+      const useableE = tidE === BlockId.CraftingTable || tidE === BlockId.Chest || tidE === BlockId.Furnace
+        || tidE === BlockId.Bed || tidE === BlockId.Door || tidE === BlockId.Gate || tidE === BlockId.Trapdoor
+        || tidE === BlockId.Lever || tidE === BlockId.Button || tidE === BlockId.Sign || tidE === BlockId.EnchantTable;
+      const eating = !dead && !invUi.isOpen() && input.useHeld && !!hf && !!ITEMS[hf.id]?.food
+        && !ITEMS[hf.id]?.placeBlock && player.hunger < 20 && !useableE;
+      if (eating && hf) {
+        eatTimer += dt;
+        eatSoundAcc += dt;
+        if (eatSoundAcc > 0.3) { eatSoundAcc = 0; sound.eat(); }
+        if (eatTimer >= EAT_TIME) {
+          eatTimer = 0;
+          player.hunger = Math.min(20, player.hunger + (ITEMS[hf.id].food ?? 0));
+          hf.count -= 1;
+          if (hf.count <= 0) inv.setHeld(null);
+          sound.eat(); hud.markDirty(); hud.refreshHotbar();
+        }
+        if (!input.breakHeld) hud.setBreakProgress(Math.min(1, eatTimer / EAT_TIME));
+      } else if (eatTimer > 0) {
+        eatTimer = 0; eatSoundAcc = 0;
+        if (!input.breakHeld) hud.setBreakProgress(0);
+      }
+    }
+
     if (!invUi.isOpen() && consumePlace(input)) {
       let ateThisClick = false;
       {
@@ -1210,13 +1257,8 @@ async function runGame(
           const useable = tid0 === BlockId.CraftingTable || tid0 === BlockId.Chest || tid0 === BlockId.Furnace
             || tid0 === BlockId.Bed || tid0 === BlockId.Door || tid0 === BlockId.Gate || tid0 === BlockId.Trapdoor
             || tid0 === BlockId.Lever || tid0 === BlockId.Button || tid0 === BlockId.Sign || tid0 === BlockId.EnchantTable;
-          if (!useable) {
-            player.hunger = Math.min(20, player.hunger + (ITEMS[heldFood.id].food ?? 0));
-            heldFood.count -= 1;
-            if (heldFood.count <= 0) inv.setHeld(null);
-            sound.eat(); hud.markDirty();
-            ateThisClick = true;
-          }
+          // MC: food is eaten by HOLDING right mouse (~1.6 s, see eatTimer below), not on click.
+          if (!useable) ateThisClick = true;
         }
       }
       if (!hit || ateThisClick) { /* eaten or nothing to interact with */ }
@@ -1276,10 +1318,7 @@ async function runGame(
           inv.setHeld(left);
           hud.markDirty(); updateArmorUi();
         } else if (held && ITEMS[held.id]?.food && !ITEMS[held.id]?.placeBlock) {
-          player.hunger = Math.min(20, player.hunger + (ITEMS[held.id].food ?? 0));
-          held.count -= 1;
-          if (held.count <= 0) inv.setHeld(null);
-          sound.eat(); hud.markDirty();
+          /* MC: cannot eat with a full hunger bar; eating itself is hold-to-eat (eatTimer). */
         } else {
           const nearTrader = traders.find((tr) => Math.hypot(tr.x - player.x, tr.y - player.y, tr.z - player.z) < 3);
           if (nearTrader) {

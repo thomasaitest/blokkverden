@@ -395,3 +395,9 @@ button.primary { background: #3a6aaa; border-color: #1a3a5a; }
 #touch-controls #btn-pause-touch {
   position: absolute; right: 16px; top: 16px;
 }
+
+#action-bar {
+  position: fixed; bottom: 152px; left: 50%; transform: translateX(-50%);
+  color: #fff; font-size: 15px; text-shadow: 0 1px 2px #000; z-index: 12;
+  pointer-events: none; opacity: 0; transition: opacity 0.4s; white-space: nowrap;
+}

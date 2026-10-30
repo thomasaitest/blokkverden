@@ -8,6 +8,8 @@ export interface InputState {
   sprint: boolean;
   breakHeld: boolean;
   placePressed: boolean;
+  /** Right mouse / place button currently held (MC hold-to-eat). */
+  useHeld: boolean;
   interactPressed: boolean;
   inventoryPressed: boolean;
   hotbarSlot: number;
@@ -33,6 +35,7 @@ export function createInput(): InputState {
     sprint: false,
     breakHeld: false,
     placePressed: false,
+    useHeld: false,
     interactPressed: false,
     inventoryPressed: false,
     hotbarSlot: 0,
@@ -78,6 +81,7 @@ export function bindDesktopControls(
     input.sneak = false;
     input.sprint = false;
     input.breakHeld = false;
+    input.useHeld = false;
   };
 
   const shouldCaptureKeys = () => !input.inventoryOpen;
@@ -160,14 +164,15 @@ export function bindDesktopControls(
         wantBreak = true;
         input.breakHeld = true;
       }
-      if (e.button === 2) input.placePressed = true;
+      if (e.button === 2) { input.placePressed = true; input.useHeld = true; }
       return;
     }
     if (e.button === 0) input.breakHeld = true;
-    if (e.button === 2) input.placePressed = true;
+    if (e.button === 2) { input.placePressed = true; input.useHeld = true; }
   };
 
   const onMouseUp = (e: MouseEvent) => {
+    if (e.button === 2) input.useHeld = false;
     if (e.button === 0) {
       input.breakHeld = false;
       draggingLook = false;

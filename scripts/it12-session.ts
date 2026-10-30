@@ -40,7 +40,7 @@ function freePort(): Promise<number> {
 async function startPreview() {
   const PORT = await freePort();
   const base = `http://127.0.0.1:${PORT}`;
-  const child = spawn('npx', ['vite', 'preview', '--host', '127.0.0.1', '--port', String(PORT), '--strictPort'], {
+  const child = spawn('node_modules/.bin/vite', ['preview', '--host', '127.0.0.1', '--port', String(PORT), '--strictPort'], {
     cwd: process.cwd(), stdio: 'pipe',
   });
   for (let i = 0; i < 80; i++) {
@@ -240,6 +240,7 @@ async function main() {
   fs.mkdirSync(SHOTS, { recursive: true });
   fs.mkdirSync(VID, { recursive: true });
   const { base, child } = await startPreview();
+  process.on('exit', () => { try { child.kill('SIGKILL'); } catch { /* gone */ } });
   const browser = await chromium.launch({
     headless: true, channel: 'chrome',
     args: ['--use-angle=swiftshader', '--use-gl=angle', '--enable-webgl', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader'],
@@ -500,6 +501,6 @@ async function main() {
   const vid = await page.video()?.path().catch(() => null);
   if (vid) console.log('VIDEO', vid);
   await browser.close();
-  child.kill();
+  child.kill('SIGKILL');
 }
 main().catch((e) => { console.error(e); process.exit(1); });

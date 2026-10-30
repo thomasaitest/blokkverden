@@ -147,7 +147,11 @@ export function setupTouchControls(root: HTMLElement, input: InputState, hooks?:
   btnPlace.addEventListener('pointerdown', (e) => {
     e.preventDefault();
     input.placePressed = true;
+    input.useHeld = true; // hold to eat (MC)
   });
+  for (const ev of ['pointerup', 'pointercancel', 'pointerleave'] as const) {
+    btnPlace.addEventListener(ev, () => { input.useHeld = false; });
+  }
 
   const btnSneak = overlay.querySelector('#btn-sneak') as HTMLElement | null;
   if (btnSneak) {

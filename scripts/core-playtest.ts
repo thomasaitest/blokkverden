@@ -39,7 +39,7 @@ function freePort(): Promise<number> {
 async function startPreview() {
   const PORT = await freePort();
   const base = `http://127.0.0.1:${PORT}`;
-  const child = spawn('npx', ['vite', 'preview', '--host', '127.0.0.1', '--port', String(PORT), '--strictPort'], {
+  const child = spawn('node_modules/.bin/vite', ['preview', '--host', '127.0.0.1', '--port', String(PORT), '--strictPort'], {
     cwd: process.cwd(), stdio: 'pipe',
   });
   for (let i = 0; i < 80; i++) {
@@ -225,6 +225,7 @@ async function main() {
   fs.mkdirSync(OUT, { recursive: true });
   fs.mkdirSync(SHOTS, { recursive: true });
   const { base, child } = await startPreview();
+  process.on('exit', () => { try { child.kill('SIGKILL'); } catch { /* gone */ } });
   const browser = await chromium.launch({
     headless: true,
     channel: 'chrome',
@@ -745,10 +746,21 @@ async function main() {
     bv.player.hunger = 10;
     bv.hud.refreshHotbar();
   });
+  // MC: a short click must NOT eat; holding RMB ~1.6 s eats one item
   await page.mouse.down({ button: 'right' }); await page.mouse.up({ button: 'right' });
+  await sleep(300);
+  const hunClick = (await st(page)).hunger;
+  // hold RMB until one item is eaten (≥1.6 s game time; swiftshader may run below 20 fps → dt clamp)
+  await page.mouse.down({ button: 'right' });
+  const holdT0 = Date.now();
+  for (let i = 0; i < 50; i++) { await sleep(100); if ((await st(page)).hunger > 10) break; }
+  const heldMs = Date.now() - holdT0;
+  await page.mouse.up({ button: 'right' });
   await sleep(200);
   const hun2 = (await st(page)).hunger;
-  if (hun2 > 10) record('H2', 'PASS', `ate apple hunger=${hun2}`);
+  const apples = await countItem(page, 52);
+  if (hun2 > 10 && hunClick === 10 && apples === 2 && heldMs >= 1500) record('H2', 'PASS', `click=${hunClick} heldMs=${heldMs} hunger=${hun2} apples=${apples}`);
+  else record('H2', 'FAIL', `hold-to-eat click=${hunClick} heldMs=${heldMs} hunger=${hun2} apples=${apples}`);
 
   await page.evaluate(() => {
     const bv = (window as any).__bv;
@@ -774,7 +786,15 @@ async function main() {
   record('H4', dr.air < 19 || dr.health < 20 ? 'PASS' : 'FAIL', `air=${dr.air} hp=${dr.health} headBlk=${headW}`);
   if (!(dr.air < 19 || dr.health < 20)) bug('H4 drown');
 
-  await page.evaluate(() => { const bv = (window as any).__bv; bv.player.health = 0.5; bv.teleport(150.5, 58, 150.5); });
+  await page.evaluate(() => {
+    const bv = (window as any).__bv;
+    // setup: dry stone landing pad (random seed could put water at 150,150 → no fall damage)
+    for (let x = 148; x <= 152; x++) for (let z = 148; z <= 152; z++) {
+      bv.world.setBlock(x, 40, z, 1);
+      for (let y = 41; y <= 62; y++) bv.world.setBlock(x, y, z, 0);
+    }
+    bv.player.health = 0.5; bv.teleport(150.5, 60, 150.5);
+  });
   await sleep(2500);
   const dead = await page.evaluate(() => (window as any).__bv.getState().dead);
   record('H5', dead ? 'PASS' : 'FAIL', `dead=${dead}`);
@@ -1087,7 +1107,7 @@ async function main() {
   console.log('BUGS', bugs);
 
   await browser.close();
-  child.kill('SIGTERM');
+  child.kill('SIGKILL');
   process.exit(counts.FAIL > 8 ? 2 : 0);
 }
 main().catch((e) => { console.error(e); process.exit(1); });

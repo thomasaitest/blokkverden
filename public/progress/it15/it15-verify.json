@@ -1,0 +1,42 @@
+{
+  "when": "2026-10-30T21:49:47.848Z",
+  "results": [
+    {
+      "id": "X1-creeper-blast",
+      "status": "PASS",
+      "notes": "hissAt=5.12 {\"blasts\":1,\"crater\":24,\"stoneGone\":4,\"chest\":0,\"torch\":0,\"hp\":16.2,\"dead\":false,\"diamonds\":5,\"gunpowder\":false,\"creeper\":0}"
+    },
+    {
+      "id": "X2-mob-loot",
+      "status": "PASS",
+      "notes": "{\"vandrer\":[75],\"vever\":[73],\"knallbolle\":[74]} invAfter=[\"115x1\",\"74x2\"]"
+    },
+    {
+      "id": "X3-rotten-flesh",
+      "status": "PASS",
+      "notes": "gained=4 tries=1 effect=29.5 greenDrums=10 hunger 12→11 in 12 s"
+    },
+    {
+      "id": "X4-string-crafting",
+      "status": "PASS",
+      "notes": "table=true bow=1 wool=1 icons=true"
+    },
+    {
+      "id": "X5-new-icons",
+      "status": "PASS",
+      "notes": "iconElems=5 (check screenshot)"
+    },
+    {
+      "id": "X6-cave-spawns",
+      "status": "PASS",
+      "notes": "lit={\"seen\":0,\"near\":0,\"kinds\":[]} dark={\"seen\":3,\"near\":1,\"kinds\":[\"vandrer\",\"vever\",\"knallbolle\"]} hp=20"
+    }
+  ],
+  "bugs": [],
+  "marks": {
+    "X1": 6.912,
+    "X1end": 12.667,
+    "X2": 12.68,
+    "X2end": 28.933
+  }
+}

@@ -4,7 +4,7 @@ Acceptance checklist for a **playable** Minecraft-like survival base.
 Expected behaviour = Java/Bedrock survival unless noted.
 **Status legend:** PASS | FAIL | PARTIAL | UNTESTED
 
-Last run: 2026-10-30 20:45–20:55 CET · it14 (55 PASS / 0 FAIL) + scripts/it14-verify.ts (section L)
+Last run: 2026-10-30 22:43–22:50 CET · it15 (55 PASS / 0 FAIL, I3/I4 now real clicks) + scripts/it14-verify.ts (L) + scripts/it15-verify.ts (section M, 6/6)
 
 ## A. World & spawn
 | # | Check | Minecraft-expected | Status | Notes |
@@ -128,6 +128,8 @@ Last run: 2026-10-30 20:45–20:55 CET · it14 (55 PASS / 0 FAIL) + scripts/it14
 | M3 | Rotten flesh | Hold RMB: +4 hunger; 80 % Hunger effect → green hunger bar, drains faster for 30 s | PASS | X3 |
 | M4 | String recipes | Bow = 3 sticks + 3 string (table); 4 string → wool (2×2); fishing rod uses string | PASS | X4 + vitest |
 | M5 | Creeper look | Four legs, no arms, face only on the head | PASS | screenshot it15-00 |
+| M7 | Cave spawns | Dark roofed spaces (sky+torch light < 8) spawn hostiles day and night, 16–28 blocks away; a torch-lit hall stays empty | PASS | X6 + vitest |
+| M8 | No canopy spawns | Nothing spawns on leaves (was: skeletons on tree tops) | PASS | vitest |
 | M6 | Real combat in core run | I3/I4 now use real LMB clicks (were faked with `__bv.mobs.hitAt`) | PASS | core-playtest I3/I4 |
 
 ## Method rules

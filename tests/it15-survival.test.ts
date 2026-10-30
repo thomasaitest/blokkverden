@@ -164,3 +164,22 @@ describe('it15 cave spawns (MC: hostiles in the dark underground)', () => {
     expect(litN).toBe(0);
   }, 30000);
 });
+
+describe('it15 no spawns on tree canopies', () => {
+  it('surface spawn rejects leaves', () => {
+    const w = new World(3);
+    for (let cx = -3; cx <= 3; cx++) for (let cz = -3; cz <= 3; cz++) {
+      const ch = w.ensureChunk(cx, cz);
+      for (let x = 0; x < 16; x++) for (let z = 0; z < 16; z++) {
+        for (let y = 0; y < 128; y++) ch.set(x, y, z, BlockId.Air);
+        for (let y = 30; y < 40; y++) ch.set(x, y, z, BlockId.Dirt);
+        ch.set(x, 40, z, BlockId.Grass);
+        ch.set(x, 46, z, BlockId.Leaves); // a canopy over everything
+      }
+    }
+    const sys = new MobSystem();
+    const quiet = createPlayer(0.5, 41, 0.5);
+    for (let i = 0; i < 40; i++) { sys.spawnCool = 0; sys.trySpawn(w, quiet, 0.9, 0.1); }
+    expect(sys.mobs.filter((m) => m.y > 45).length).toBe(0);
+  });
+});

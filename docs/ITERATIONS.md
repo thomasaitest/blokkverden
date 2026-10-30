@@ -2,6 +2,43 @@
 
 Original voxel-sandkasse. Ingen Mojang-assets.
 
+## Iterasjon 15 (2026-10-30)
+
+Start: fre. 30. okt. 22:07 CET · Slutt: 23:0x CET (~60 min)
+
+### Fokus
+Feiljakt i nattkamp og eksplosjoner med ekte tastatur/mus i Chromium: knallbolle, mobbedrops, mat, håndverk, huler. `__bv` bare til oppsett. Testene for kamp i core-playtest (I3/I4) brukte `__bv` til selve slaget — nå ekte museklikk.
+
+### Fikset
+1. Knallbolle eksploderte ~9 ganger på rad (én gang per bilde i dødsanimasjonen) → drepte deg nesten uansett avstand. Nå nøyaktig én eksplosjon; døende mobber gjør ingenting
+2. Eksplosjoner som i MC (stråle-modell med sprengmotstand): krater i gress/jord og litt i stein, kister/ovner sprenges og mister innholdet på bakken, fakler faller av, 1/3 av blokkene slippes som ting; skade etter avstand og dekning (vegg skjermer). Før: stein var immun, kister forsvant aldri, skaden ignorerte vegger
+3. Mobbedrops som i MC: vandrer → råttent kjøtt, vever → tråd, knallbolle → krutt (ikke hvis den sprenger seg selv). Før ga alle tre kull
+4. Bue lages av 3 pinner + 3 tråd (før lær), fiskestang av tråd (før fjær), 4 tråd → ull
+5. Knallbolle-modell: fire korte bein, ingen armer, ansikt bare på hodet (før: armer og «ansikter» på alle kroppsdeler); 20 liv som i MC
+6. Ingen mobber spawner oppå trekroner (før sto skjelett i tretoppene og skjøt)
+7. Ingen XP når en knallbolle sprenger seg selv
+
+### Nye funksjoner (2)
+- Råttent kjøtt: +4 sult, 80 % sjanse for sult-effekt i 30 s (grønn sultlinje, tømmes raskere)
+- Fiendtlige mobber spawner i mørke huler (lys < 8), også om dagen; fakler holder hulene trygge
+
+### Playtest
+- Core: **55 PASS / 0 FAIL / 0 PARTIAL** (`scripts/core-playtest.ts`, kjørt alene på endelig bygg; I3/I4 nå med ekte klikk)
+- it15-verify: **6/6 PASS** (`scripts/it15-verify.ts`, X1–X6, ny seksjon M i CORE-PLAYTEST.md)
+- Naturlig nattøkt (`scripts/it15-session.ts`, ~100 s natt i ny verden med steinsverd): drepte edderkopper/vandrer/bueskytter, 1 død av knallbolle, 0 JS-feil; fant feilen med mobber i tretoppene
+- 71 vitest grønne (10 nye), npm audit 0 sårbarheter, secrets-scan rent
+
+### Kjente begrensninger
+- Fakkellys under jorda er svakere enn i MC
+- XP-kuler er grønne kuber (store når de flyr rett mot kamera)
+- Mobber i vann brenner ikke i sola (som MC), men vandrere kan bli stående i vannkanten
+- Styreflate-hjul og ekte Mac-GPU-fps kan ikke måles headless
+
+### Media
+https://thomasaitest.github.io/blokkverden/progress/it15/
+
+---
+
 ## Iterasjon 14 (2026-10-30)
 
 Start: fre. 30. okt. 20:01 CET · Slutt: 20:49 CET (~48 min)

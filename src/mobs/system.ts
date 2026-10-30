@@ -145,6 +145,8 @@ export class MobSystem {
   private surfaceY(world: World, x: number, z: number): number {
     for (let y = 70; y > 0; y--) {
       const id = world.getBlock(Math.floor(x), y, Math.floor(z));
+      // MC: nothing spawns on leaves (before: skeletons/zombies spawned on tree canopies and shot down from there)
+      if (id === BlockId.Leaves) return -1;
       if (isSolid(id) && world.getBlock(Math.floor(x), y + 1, Math.floor(z)) === BlockId.Air
           && world.getBlock(Math.floor(x), y + 1, Math.floor(z)) !== BlockId.Water) {
         if (world.getBlock(Math.floor(x), y + 1, Math.floor(z)) === BlockId.Water) continue;

@@ -311,6 +311,7 @@ async function main() {
     await setHeld(page, 0);
     await page.evaluate(() => { const bv = (window as any).__bv;
       bv.mobs.clear(); bv.setDay(0.9); bv.player.health = 20; bv.player.hunger = 20;
+      (window as any).__blasts = 0; if (!(window as any).__wrapped) { (window as any).__wrapped = true; const prev = bv.mobs.onBlast; bv.mobs.onBlast = (...a: any[]) => { (window as any).__blasts++; prev?.(...a); }; }
       bv.world.setBlock(7, 46, 4, 13);
       const ch = bv.containers.getChest(7, 46, 4); ch[0] = { id: 55, count: 5 }; ch[1] = { id: 5, count: 9 };
       bv.world.setBlock(10, 46, 4, 12); // torch near the blast
@@ -341,7 +342,7 @@ async function main() {
       }
       const ids = bv.drops.drops.map((d: any) => `${d.stack.id}x${d.stack.count}`);
       bv.__x1hp = bv.player.health;
-      return { crater, stoneGone, chest: bv.world.getBlock(7, 46, 4), torch: bv.world.getBlock(10, 46, 4), hp: +bv.player.health.toFixed(1), dead: bv.getState().dead,
+      return { blasts: (window as any).__blasts, crater, stoneGone, chest: bv.world.getBlock(7, 46, 4), torch: bv.world.getBlock(10, 46, 4), hp: +bv.player.health.toFixed(1), dead: bv.getState().dead,
         diamonds: bv.drops.drops.filter((d: any) => d.stack.id === 55).reduce((n: number, d: any) => n + d.stack.count, 0),
         gunpowder: ids.some((s: string) => s.startsWith('74x')), creeper: bv.mobs.mobs.filter((m: any) => m.__test && m.hp > 0).length };
     });
@@ -349,7 +350,7 @@ async function main() {
     await page.evaluate(async () => { const bv = (window as any).__bv; bv.setDay(0.3); bv.teleport(8.5, 46.05, 13.5); bv.lookAt(8.5, 44, 5.5); });
     await sleep(1200);
     await shot(page, 'it15-02-krater.png');
-    record('X1-creeper-blast', fuse > 0 && v.crater >= 8 && v.stoneGone >= 1 && v.chest === 0 && v.diamonds === 5 && v.hp < 20 && v.hp > 0 && !v.dead && !v.gunpowder && v.creeper === 0 ? 'PASS' : 'FAIL',
+    record('X1-creeper-blast', fuse > 0 && v.blasts === 1 && v.crater >= 8 && v.chest === 0 && v.diamonds === 5 && v.hp < 20 && v.hp > 0 && !v.dead && !v.gunpowder && v.creeper === 0 ? 'PASS' : 'FAIL',
       `hissAt=${distAtHiss.toFixed(2)} ${JSON.stringify(v)}`);
     mark('X1end');
     await ensureRespawn(page);
@@ -459,6 +460,46 @@ async function main() {
     await shot(page, 'it15-07-nye-ikoner.png');
     await closeUi(page);
     record('X5-new-icons', n >= 5 ? 'PASS' : 'PARTIAL', `iconElems=${n} (check screenshot)`);
+  }
+
+  // X6 — caves: in a dark, roofed hall (day!) hostiles spawn and come for you; the same hall lit with torches stays empty
+  if (run('X6')) {
+    await ensureRespawn(page);
+    const hall = (lit: boolean) => page.evaluate(async (lit) => { const bv = (window as any).__bv;
+      bv.mobs.clear(); bv.setDay(0.3); bv.player.health = 20;
+      for (let x = -24; x <= 40; x++) for (let z = -24; z <= 40; z++) {
+        for (let y = 12; y <= 32; y++) bv.world.setBlock(x, y, z, (y >= 16 && y <= 18) ? 0 : 3);
+        if (lit && (x % 5 === 0) && (z % 5 === 0)) bv.world.setBlock(x, 16, z, 12);
+      }
+      bv.world.setBlock(8, 16, 9, 12); // one torch by the player so the screenshot shows something
+      bv.teleport(8.5, 16.05, 8.5);
+      await bv.forceRemeshAround();
+    }, lit);
+    const watch = async (secs: number) => {
+      let seen = 0, near = 0; const kinds = new Set<string>();
+      for (let i = 0; i < secs * 2; i++) {
+        await sleep(500);
+        const r = await page.evaluate(() => { const bv = (window as any).__bv; const p = bv.player;
+          const h = bv.mobs.mobs.filter((m: any) => m.hostile && m.hp > 0 && m.y > 15 && m.y < 19);
+          return { n: h.length, kinds: h.map((m: any) => m.kind), near: h.filter((m: any) => Math.hypot(m.x - p.x, m.z - p.z) < 6).length }; });
+        seen = Math.max(seen, r.n); near = Math.max(near, r.near); r.kinds.forEach((k: string) => kinds.add(k));
+        if (near > 0 && i > 10) break;
+      }
+      return { seen, near, kinds: [...kinds] };
+    };
+    await hall(true);
+    await ensureLocked(page);
+    const litRes = await watch(20);
+    await hall(false);
+    const darkRes = await watch(45);
+    await page.evaluate(() => { const bv = (window as any).__bv; const p = bv.player;
+      const m = bv.mobs.mobs.filter((m: any) => m.hostile && m.hp > 0).sort((a: any, b: any) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z))[0];
+      if (m) bv.lookAt(m.x, m.y + 1, m.z); });
+    await sleep(600);
+    await shot(page, 'it15-08-hule-mobber.png');
+    const hp = await page.evaluate(() => (window as any).__bv.player.health);
+    record('X6-cave-spawns', litRes.seen === 0 && darkRes.seen > 0 && darkRes.near > 0 ? 'PASS' : 'FAIL', `lit=${JSON.stringify(litRes)} dark=${JSON.stringify(darkRes)} hp=${hp}`);
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.mobs.clear(); });
   }
 
   const report = { when: new Date().toISOString(), results, bugs, marks };

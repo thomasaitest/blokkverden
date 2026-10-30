@@ -4,7 +4,7 @@ Acceptance checklist for a **playable** Minecraft-like survival base.
 Expected behaviour = Java/Bedrock survival unless noted.
 **Status legend:** PASS | FAIL | PARTIAL | UNTESTED
 
-Last run: 2026-10-30 18:45–18:51 CET · it13 (55 PASS / 0 FAIL) + scripts/it13-verify.ts 14/14
+Last run: 2026-10-30 20:45–20:55 CET · it14 (55 PASS / 0 FAIL) + scripts/it14-verify.ts (section L)
 
 ## A. World & spawn
 | # | Check | Minecraft-expected | Status | Notes |
@@ -28,7 +28,7 @@ Last run: 2026-10-30 18:45–18:51 CET · it13 (55 PASS / 0 FAIL) + scripts/it13
 |---|--------|-------------------|--------|-------|
 | C1 | Hold-to-break | Hold LMB: crack overlay progresses; release cancels | PASS | Dig without pointer-lock fallback fixed  it11 e2e |
 | C2 | Tool times | Wood pick faster on stone than bare hand; bare hand very slow on stone | PASS | bare≈9.8s pick≈1.9s  it11 e2e |
-| C3 | Stone→cobble | Stone mined with pickaxe drops cobblestone; without pickaxe: no drop / nothing useful | PASS |  it11 e2e |
+| C3 | Stone→cobble | Stone mined with pickaxe drops cobblestone; without pickaxe: no drop / nothing useful | PASS | it14: also cobble/furnace need a pickaxe; tiers in L2 |
 | C4 | Log drops | Punch/log axe: drops log item | PASS |  it11 e2e |
 | C5 | Pickup | Dropped items in world; walk over to pick up into inventory | PASS |  it11 e2e |
 
@@ -104,6 +104,21 @@ Last run: 2026-10-30 18:45–18:51 CET · it13 (55 PASS / 0 FAIL) + scripts/it13
 | K5 | Stone tools + furnace | | PASS | survival session e2e  it11 e2e |
 | K6 | Shelter + torch before night | | PASS | shelter+torch e2e  it11 e2e |
 | K7 | Survive night | | PASS | survived night in shelter e2e  it11 e2e |
+
+## L. Deeper survival (it14, `scripts/it14-verify.ts`, real input)
+| # | Check | Minecraft-expected | Status | Notes |
+|---|--------|-------------------|--------|-------|
+| L1 | Mine straight down | Bedrock floor at y=0, unbreakable; you land on it | PASS | V1 |
+| L2 | Pickaxe tiers | Iron ore needs stone+, gold/diamond need iron+; weaker pick = slow + no drop | PASS | V2 |
+| L3 | Iron chain | Smelt 3 iron ore (furnace UI) → craft iron pickaxe on table | PASS | V3 |
+| L4 | Cook meat | Raw meat → cooked meat in furnace; eat (+8) | PASS | V4 |
+| L5 | Break chest | Contents spill as items | PASS | V5 |
+| L6 | Sunrise | Zombies/skeletons in open sky burn; roofed/creepers don't | PASS | V6 |
+| L7 | Creeper | Hissing creeper stands still, no melee; fuse winds down if you run >7 | PASS | V7 |
+| L8 | Held item name | Name above hotbar ~2 s on switch; F3 debug off by default | PASS | V8 |
+| L9 | Pickup → hotbar | Picked-up item shows in hotbar at once | PASS | V9 |
+| L10 | Tool icons | Pickaxe/axe/shovel/sword/hoe/armor distinguishable, per tier | PASS | V10 |
+| L11 | Torches | Torch placeable in own cell (1×1 shaft); pops off when its block is mined | PASS | V11 |
 
 ## Method rules
 1. **Real input:** synthesized keyboard/mouse via pointer lock. `__bv` may set up a scenario only — never perform the action under test.

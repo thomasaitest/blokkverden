@@ -17,12 +17,13 @@ const SHOTS = process.env.BV_SHOTS || '/workspace/blokkverden-shots/it14';
 type Status = 'PASS' | 'FAIL' | 'PARTIAL' | 'UNTESTED';
 interface Row { id: string; status: Status; notes: string }
 const results: Row[] = [];
+let T0 = Date.now();
 const bugs: string[] = [];
 function record(id: string, status: Status, notes = '') {
   const prev = results.findIndex((r) => r.id === id);
   if (prev >= 0) results.splice(prev, 1);
   results.push({ id, status, notes });
-  console.log(`[${status}] ${id}${notes ? ' — ' + notes : ''}`);
+  console.log(`[${status}] ${id}${notes ? ' — ' + notes : ''} @${((Date.now() - T0) / 1000).toFixed(1)}s`);
 }
 function bug(msg: string) { bugs.push(msg); console.error('BUG:', msg); }
 
@@ -278,6 +279,7 @@ async function main() {
   });
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 }, recordVideo: process.env.BV_VID ? { dir: process.env.BV_VID, size: { width: 1280, height: 720 } } : undefined });
   const page = await ctx.newPage();
+  T0 = Date.now();
   await page.addInitScript('window.__name = (f) => f;');
   page.on('pageerror', (e) => { console.error('PAGEERROR', e.message); bug('pageerror ' + e.message); });
   await boot(page, base, 'It14Verify');
@@ -321,6 +323,7 @@ async function main() {
 
   // V2 — pickaxe tiers with real mining: wood pick gets nothing from iron ore, stone pick does; diamond needs iron
   if (run('V2')) {
+    console.log(`V2 start @${((Date.now() - T0) / 1000).toFixed(1)}s`);
     await flatPad(page, 45);
     const mineOre = async (ore: number, pick: number, ms: number) => {
       await page.evaluate((ore) => { const bv = (window as any).__bv; bv.world.setBlock(8, 46, 6, ore); bv.drops.drops.length = 0; }, ore);
@@ -436,6 +439,7 @@ async function main() {
 
   // V6 — morning: zombies/skeletons in the open burn and die; under a roof they survive; creepers don't burn
   if (run('V6')) {
+    console.log(`V6 start @${((Date.now() - T0) / 1000).toFixed(1)}s`);
     await flatPad(page, 45);
     await page.evaluate(() => { const bv = (window as any).__bv; bv.mobs.clear(); bv.setDay(0.35); bv.player.health = 20;
       for (let x = 12; x <= 15; x++) for (let z = 12; z <= 15; z++) bv.world.setBlock(x, 49, z, 6);
@@ -467,6 +471,7 @@ async function main() {
 
   // V7 — creeper hiss: run away with real S key → fuse winds down, no blast; come back later → no instant blast
   if (run('V7')) {
+    console.log(`V7 start @${((Date.now() - T0) / 1000).toFixed(1)}s`);
     await flatPad(page, 45);
     await page.evaluate(() => { const bv = (window as any).__bv;
       for (let x = -4; x <= 34; x++) for (let z = 0; z <= 16; z++) { bv.world.setBlock(x, 45, z, 1); for (let y = 46; y <= 50; y++) bv.world.setBlock(x, y, z, 0); }
@@ -591,6 +596,24 @@ async function main() {
     await walk(page, 'KeyW', 900); await sleep(700);
     const got = await countItem(page, 12);
     record('V11b-torch-pops-off', torchBlock === 0 && got === 1 ? 'PASS' : 'FAIL', `torchBlockAfter=${torchBlock} torchItems=${got}`);
+  }
+
+  // V12 — creative mode: blocks (even bedrock) break at once with a real click; survival stays unbreakable (V1)
+  if (run('V12')) {
+    await closeUi(page);
+    await flatPad(page, 45);
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.world.setBlock(8, 46, 6, 48); bv.world.setBlock(9, 46, 6, 3); bv.setCreative(true); });
+    await setHeld(page, 0);
+    await aim(page, 8.5, 46.05, 8.5, 8.5, 46.5, 6.5);
+    await ensureLocked(page); await page.evaluate(() => (window as any).__bv.lookAt(8.5, 46.5, 6.5));
+    const t0 = Date.now();
+    await page.mouse.down();
+    for (let i = 0; i < 30; i++) { await sleep(50); if (await page.evaluate(() => (window as any).__bv.world.getBlock(8, 46, 6) === 0)) break; }
+    await page.mouse.up();
+    const ms = Date.now() - t0;
+    const gone = await page.evaluate(() => (window as any).__bv.world.getBlock(8, 46, 6) === 0);
+    await page.evaluate(() => (window as any).__bv.setCreative(false));
+    record('V12-creative-instant-break', gone && ms < 1200 ? 'PASS' : 'FAIL', `bedrockGone=${gone} in ${ms} ms`);
   }
 
   const report = { when: new Date().toISOString(), results, bugs };

@@ -1,0 +1,71 @@
+{
+  "when": "2026-10-30T19:43:32.557Z",
+  "results": [
+    {
+      "id": "V1-bedrock-floor",
+      "status": "PASS",
+      "notes": "{\"y\":1,\"bottom\":48,\"y1\":0,\"cobble\":4,\"dead\":false}"
+    },
+    {
+      "id": "V2-pick-tiers",
+      "status": "PASS",
+      "notes": "woodOnIron={\"broken\":true,\"items\":[],\"took\":3775} stoneOnIron={\"broken\":true,\"items\":[\"16x1\"],\"took\":649} stoneOnDiamond={\"broken\":true,\"items\":[],\"took\":2307} ironOnDiamond={\"broken\":true,\"items\":[\"55x1\"],\"took\":594}"
+    },
+    {
+      "id": "V3-iron-chain",
+      "status": "PASS",
+      "notes": "furnaceUi=true ingots=3 table=true ironPick=1"
+    },
+    {
+      "id": "V4-cook-eat-meat",
+      "status": "PASS",
+      "notes": "hunger 8→16 cookedLeft=0 title=\"\""
+    },
+    {
+      "id": "V5-chest-spills",
+      "status": "PASS",
+      "notes": "{\"diamond\":5,\"log\":12,\"iron\":7,\"chest\":1}"
+    },
+    {
+      "id": "V6-sun-burn",
+      "status": "PASS",
+      "notes": "after16s=[\"vandrer@14:20.0\",\"knallbolle@3:18.0\"]"
+    },
+    {
+      "id": "V7-creeper-defuse",
+      "status": "PASS",
+      "notes": "fuseNear=1.27 after={\"fuse\":0,\"alive\":true,\"dist\":13.4,\"hp\":20,\"ground\":1}"
+    },
+    {
+      "id": "V8-held-name-f3",
+      "status": "PASS",
+      "notes": "debug0=none name={\"t\":\"Trekrafse\",\"o\":\"1\"} after2.8s=0 slot1=Steinhakke F3={\"d\":\"block\",\"t\":\"Blokkverden it14\\n28 fps\\nxyz: 22.90 / 46.\"} F3again=none"
+    },
+    {
+      "id": "V9-pickup-shows-in-hotbar",
+      "status": "PASS",
+      "notes": "before=0 inv=3 dom={\"icon\":true,\"n\":\"3\"}"
+    },
+    {
+      "id": "V10-distinct-tool-icons",
+      "status": "PASS",
+      "notes": "hotbar icons=9 distinct=9"
+    },
+    {
+      "id": "V11a-torch-in-own-cell",
+      "status": "PASS",
+      "notes": "torchInShaft=true torchesLeft=3"
+    },
+    {
+      "id": "V11b-torch-pops-off",
+      "status": "PASS",
+      "notes": "torchBlockAfter=0 torchItems=1"
+    },
+    {
+      "id": "V12-creative-instant-break",
+      "status": "PASS",
+      "notes": "bedrockGone=true in 137 ms"
+    }
+  ],
+  "bugs": []
+}

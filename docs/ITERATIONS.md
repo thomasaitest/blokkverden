@@ -2,6 +2,47 @@
 
 Original voxel-sandkasse. Ingen Mojang-assets.
 
+## Iterasjon 14 (2026-10-30)
+
+Start: fre. 30. okt. 20:01 CET · Slutt: 20:49 CET (~48 min)
+
+### Fokus
+Lengre overlevelsesøkter med ekte tastatur/mus i Chromium: grave rett ned, malm og hakkenivåer, ovn → jernhakke, mat, kister, natt → morgen, creeper, fakler i sjakter. `__bv` bare til oppsett.
+
+### Fikset
+1. Grunnfjell i bunnen av verden (y=0, litt på y=1–2): man kan ikke lenger grave seg ut av verden; gamle lagrede verdener får grunnfjell når de lastes. Kan knuses i kreativ (umiddelbart, som MC)
+2. Hakkenivåer som i MC: jernmalm krever steinhakke, gull/diamant krever jernhakke; brostein/ovn krever hakke. For svak hakke graver tregere og gir ingenting
+3. Rått kjøtt kan stekes i ovnen («Stekt kjøtt», +8 sult); kuer gir også kjøtt, skjeletter gir bein og piler
+4. Knuse en kiste/ovn slipper innholdet på bakken (før forsvant alt)
+5. Vandrere/bueskyttere brenner i sola under åpen himmel (glødende) — før skjedde det i praksis aldri. Under tak, i vann og om natta brenner de ikke; knallboller brenner ikke
+6. Knallbolle: står stille mens den freser, slår ikke i nærkamp, og lunta går tilbake hvis du løper unna (> 7 blokker). Før ble lunta aldri nullstilt → eksploderte med en gang neste gang
+7. Plukket opp ting dukker opp i hotbaren med en gang (før ble hotbaren ikke tegnet på nytt), + «plopp»-lyd
+8. Egne ikoner for hakke/øks/spade/sverd/krafse per materiale, bue, pil og rustning (før så alle tre-verktøy like ut, jern var en grå firkant)
+9. Fakler (og andre ikke-solide blokker) kan settes der du står, f.eks. i bunnen av en 1×1-sjakt; fakkel faller av når blokka under knuses
+10. Skyggelegging (AO) som i MC: 1×1-sjakter og tunneler er ikke lenger kullsvarte
+11. F3-feilsøking er skjult som standard (og F3-tasten virker nå — sjekket feil tastekode); norsk tekst i F3; «Trehakkejord» → «Trekrafse», «Kreativt inventar»
+
+### Ny funksjon (1)
+- Navnet på valgt gjenstand vises over hotbaren i ~2 s når du bytter (som i MC)
+
+### Playtest
+- Core: **55 PASS / 0 FAIL / 0 PARTIAL** (`scripts/core-playtest.ts`, kjørt flere ganger)
+- it14-verify: **13/13 PASS** (`scripts/it14-verify.ts`, V1–V12, ny seksjon L i CORE-PLAYTEST.md)
+- Naturlig økt (`scripts/it14-session.ts`): gikk, gravde fra y≈29 ned til grunnfjell med steinhakke (fikk jernmalm), satte fakkel i sjakta, natt → morgen; 0 JS-feil, 21–45 fps (swiftshader)
+- Gammel bygg (it13) feilet V9 (plukket ting vises ikke i hotbar) — bekreftet ekte feil
+- 61 vitest grønne (11 nye), npm audit 0 sårbarheter, secrets-scan rent
+
+### Kjente begrensninger
+- Fakkellys under jorda er svakere enn i MC (blokklys ganges med sol-/omgivelseslys i rendereren)
+- Huler har ingen mobber (spawn bare på overflaten); vandrer/edderkopp/knallbolle slipper fortsatt kull
+- Knallbolle-eksplosjon knuser ikke stein og ikke kister/ovner
+- Styreflate-hjul og ekte Mac-GPU-fps kan ikke måles headless
+
+### Media
+https://thomasaitest.github.io/blokkverden/progress/it14/
+
+---
+
 ## Iterasjon 13 (2026-10-30)
 
 ### Fokus

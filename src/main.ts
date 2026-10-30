@@ -1232,7 +1232,8 @@ async function runGame(
         sound.breakBlock(); markMesh(); hud.markDirty();
         breakAcc = 0; breakTarget = null; hud.setBreakProgress(0);
       } else {
-        const need = breakDuration(id, inv.held());
+        // MC creative: blocks (even bedrock) break instantly
+        const need = player.creative ? 0.05 : breakDuration(id, inv.held());
         breakAcc += dt;
         hud.setBreakProgress(need > 0 ? breakAcc / need : 1);
         if (need > 0 && breakAcc >= need) {

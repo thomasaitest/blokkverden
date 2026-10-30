@@ -193,7 +193,7 @@ async function runGame(
 
   const deathEl = document.createElement('div');
   deathEl.id = 'death-screen';
-  deathEl.innerHTML = `<div><h1>Du døde</h1><button type="button" id="btn-respawn">Respawn</button></div>`;
+  deathEl.innerHTML = `<div><h1>Du døde</h1><button type="button" id="btn-respawn">Gjenoppstå</button></div>`;
   deathEl.style.display = 'none';
   app.appendChild(deathEl);
 
@@ -265,7 +265,7 @@ async function runGame(
 
   const invUi = createInventoryUi(app, inv, renderer.getAtlas(), () => {
     hud.markDirty(); hud.refreshHotbar();
-  }, (s) => throwFromPlayer(s));
+  }, (s) => throwFromPlayer(s), (onTable) => { if (onTable) achieve.grant('first_craft'); });
   /** MC: closing a container screen returns straight to the game (mouse recaptured). */
   const relock = () => {
     try { renderer.canvas.focus({ preventScroll: true }); } catch { renderer.canvas.focus(); }
@@ -437,7 +437,7 @@ async function runGame(
     if (player.creative) inv.fillStarter();
     hud.markDirty(); hud.refreshHotbar(); updateArmorUi();
   }
-  deathEl.querySelector('#btn-respawn')!.addEventListener('click', () => respawnPlayer());
+  deathEl.querySelector('#btn-respawn')!.addEventListener('click', () => { respawnPlayer(); relock(); });
 
   function trySleep(hx: number, hy: number, hz: number): boolean {
     // MC (Java 1.15+): using a bed always sets the respawn point, even when you can't sleep.
@@ -976,6 +976,7 @@ async function runGame(
 
     clickLook.style.display = (!paused && !dead && !input.pointerLocked && !input.inventoryOpen) ? 'block' : 'none';
     if (paused || dead) {
+      hud.updateBars(player); // MC: empty hearts on the death screen
       renderer.setDayTime(dayTime);
       renderer.updateCamera(player);
       renderer.render();
@@ -1387,7 +1388,6 @@ async function runGame(
                 if (player.creative) inv.add(taken); // restore
                 if (placeId === BlockId.PortalFrame) lightPortal(world, px, py, pz);
                 sound.placeBlock(); markMesh();
-                achieve.grant('first_craft');
               } else if (!player.creative) inv.add(taken);
               else inv.add(taken);
               hud.markDirty();

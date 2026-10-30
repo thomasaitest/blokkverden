@@ -111,7 +111,7 @@ export function createHud(root: HTMLElement, inv: Inventory, atlas: HTMLCanvasEl
       const cz = Math.floor(p.z / CHUNK_SIZE);
       const held = inv.held();
       debugEl.textContent = [
-        `Blokkverden it12`,
+        `Blokkverden it13`,
         `${fps.toFixed(0)} fps`,
         `xyz: ${p.x.toFixed(2)} / ${p.y.toFixed(2)} / ${p.z.toFixed(2)}`,
         `chunk: ${cx} ${cz}`,

@@ -35,6 +35,26 @@ function cliffAhead(world: World, x: number, y: number, z: number, dx: number, d
   return y - (ground + 1) > 2.2;
 }
 
+/** MC: mobs can't hit/shoot you through solid blocks. Sampled ray between two eye points. */
+export function lineOfSight(world: World, x0: number, y0: number, z0: number, x1: number, y1: number, z1: number): boolean {
+  const dx = x1 - x0, dy = y1 - y0, dz = z1 - z0;
+  const len = Math.hypot(dx, dy, dz);
+  const n = Math.max(1, Math.ceil(len / 0.2));
+  for (let i = 1; i < n; i++) {
+    const t = i / n;
+    if (isSolid(world.getBlock(Math.floor(x0 + dx * t), Math.floor(y0 + dy * t), Math.floor(z0 + dz * t)))) return false;
+  }
+  return true;
+}
+
+/** Melee reach like MC (bounding boxes nearly touching): horizontal AND vertical overlap. */
+export function inMeleeReach(m: { x: number; y: number; z: number; height: number }, p: { x: number; y: number; z: number }): boolean {
+  if (Math.hypot(m.x - p.x, m.z - p.z) >= 1.4) return false;
+  // MC: inflated box only grows horizontally — vertical boxes must really overlap
+  // (player y..y+1.8, mob y..y+h). A jumping zombie can't reach you on a 3-high pillar.
+  return p.y < m.y + m.height && p.y + 1.8 > m.y;
+}
+
 export class MobSystem {
   mobs: Mob[] = [];
   nextId = 1;
@@ -157,10 +177,12 @@ export class MobSystem {
         } else if (m.kind !== 'knallbolle') {
           m.fuse = 0;
         }
+        const sees = () => lineOfSight(world, m.x, m.y + m.height * 0.85, m.z, player.x, player.y + 1.62, player.z);
         if (m.kind === 'bueskytt' && distP < 14 && distP > 4 && m.attackCool <= 0) {
           m.attackCool = 1.6;
-          if (Math.random() < 0.55) { onPlayerHurt(3, tx, tz); sound.bow(); }
-        } else if (distP < 1.4 && m.attackCool <= 0 && m.kind !== 'bueskytt') {
+          // No arrows through shelter walls/roofs (was 55 % hit chance regardless of cover).
+          if (sees() && Math.random() < 0.55) { onPlayerHurt(3, tx, tz); sound.bow(); }
+        } else if (m.kind !== 'bueskytt' && m.attackCool <= 0 && inMeleeReach(m, player) && sees()) {
           m.attackCool = 1.0;
           onPlayerHurt(m.kind === 'vever' ? 3 : 4, tx, tz);
           sound.mobHit();

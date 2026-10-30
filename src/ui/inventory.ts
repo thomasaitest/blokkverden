@@ -25,6 +25,8 @@ export function createInventoryUi(
   onChange: () => void,
   /** Items that no longer fit when closing (craft grid / cursor) are thrown, not lost. */
   onOverflow: (s: ItemStack) => void = () => {},
+  /** Fired when a craft result is taken; arg = crafted on the 3×3 table. */
+  onCraft: (onTable: boolean) => void = () => {},
 ): InventoryUi {
   const el = document.createElement('div');
   el.id = 'inv-overlay';
@@ -165,6 +167,7 @@ export function createInventoryUi(
     if (cursor && cursor.id === craftResult.id) cursor.count += craftResult.count;
     else cursor = { ...craftResult };
     consumeCraft(craft);
+    onCraft(mode === 'table');
     craftResult = null;
     updateCraft();
     updateCursorVisual();

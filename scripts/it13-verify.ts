@@ -162,6 +162,68 @@ async function flatPad(page: Page, y = 45) {
 
 /** Craft via real inventory UI clicks: put pattern into craft grid, take output. */
 
+async function uiCraft(page: Page, pattern: (number | 0)[], grid = 2) {
+  const open = await page.evaluate(() => (window as any).__bv.input.inventoryOpen);
+  if (!open) { await page.keyboard.press('KeyE'); await sleep(300); }
+  // Clear craft grid back into inventory
+  for (let i = 0; i < grid * grid; i++) {
+    const slot = page.locator(`[data-craft-slot="${i}"]`);
+    if (await slot.count()) await slot.click({ modifiers: ['Shift'] }).catch(() => {});
+  }
+  await sleep(80);
+  // Place one item per cell via right-click (MC-like)
+  for (let i = 0; i < pattern.length; i++) {
+    const id = pattern[i];
+    if (!id) continue;
+    const src = await page.evaluate((id) => {
+      const slots = (window as any).__bv.inv.slots;
+      for (let i = 0; i < slots.length; i++) if (slots[i]?.id === id && slots[i].count > 0) return i;
+      return -1;
+    }, id);
+    if (src < 0) return false;
+    // Pick stack
+    const craftCell = page.locator(`[data-craft-slot="${i}"]`);
+    if (!(await craftCell.count())) return false;
+    await page.locator(`[data-inv-slot="${src}"]`).click({ button: 'left' });
+    await sleep(60);
+    await craftCell.click({ button: 'right', timeout: 5000 });
+    await sleep(60);
+    // Return leftover stack to inv (prefer original or empty)
+    const dest = await page.evaluate((src) => {
+      const slots = (window as any).__bv.inv.slots;
+      if (!slots[src]) return src;
+      for (let i = 0; i < slots.length; i++) if (!slots[i]) return i;
+      return src;
+    }, src);
+    await page.locator(`[data-inv-slot="${dest}"]`).click({ button: 'left' });
+    await sleep(60);
+  }
+  await sleep(100);
+  const out = page.locator('[data-craft-out="1"]');
+  if (!(await out.count())) return false;
+  // Ensure output painted
+  const hasOut = await page.evaluate(() => {
+    const el = document.querySelector('[data-craft-out="1"]');
+    return !!el && el.childElementCount > 0;
+  });
+  if (!hasOut) {
+    // soft fail — recipe may not match
+  }
+  await out.click({ button: 'left' });
+  await sleep(120);
+  // Deposit cursor into any empty slot 0..35
+  for (let i = 0; i < 36; i++) {
+    const empty = await page.evaluate((i) => !(window as any).__bv.inv.slots[i], i);
+    if (empty) {
+      await page.locator(`[data-inv-slot="${i}"]`).click({ button: 'left' });
+      await sleep(60);
+      break;
+    }
+  }
+  return true;
+}
+
+
 async function isPaused(page: Page) {
   return page.evaluate(() => {
     const el = document.getElementById('pause-menu');
@@ -262,6 +324,88 @@ async function main() {
   await sleep(300);
   const after = await countItem(page, 2);
   record('P7b-then-places', p7.locked && after === 4 ? 'PASS' : 'FAIL', `dirt ${p7.dirt}→${after}`);
+
+  // P8 — mobs need reach + line of sight (MC): pillar-up beats zombies, a roofed shelter stops arrows
+  await flatPad(page, 45);
+  const hpAfter = async (ms: number) => {
+    const t0 = Date.now(); let min = 20;
+    while (Date.now() - t0 < ms) {
+      await page.evaluate(() => { const bv = (window as any).__bv; bv.mobs.mobs = bv.mobs.mobs.filter((m: any) => m.__test);
+        for (const m of bv.mobs.mobs) if (m.__pin) { m.x = m.__pin[0]; m.z = m.__pin[1]; } });
+      min = Math.min(min, (await st(page)).health); await sleep(250);
+    }
+    return min;
+  };
+  await page.evaluate(() => { const bv = (window as any).__bv; bv.setDay(0.9); bv.mobs.mobs.length = 0; bv.player.health = 20; bv.player.hunger = 20;
+    for (let y = 46; y <= 48; y++) bv.world.setBlock(8, y, 8, 3);
+    bv.teleport(8.5, 49.05, 8.5); bv.look(0, -0.6);
+    const z = bv.spawnMob('vandrer', 1.25, -3, 0); z.__test = true; });
+  await acquireLock(page);
+  await page.evaluate(async () => { const bv = (window as any).__bv; await bv.forceRemeshAround(); const m = bv.mobs.mobs[0]; if (m) bv.lookAt(m.x, m.y + 0.9, m.z); });
+  await sleep(1500);
+  await shot(page, 'it13-04-soyle.png');
+  const pillarMin = await hpAfter(6000);
+  const pz = await page.evaluate(() => { const bv = (window as any).__bv; const m = bv.mobs.mobs[0]; return { me: [bv.player.x, bv.player.y].map((v: number) => +v.toFixed(2)), mob: m ? [m.x, m.y].map((v: number) => +v.toFixed(2)) : null }; });
+  // control: same zombie next to the player on the ground does hit
+  await page.evaluate(() => { const bv = (window as any).__bv; bv.player.health = 20; bv.teleport(10.5, 46.05, 8.5); });
+  const groundMin = await hpAfter(4000);
+  record('P8a-pillar-vs-zombie', pillarMin === 20 && groundMin < 20 ? 'PASS' : 'FAIL', `onPillar minHp=${pillarMin} ${JSON.stringify(pz)} control(ground) minHp=${groundMin}`);
+
+  await flatPad(page, 45);
+  await page.evaluate(() => { const bv = (window as any).__bv; bv.mobs.mobs.length = 0; bv.player.health = 20; bv.teleport(8.5, 46.05, 8.5);
+    const s = bv.spawnMob('bueskytt', 7.3, -0.0001, 0.2); s.y = 46.05; s.__test = true; s.__pin = [s.x, s.z]; });
+  const openMin = await hpAfter(8000);
+  await page.evaluate(() => { const bv = (window as any).__bv; bv.mobs.mobs.length = 0; bv.player.health = 20;
+    for (let x = 3; x <= 14; x++) for (let z = 3; z <= 14; z++) {
+      bv.world.setBlock(x, 49, z, 3);
+      if (x === 3 || x === 14 || z === 3 || z === 14) for (let y = 46; y <= 48; y++) bv.world.setBlock(x, y, z, 3);
+    }
+    bv.world.setBlock(8, 48, 6, 12); // torch-ish marker inside
+    bv.teleport(8.5, 46.05, 8.5); bv.lookAt(16, 47, 8.5);
+    const s = bv.spawnMob('bueskytt', 7.3, -0.0001, 0.2); s.y = 46.05; s.__test = true; s.__pin = [s.x, s.z]; });
+  await page.evaluate(async () => { await (window as any).__bv.forceRemeshAround(); });
+  await sleep(1200);
+  await shot(page, 'it13-05-ly-mot-skjelett.png');
+  const shelterMin = await hpAfter(8000);
+  record('P8b-shelter-vs-skeleton', openMin < 20 && shelterMin === 20 ? 'PASS' : 'FAIL', `open minHp=${openMin} shelter minHp=${shelterMin}`);
+  await page.evaluate(() => { const bv = (window as any).__bv; bv.mobs.mobs.length = 0; bv.setDay(0.3); bv.player.health = 20; });
+
+  // P9 — death screen → real click on «Gjenoppstå» goes straight back into the game (mouse captured)
+  await acquireLock(page);
+  await page.evaluate(() => (window as any).__bv.kill());
+  await sleep(500);
+  await shot(page, 'it13-06-dod.png');
+  await page.locator('#btn-respawn').click(); await sleep(600);
+  const p9 = await st(page);
+  record('P9-respawn-relock', !p9.dead && p9.locked && !(await isPaused(page)) ? 'PASS' : 'FAIL', `dead=${p9.dead} locked=${p9.locked}`);
+
+  // P10 — achievement «Håndverk» (made something on the workbench) only from a table craft, not from placing a block
+  await flatPad(page, 45);
+  await page.evaluate(() => { localStorage.removeItem('bv-achieve'); const bv = (window as any).__bv; bv.mobs.mobs.length = 0;
+    bv.inv.slots.fill(null); bv.inv.slots[0] = { id: 2, count: 3 }; bv.inv.slots[1] = { id: 5, count: 2 }; bv.inv.selected = 0; bv.hud.markDirty(); bv.hud.refreshHotbar(); });
+  await page.evaluate(() => { const a = document.getElementById('achieve-toast'); if (a) a.innerHTML = ''; });
+  const toastText = () => page.evaluate(() => document.getElementById('achieve-toast')?.textContent ?? '');
+  await aim(page, 8.5, 46.05, 8.5, 8.5, 45.9, 6.5);
+  await acquireLock(page);
+  await page.mouse.down({ button: 'right' }); await sleep(80); await page.mouse.up({ button: 'right' });
+  await sleep(600);
+  const placedDirt = await countItem(page, 2);
+  const tPlace = await toastText();
+  // table: place one via __bv (setup), open with real RMB, craft log → planks with real clicks
+  await page.evaluate(() => { const bv = (window as any).__bv; bv.world.setBlock(10, 46, 8, 11); });
+  await aim(page, 8.5, 46.05, 8.5, 10.5, 46.5, 8.5);
+  await acquireLock(page);
+  await page.mouse.down({ button: 'right' }); await sleep(80); await page.mouse.up({ button: 'right' });
+  await sleep(500);
+  const tableOpen = await page.evaluate(() => (window as any).__bv.input.inventoryOpen);
+  const crafted = tableOpen ? await uiCraft(page, [5], 3) : false;
+  await sleep(500);
+  await shot(page, 'it13-07-handverk.png');
+  const tCraft = await toastText();
+  const planks = await countItem(page, 6);
+  if (await page.evaluate(() => (window as any).__bv.input.inventoryOpen)) { await page.keyboard.press('KeyE'); await sleep(300); }
+  record('P10-craft-achievement', placedDirt === 2 && !/Håndverk/.test(tPlace) && tableOpen && planks === 4 && /Håndverk/.test(tCraft) ? 'PASS' : 'FAIL',
+    `placed=${placedDirt === 2} toastAfterPlace="${tPlace}" table=${tableOpen} crafted=${crafted} planks=${planks} toastAfterCraft="${tCraft}"`);
 
   // P5 — quit to title, reopen the same world: old session must be gone (no loop, no autosave
   // over the reopened world, WebGL context freed), and the world/position must reload.

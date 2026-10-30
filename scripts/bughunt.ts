@@ -42,6 +42,7 @@ async function main() {
   }
   const browser = await chromium.launch({
     headless: true,
+    channel: 'chrome',
     args: ['--use-gl=angle', '--enable-webgl', '--ignore-gpu-blocklist'],
   });
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });

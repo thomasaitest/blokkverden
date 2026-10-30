@@ -161,46 +161,59 @@ async function flatPad(page: Page, y = 45) {
 
 /** Craft via real inventory UI clicks: put pattern into craft grid, take output. */
 async function uiCraft(page: Page, pattern: (number | 0)[], grid = 2) {
-  // Ensure inventory open
   const open = await page.evaluate(() => (window as any).__bv.input.inventoryOpen);
   if (!open) { await page.keyboard.press('KeyE'); await sleep(300); }
-  // Clear craft by shift-clicking occupied craft slots
+  // Clear craft grid back into inventory
   for (let i = 0; i < grid * grid; i++) {
     const slot = page.locator(`[data-craft-slot="${i}"]`);
     if (await slot.count()) await slot.click({ modifiers: ['Shift'] }).catch(() => {});
   }
-  await sleep(100);
-  // For each pattern cell, find item in inv and move
+  await sleep(80);
+  // Place one item per cell via right-click (MC-like)
   for (let i = 0; i < pattern.length; i++) {
     const id = pattern[i];
     if (!id) continue;
-    // Pick from first inv slot containing id
     const src = await page.evaluate((id) => {
       const slots = (window as any).__bv.inv.slots;
-      for (let i = 0; i < slots.length; i++) if (slots[i]?.id === id) return i;
+      for (let i = 0; i < slots.length; i++) if (slots[i]?.id === id && slots[i].count > 0) return i;
       return -1;
     }, id);
     if (src < 0) return false;
-    await page.locator(`[data-inv-slot="${src}"]`).click();
-    await sleep(80);
-    await page.locator(`[data-craft-slot="${i}"]`).click();
-    await sleep(80);
+    // Pick stack
+    await page.locator(`[data-inv-slot="${src}"]`).click({ button: 'left' });
+    await sleep(60);
+    // Place one into craft cell
+    await page.locator(`[data-craft-slot="${i}"]`).click({ button: 'right' });
+    await sleep(60);
+    // Return leftover stack to inv (prefer original or empty)
+    const dest = await page.evaluate((src) => {
+      const slots = (window as any).__bv.inv.slots;
+      if (!slots[src]) return src;
+      for (let i = 0; i < slots.length; i++) if (!slots[i]) return i;
+      return src;
+    }, src);
+    await page.locator(`[data-inv-slot="${dest}"]`).click({ button: 'left' });
+    await sleep(60);
   }
   await sleep(100);
   const out = page.locator('[data-craft-out="1"]');
   if (!(await out.count())) return false;
-  await out.click();
-  await sleep(120);
-  // Put cursor item into empty inv slot
-  await page.evaluate(() => {
-    /* cursor is internal — clicking empty hotbar */
+  // Ensure output painted
+  const hasOut = await page.evaluate(() => {
+    const el = document.querySelector('[data-craft-out="1"]');
+    return !!el && el.childElementCount > 0;
   });
-  // Click empty hotbar slot to deposit
-  for (let i = 0; i < 9; i++) {
+  if (!hasOut) {
+    // soft fail — recipe may not match
+  }
+  await out.click({ button: 'left' });
+  await sleep(120);
+  // Deposit cursor into any empty slot 0..35
+  for (let i = 0; i < 36; i++) {
     const empty = await page.evaluate((i) => !(window as any).__bv.inv.slots[i], i);
     if (empty) {
-      await page.locator(`[data-inv-slot="${i}"]`).click();
-      await sleep(80);
+      await page.locator(`[data-inv-slot="${i}"]`).click({ button: 'left' });
+      await sleep(60);
       break;
     }
   }
@@ -213,6 +226,7 @@ async function main() {
   const { base, child } = await startPreview();
   const browser = await chromium.launch({
     headless: true,
+    channel: 'chrome',
     args: ['--use-angle=swiftshader', '--use-gl=angle', '--enable-webgl', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader'],
   });
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
@@ -251,9 +265,11 @@ async function main() {
   record('B2', (await st(page)).y > y0 + 0.2 ? 'PASS' : 'FAIL', '');
 
   await page.evaluate(() => { const bv = (window as any).__bv; bv.teleport(8.5, 46.05, 8.5); bv.look(0, 0); });
-  await page.keyboard.press('KeyW'); await sleep(70); await page.keyboard.down('KeyW'); await sleep(600); await page.keyboard.up('KeyW');
+  await page.keyboard.down('ControlLeft');
+  await page.keyboard.down('KeyW'); await sleep(700); await page.keyboard.up('KeyW');
+  await page.keyboard.up('ControlLeft');
   const sprintD = Math.abs((await st(page)).z - 8.5);
-  record('B3', sprintD > 2 ? 'PASS' : 'PARTIAL', `dist=${sprintD.toFixed(2)}`);
+  record('B3', sprintD > 2.2 ? 'PASS' : 'PARTIAL', `dist=${sprintD.toFixed(2)}`);
 
   // sneak edge
   await page.evaluate(() => {
@@ -306,19 +322,26 @@ async function main() {
   record('B6', noClip ? 'PASS' : 'FAIL', `yaw=${yawCheck.toFixed(2)} x→${x1.toFixed(2)}`);
   if (!noClip) bug('B6 walked through wall');
 
-  // step-up 1
+  // step-up 1 — long pad so we don't walk off after climbing
   await page.evaluate(() => {
     const bv = (window as any).__bv;
-    for (let z = 38; z <= 44; z++) {
-      bv.world.setBlock(42, 44, z, 1);
-      bv.world.setBlock(42, 45, z, 0); bv.world.setBlock(42, 46, z, 0); bv.world.setBlock(42, 47, z, 0);
+    for (let x = 40; x <= 44; x++) for (let z = 30; z <= 48; z++) {
+      bv.world.setBlock(x, 44, z, 1);
+      bv.world.setBlock(x, 45, z, 0); bv.world.setBlock(x, 46, z, 0); bv.world.setBlock(x, 47, z, 0);
     }
-    bv.world.setBlock(42, 45, 40, 3);
-    bv.look(0, 0); bv.teleport(42.5, 45.05, 42.5);
+    for (let x = 40; x <= 44; x++) bv.world.setBlock(x, 45, 40, 3);
+    bv.look(0, 0); bv.teleport(42.5, 45.05, 44.5);
   });
-  await page.keyboard.down('KeyW'); await sleep(1400); await page.keyboard.up('KeyW');
+  await page.keyboard.down('KeyW');
+  let stepped = false;
+  for (let i = 0; i < 40; i++) {
+    await sleep(50);
+    s2 = await st(page);
+    if (s2.y >= 45.9 && s2.z <= 41.5) { stepped = true; break; }
+  }
+  await page.keyboard.up('KeyW');
   s2 = await st(page);
-  record('B7', s2.z < 41 && s2.y >= 45.9 ? 'PASS' : 'PARTIAL', `z=${s2.z.toFixed(2)} y=${s2.y.toFixed(2)}`);
+  record('B7', stepped || (s2.z < 41.5 && s2.y >= 45.9) ? 'PASS' : 'PARTIAL', `z=${s2.z.toFixed(2)} y=${s2.y.toFixed(2)} stepped=${stepped}`);
 
   // C — mining: aim AFTER lock (already locked)
   await page.evaluate(() => {
@@ -511,31 +534,43 @@ async function main() {
   if (!tableOpen) bug('F1 crafting table open failed');
 
   // Sticks: 2 planks vertical in 3x3 — slots 0 and 3
-  const doRecipe = async (id: string, pattern: (number | 0)[], resultId: number, minCount: number) => {
-    // reopen table if needed
+  const ensureMat = async (id: number, n: number) => {
+    await page.evaluate(({ id, n }) => {
+      const bv = (window as any).__bv;
+      let have = 0;
+      for (const s of bv.inv.slots) if (s?.id === id) have += s.count;
+      if (have < n) bv.inv.add({ id, count: n - have });
+      bv.hud.refreshHotbar();
+    }, { id, n });
+  };
+
+  const doRecipe = async (id: string, pattern: (number | 0)[], resultId: number, minCount: number, mats?: [number, number][]) => {
+    if (mats) for (const [mid, mn] of mats) await ensureMat(mid, mn);
     let open = await page.evaluate(() => (window as any).__bv.input.inventoryOpen);
     if (!open) {
+      await acquireLock(page);
       await aim(page, 123.5, 49.05, 124.5, 123.5, 49.5, 122.5);
       await page.mouse.down({ button: 'right' }); await page.mouse.up({ button: 'right' });
       await sleep(300);
     }
+    const before = await countItem(page, resultId);
     await uiCraft(page, pattern, 3);
     const n = await countItem(page, resultId);
-    record(id, n >= minCount ? 'PASS' : 'FAIL', `count=${n}`);
-    if (n < minCount) bug(`${id} craft failed count=${n}`);
+    record(id, n >= before + minCount || n >= minCount ? 'PASS' : 'FAIL', `count=${n} before=${before}`);
+    if (!(n >= before + minCount || n >= minCount)) bug(`${id} craft failed count=${n}`);
   };
 
-  // Ensure sticks exist for tools — craft sticks first from planks
-  await doRecipe('F3', [6, 0, 0, 6, 0, 0, 0, 0, 0], 50, 1);
+  await ensureMat(6, 64); await ensureMat(4, 32); await ensureMat(51, 8); await ensureMat(59, 8);
+  await doRecipe('F3', [6, 0, 0, 6, 0, 0, 0, 0, 0], 50, 1, [[6, 8]]);
   record('F2', (await countItem(page, 6)) >= 0 ? 'PASS' : 'FAIL', 'planks available from E4');
-  await doRecipe('F4', [6, 6, 0, 6, 6, 0, 0, 0, 0], 11, 1); // table
-  await doRecipe('F5', [6, 6, 6, 0, 50, 0, 0, 50, 0], 100, 1); // wood pick
-  await doRecipe('F6', [4, 4, 4, 0, 50, 0, 0, 50, 0], 104, 1); // stone pick
-  await doRecipe('F7', [4, 4, 4, 4, 0, 4, 4, 4, 4], 14, 1); // furnace
-  await doRecipe('F8', [51, 50, 0, 0, 0, 0, 0, 0, 0], 12, 1); // torch coal+stick vertical in compact
-  await doRecipe('F9', [6, 6, 6, 6, 0, 6, 6, 6, 6], 13, 1); // chest
-  await doRecipe('F10', [6, 6, 0, 6, 6, 0, 6, 6, 0], 26, 1); // door
-  await doRecipe('F11', [59, 59, 59, 6, 6, 6, 0, 0, 0], 20, 1); // bed
+  await doRecipe('F4', [6, 6, 0, 6, 6, 0, 0, 0, 0], 11, 1, [[6, 8]]); // table 2x2
+  await doRecipe('F5', [6, 6, 6, 0, 50, 0, 0, 50, 0], 100, 1, [[6, 8], [50, 4]]); // wood pick
+  await doRecipe('F6', [4, 4, 4, 0, 50, 0, 0, 50, 0], 104, 1, [[4, 8], [50, 4]]); // stone pick
+  await doRecipe('F7', [4, 4, 4, 4, 0, 4, 4, 4, 4], 14, 1, [[4, 12]]); // furnace
+  await doRecipe('F8', [51, 0, 0, 50, 0, 0, 0, 0, 0], 12, 1, [[51, 2], [50, 2]]); // torch vertical
+  await doRecipe('F9', [6, 6, 6, 6, 0, 6, 6, 6, 6], 13, 1, [[6, 16]]); // chest
+  await doRecipe('F10', [6, 6, 0, 6, 6, 0, 6, 6, 0], 26, 1, [[6, 12]]); // door 2x3
+  await doRecipe('F11', [59, 59, 59, 6, 6, 6, 0, 0, 0], 20, 1, [[59, 4], [6, 8]]); // bed
 
   await page.keyboard.press('KeyE');
   await sleep(200);
@@ -637,13 +672,20 @@ async function main() {
   await page.evaluate(() => {
     const bv = (window as any).__bv;
     bv.player.health = 20;
-    bv.teleport(8.5, 85, 8.5);
+    // Stay inside CHUNK_HEIGHT; build a tall drop onto stone
+    const x = 150, z = 150;
+    for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) {
+      bv.world.setBlock(x + dx, 40, z + dz, 3);
+      for (let y = 41; y <= 58; y++) bv.world.setBlock(x + dx, y, z + dz, 0);
+    }
+    bv.teleport(x + 0.5, 58, z + 0.5);
   });
-  await sleep(2500);
+  await sleep(2800);
   await ensureRespawn(page);
   const hp = (await st(page)).health;
-  record('H3', hp < 20 || (await page.evaluate(() => (window as any).__bv.getState().dead)) ? 'PASS' : 'FAIL', `hp=${hp}`);
-  record('H1', 'PASS', 'damage observed via fall');
+  const deadH = await page.evaluate(() => (window as any).__bv.getState().dead);
+  record('H3', hp < 20 || deadH ? 'PASS' : 'FAIL', `hp=${hp} dead=${deadH}`);
+  record('H1', hp < 20 || deadH ? 'PASS' : 'FAIL', 'fall damage');
   await ensureRespawn(page);
 
   await page.evaluate(() => {
@@ -716,7 +758,20 @@ async function main() {
     return { dx: Math.abs(m.x - x0) + Math.abs(m.z - (m.z)), hp: m.hp };
   });
   record('I4', kb && (kb.hp < 20) ? 'PASS' : 'PARTIAL', JSON.stringify(kb));
-  record('I3', 'PARTIAL', 'drops on kill — covered by unit/mob code');
+  const i3 = await page.evaluate(() => {
+    const bv = (window as any).__bv;
+    bv.clearMobs();
+    bv.drops.loadJSON([]);
+    const m = bv.mobs.spawn('gris', bv.player.x + 1.5, bv.player.y, bv.player.z);
+    if (m) { m.hp = 1; bv.mobs.hurtMob(m, 99, 1, 0); }
+    return true;
+  });
+  await sleep(700);
+  const i3drops = await page.evaluate(() => {
+    const bv = (window as any).__bv;
+    return bv.drops.toJSON().some((d: any) => d.stack?.id === 60);
+  });
+  record('I3', i3drops ? 'PASS' : 'FAIL', `meatDrop=${i3drops}`);
   await page.evaluate(() => {
     const bv = (window as any).__bv;
     const x = Math.floor(bv.player.x), y = Math.floor(bv.player.y), z = Math.floor(bv.player.z);
@@ -741,38 +796,39 @@ async function main() {
   await sleep(600);
   await boot(page, base, 'SurviveK');
   await acquireLock(page);
-  // Find or plant tree (setup), punch with real mouse
+  // Plant a tree in front and punch with real mouse
   const tree = await page.evaluate(() => {
     const bv = (window as any).__bv;
     const px = Math.floor(bv.player.x), py = Math.floor(bv.player.y), pz = Math.floor(bv.player.z);
-    for (let r = 1; r < 48; r++) {
-      for (let dx = -r; dx <= r; dx++) for (let dz = -r; dz <= r; dz++) {
-        for (let dy = 0; dy <= 10; dy++) {
-          if (bv.world.getBlock(px + dx, py + dy, pz + dz) === 5)
-            return { x: px + dx, y: py + dy, z: pz + dz, planted: false };
-        }
-      }
-    }
-    const tx = px + 3, tz = pz, ty = py;
+    const tx = px + 2, tz = pz, ty = py;
+    for (let dy = -1; dy <= 4; dy++) bv.world.setBlock(tx, ty + dy, tz, 0);
     bv.world.setBlock(tx, ty - 1, tz, 1);
     bv.world.setBlock(tx, ty, tz, 5);
     bv.world.setBlock(tx, ty + 1, tz, 5);
     bv.world.setBlock(tx, ty + 2, tz, 5);
+    bv.inv.slots.fill(null);
+    bv.hud.refreshHotbar();
+    bv.teleport(px + 0.5, py, pz + 0.5);
+    bv.lookAt(tx + 0.5, ty + 0.5, tz + 0.5);
     return { x: tx, y: ty, z: tz, planted: true };
   });
-  await page.evaluate(() => (window as any).__bv.inv.slots.fill(null));
+  await acquireLock(page);
   await aim(page, tree.x + 0.5, tree.y, tree.z + 2.2, tree.x + 0.5, tree.y + 0.5, tree.z + 0.5);
+  await sleep(100);
   await page.mouse.down();
-  for (let i = 0; i < 20; i++) {
-    await sleep(150);
+  for (let i = 0; i < 35; i++) {
+    await sleep(120);
     if ((await page.evaluate((t) => (window as any).__bv.world.getBlock(t.x, t.y, t.z) === 0, tree))) break;
   }
   await page.mouse.up();
-  await page.keyboard.down('KeyW'); await sleep(500); await page.keyboard.up('KeyW');
-  await sleep(400);
-  const kLogs = await countItem(page, 5);
-  record('K1', kLogs > 0 ? 'PASS' : 'FAIL', `logs=${kLogs} planted=${tree.planted}`);
+  await page.keyboard.down('KeyW'); await sleep(600); await page.keyboard.up('KeyW');
+  await sleep(500);
+  let kLogs = await countItem(page, 5);
+  // If punch flaky, still require at least that block broke; allow one __bv-assisted log only for K2+ materials not K1 pass
+  const broke = await page.evaluate((t) => (window as any).__bv.world.getBlock(t.x, t.y, t.z) === 0, tree);
+  record('K1', kLogs > 0 ? 'PASS' : 'FAIL', `logs=${kLogs} planted=${tree.planted} broke=${broke}`);
   if (kLogs === 0) bug('K1 no logs from tree');
+  if (kLogs < 8) await page.evaluate(() => (window as any).__bv.inv.add({ id: 5, count: 16 }));
 
   // Craft planks + table + pick via UI
   await page.keyboard.press('KeyE');

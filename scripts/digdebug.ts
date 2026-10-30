@@ -13,7 +13,7 @@ async function main() {
   const base = `http://127.0.0.1:${PORT}`;
   const child = spawn('npx', ['vite', 'preview', '--host', '127.0.0.1', '--port', String(PORT), '--strictPort'], { cwd: process.cwd(), stdio: 'pipe' });
   for (let i = 0; i < 40; i++) { try { if ((await fetch(base + '/')).ok) break; } catch {} await sleep(200); }
-  const browser = await chromium.launch({ headless: true, args: ['--use-angle=swiftshader', '--use-gl=angle', '--enable-unsafe-swiftshader'] });
+  const browser = await chromium.launch({ headless: true, channel: 'chrome', args: ['--use-angle=swiftshader', '--use-gl=angle', '--enable-unsafe-swiftshader'] });
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
   page.on('dialog', async (d) => {
     if (d.type() === 'prompt') await d.accept('Dbg');

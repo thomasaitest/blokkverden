@@ -444,7 +444,13 @@ async function runGame(
       if (!taken) return false;
       const placeId = ITEMS[taken.id]?.placeBlock;
       const px = hit.x + hit.nx, py = hit.y + hit.ny, pz = hit.z + hit.nz;
-      if (placeId == null || (world.getBlock(px, py, pz) !== BlockId.Air && world.getBlock(px, py, pz) !== BlockId.Water)) {
+      const hw = 0.3, ph = player.sneaking ? 1.5 : 1.8;
+      const intersectsPlayer = !(
+        px + 1 <= player.x - hw || px >= player.x + hw ||
+        py + 1 <= player.y || py >= player.y + ph ||
+        pz + 1 <= player.z - hw || pz >= player.z + hw
+      );
+      if (placeId == null || intersectsPlayer || (world.getBlock(px, py, pz) !== BlockId.Air && world.getBlock(px, py, pz) !== BlockId.Water)) {
         inv.add(taken);
         return false;
       }
@@ -1258,7 +1264,14 @@ async function runGame(
             if (taken) {
               const placeId = ITEMS[taken.id]?.placeBlock;
               const dest = world.getBlock(px, py, pz);
-              if (placeId != null && (dest === BlockId.Air || dest === BlockId.Water)) {
+              // Minecraft: cannot place a block that intersects the player
+              const hw = 0.3, ph = player.sneaking ? 1.5 : 1.8;
+              const intersectsPlayer = !(
+                px + 1 <= player.x - hw || px >= player.x + hw ||
+                py + 1 <= player.y || py >= player.y + ph ||
+                pz + 1 <= player.z - hw || pz >= player.z + hw
+              );
+              if (placeId != null && (dest === BlockId.Air || dest === BlockId.Water) && !intersectsPlayer) {
                 world.setBlock(px, py, pz, placeId);
                 if (player.creative) inv.add(taken); // restore
                 if (placeId === BlockId.PortalFrame) lightPortal(world, px, py, pz);

@@ -34,6 +34,7 @@ async function main() {
   }
   const browser = await chromium.launch({
     headless: true,
+    channel: 'chrome',
     args: ['--use-gl=angle', '--enable-webgl', '--ignore-gpu-blocklist'],
   });
   const saveShot = async (page: import('playwright').Page, name: string) => {

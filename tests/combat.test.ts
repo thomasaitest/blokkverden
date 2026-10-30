@@ -41,3 +41,27 @@ describe('mob attacks need reach + line of sight (MC)', () => {
     expect(lineOfSight(w, 2.5, 61.6, 8.5, 12.5, 61.6, 8.5)).toBe(false);
   });
 });
+
+describe('mob ground collision (no wall-climbing)', () => {
+  it('a zombie pushing into a 3-high pillar for 20 s stays on the ground', () => {
+    const w = new World(3);
+    for (let cx = -1; cx <= 1; cx++) for (let cz = -1; cz <= 1; cz++) w.ensureChunk(cx, cz);
+    for (let x = 0; x < 16; x++) for (let z = 0; z < 16; z++) {
+      w.setBlock(x, 45, z, BlockId.Stone);
+      for (let y = 46; y < 60; y++) w.setBlock(x, y, z, BlockId.Air);
+    }
+    for (let y = 46; y <= 48; y++) w.setBlock(8, y, 8, BlockId.Stone);
+    const sys = new MobSystem();
+    const z = sys.spawn('vandrer', 9.75, 46.02, 8.5);
+    const player = createPlayer(8.5, 49, 8.5);
+    let hits = 0, maxY = 0;
+    const drops = new DropSystem();
+    for (let i = 0; i < 400; i++) {
+      sys.update(w, player, 0.05, drops, new SoundBus(), () => { hits++; });
+      maxY = Math.max(maxY, z.y);
+    }
+    expect(hits).toBe(0);
+    expect(maxY).toBeLessThan(47); // own jumps peak ~46.9; old ceil() landing popped it to 47+
+    expect(Math.abs(z.y - 46)).toBeLessThan(1.05);
+  });
+});

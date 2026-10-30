@@ -255,9 +255,12 @@ export class MobSystem {
       m.onGround = false;
       if (collides(world, m.x, m.y, m.z, m.width, m.height)) {
         if (m.vy <= 0) {
-          m.y = Math.ceil(m.y - m.vy * dt);
-          let g = 0;
-          while (collides(world, m.x, m.y, m.z, m.width, m.height) && g++ < 20) m.y += 0.05;
+          // Land on top of the block under the feet — never above where we came from.
+          // (Old: ceil(prevY) + 0.05 nudges teleported mobs a whole block up from y=46.02,
+          // so zombies hopped onto ledges/pillars and climbed walls.)
+          const prevY = m.y - m.vy * dt;
+          const snap = Math.floor(m.y) + 1;
+          m.y = snap <= prevY + 1e-6 && !collides(world, m.x, snap, m.z, m.width, m.height) ? snap : prevY;
           m.vy = 0; m.onGround = true;
         } else { m.y -= m.vy * dt; m.vy = 0; }
       }

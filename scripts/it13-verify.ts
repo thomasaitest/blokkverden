@@ -40,7 +40,7 @@ function freePort(): Promise<number> {
 async function startPreview() {
   const PORT = await freePort();
   const base = `http://127.0.0.1:${PORT}`;
-  const child = spawn('node_modules/.bin/vite', ['preview', '--host', '127.0.0.1', '--port', String(PORT), '--strictPort'], {
+  const child = spawn('node_modules/.bin/vite', ['preview', '--host', '127.0.0.1', '--port', String(PORT), '--strictPort', ...(process.env.BV_DIST ? ['--outDir', process.env.BV_DIST] : [])], {
     cwd: process.cwd(), stdio: 'pipe',
   });
   for (let i = 0; i < 80; i++) {
@@ -224,6 +224,14 @@ async function uiCraft(page: Page, pattern: (number | 0)[], grid = 2) {
 }
 
 
+async function ensureLocked(page: Page) {
+  for (let i = 0; i < 8; i++) {
+    if (await page.evaluate(() => (window as any).__bv.input.pointerLocked)) return true;
+    await acquireLock(page); await sleep(250);
+  }
+  return false;
+}
+
 async function isPaused(page: Page) {
   return page.evaluate(() => {
     const el = document.getElementById('pause-menu');
@@ -332,7 +340,8 @@ async function main() {
     while (Date.now() - t0 < ms) {
       await page.evaluate(() => { const bv = (window as any).__bv; bv.mobs.mobs = bv.mobs.mobs.filter((m: any) => m.__test);
         for (const m of bv.mobs.mobs) if (m.__pin) { m.x = m.__pin[0]; m.z = m.__pin[1]; } });
-      min = Math.min(min, (await st(page)).health); await sleep(250);
+      const h = (await st(page)).health;
+      min = Math.min(min, h); await sleep(100);
     }
     return min;
   };
@@ -386,7 +395,7 @@ async function main() {
   await page.evaluate(() => { const a = document.getElementById('achieve-toast'); if (a) a.innerHTML = ''; });
   const toastText = () => page.evaluate(() => document.getElementById('achieve-toast')?.textContent ?? '');
   await aim(page, 8.5, 46.05, 8.5, 8.5, 45.9, 6.5);
-  await acquireLock(page);
+  await ensureLocked(page); await sleep(150);
   await page.mouse.down({ button: 'right' }); await sleep(80); await page.mouse.up({ button: 'right' });
   await sleep(600);
   const placedDirt = await countItem(page, 2);
@@ -394,7 +403,7 @@ async function main() {
   // table: place one via __bv (setup), open with real RMB, craft log → planks with real clicks
   await page.evaluate(() => { const bv = (window as any).__bv; bv.world.setBlock(10, 46, 8, 11); });
   await aim(page, 8.5, 46.05, 8.5, 10.5, 46.5, 8.5);
-  await acquireLock(page);
+  await ensureLocked(page); await sleep(150);
   await page.mouse.down({ button: 'right' }); await sleep(80); await page.mouse.up({ button: 'right' });
   await sleep(500);
   const tableOpen = await page.evaluate(() => (window as any).__bv.input.inventoryOpen);
@@ -406,6 +415,21 @@ async function main() {
   if (await page.evaluate(() => (window as any).__bv.input.inventoryOpen)) { await page.keyboard.press('KeyE'); await sleep(300); }
   record('P10-craft-achievement', placedDirt === 2 && !/Håndverk/.test(tPlace) && tableOpen && planks === 4 && /Håndverk/.test(tCraft) ? 'PASS' : 'FAIL',
     `placed=${placedDirt === 2} toastAfterPlace="${tPlace}" table=${tableOpen} crafted=${crafted} planks=${planks} toastAfterCraft="${tCraft}"`);
+
+  // P11 — HUD: hearts/hunger rows keep their position as they empty; empty hearts stay visible
+  const rowRects = () => page.evaluate(() => {
+    const r = (id: string) => { const b = document.getElementById(id)!.getBoundingClientRect(); return [Math.round(b.left), Math.round(b.right)]; };
+    return { hearts: r('hearts'), hunger: r('hunger') };
+  });
+  await page.evaluate(() => { const bv = (window as any).__bv; bv.player.health = 20; bv.player.hunger = 20; });
+  await sleep(400);
+  const full = await rowRects();
+  await page.evaluate(() => { const bv = (window as any).__bv; bv.player.health = 3; bv.player.hunger = 1; });
+  await sleep(400);
+  const low = await rowRects();
+  await shot(page, 'it13-08-hud-tom.png');
+  await page.evaluate(() => { const bv = (window as any).__bv; bv.player.health = 20; bv.player.hunger = 20; });
+  record('P11-hud-stable', JSON.stringify(full) === JSON.stringify(low) ? 'PASS' : 'FAIL', `full=${JSON.stringify(full)} low=${JSON.stringify(low)}`);
 
   // P5 — quit to title, reopen the same world: old session must be gone (no loop, no autosave
   // over the reopened world, WebGL context freed), and the world/position must reload.

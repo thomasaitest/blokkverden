@@ -201,9 +201,13 @@ canvas#game {
 #hearts .heart.half { color: transparent; background: linear-gradient(90deg, #e33 50%, #6a2a2a 50%); -webkit-background-clip: text; background-clip: text; text-shadow: none; }
 #hunger { display: flex; flex-direction: row-reverse; } /* MC: hunger drains from the left, fills from the right */
 #hunger .drum.half { clip-path: inset(0 0 0 50%); }
-#hearts .heart.empty { color: #422; opacity: 0.7; }
+/* Fixed cell width: the row (and the centred hunger bar next to it) must not shift as hearts empty. */
+#hearts .heart { display: inline-block; width: 1em; text-align: center; }
+/* MC: empty heart = dark container with a light outline, clearly visible (also on the red death screen) */
+#hearts .heart.empty { color: #3a1010; text-shadow: 0 0 1px #ddd, 0 0 1px #ddd, 0 1px 2px #000; }
 #hunger .drum.full { filter: none; }
-#hunger .drum.empty { opacity: 0.35; }
+#hunger .drum { display: inline-block; width: 1em; text-align: center; }
+#hunger .drum.empty { opacity: 0.45; filter: grayscale(1) brightness(0.45); }
 
 .stack-count {
   position: absolute;

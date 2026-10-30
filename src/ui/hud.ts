@@ -143,7 +143,7 @@ export function createHud(root: HTMLElement, inv: Inventory, atlas: HTMLCanvasEl
         const half = !full && p.health >= i * 2 + 1;
         const span = document.createElement('span');
         span.className = 'heart' + (full ? ' full' : half ? ' half' : ' empty');
-        span.textContent = full || half ? '♥' : '♡';
+        span.textContent = '♥'; // same glyph for all states (♡ was narrower → bar shifted)
         hearts.appendChild(span);
       }
       for (let i = 0; i < 10; i++) {
@@ -151,7 +151,7 @@ export function createHud(root: HTMLElement, inv: Inventory, atlas: HTMLCanvasEl
         const half = !full && p.hunger >= i * 2 + 1;
         const span = document.createElement('span');
         span.className = 'drum' + (full ? ' full' : half ? ' half' : ' empty');
-        span.textContent = full || half ? '🍗' : '○';
+        span.textContent = '🍗'; // empty = greyed drumstick, constant width (MC)
         hunger.appendChild(span);
       }
       if (p.inWater || p.air < 20) {

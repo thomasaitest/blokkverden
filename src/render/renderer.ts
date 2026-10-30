@@ -182,14 +182,18 @@ export class GameRenderer {
     const sunY = Math.sin(angle);
     this.sun.position.set(Math.cos(angle) * 100, sunY * 100, 40);
     const day = Math.max(0, sunY);
-    this.sun.intensity = 0.2 + day * 0.85;
-    this.ambient.intensity = 0.22 + day * 0.35;
+    // MC-like daylight: faces are lit almost evenly by sky light (the mesher already applies MC's fixed
+    // face shading top 1.0 / N-S 0.85 / E-W 0.75 / bottom 0.55). Three's Lambert divides by π, so scale
+    // by π to get the full texture colour at noon. Before: sun-direction-heavy lighting left the world at
+    // ~55 % brightness at noon with sides at ~30 % (muddy sand, near-black grass sides).
+    this.sun.intensity = Math.PI * 0.15 * day;
+    this.ambient.intensity = Math.PI * (0.1 + 0.8 * day);
     if (day > 0.2) this.skyColor.setRGB(0.53, 0.71, 0.88);
     else if (day > 0) this.skyColor.setRGB(0.85, 0.45 + day, 0.35);
     else this.skyColor.setRGB(0.04, 0.05, 0.1);
     this.renderer.setClearColor(this.skyColor);
     (this.scene.fog as THREE.Fog).color.copy(this.skyColor);
-    this.hemi.intensity = 0.12 + day * 0.28;
+    this.hemi.intensity = 0.12 + day * 0.1;
   }
 
   private applyHelveteSky(): void {

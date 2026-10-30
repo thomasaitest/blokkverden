@@ -1,5 +1,5 @@
 {
-  "when": "2026-10-30T23:21:40.318Z",
+  "when": "2026-10-30T23:24:09.755Z",
   "results": [
     {
       "id": "V-lighting-shots",
@@ -19,12 +19,12 @@
     {
       "id": "S3-suffocation",
       "status": "PASS",
-      "notes": "overlay=true/false buried={\"feet\":8,\"head\":8,\"above\":0} hpAfter1.8s=16.399999999999977 y=46.01 afterDig y=47.00 hp=16.770824999999956->17.083299999999937"
+      "notes": "overlay=true/false buried={\"feet\":8,\"head\":8,\"above\":0} hpAfter1.8s=17.37082499999998 y=46.00 afterDig y=47.00 hp=16.762499999999957->17.04999999999994"
     },
     {
       "id": "L1-leaf-decay",
       "status": "PASS",
-      "notes": "logsBroken=3 leaves before=42 +1.5s=39 +9.5s=21 end=1"
+      "notes": "logsBroken=3 leaves before=42 +1.5s=40 +9.5s=26 end=1"
     },
     {
       "id": "L2-placed-leaf-persistent",
@@ -34,10 +34,10 @@
   ],
   "bugs": [],
   "marks": {
-    "V": 7.425,
-    "S1": 11.368,
-    "S2": 13.82,
-    "S3": 15.744,
-    "L": 21.963
+    "V": 6.954,
+    "S1": 10.768,
+    "S2": 13.141,
+    "S3": 15.04,
+    "L": 21.029
   }
 }

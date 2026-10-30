@@ -4,7 +4,7 @@ Original voxel-sandkasse. Ingen Mojang-assets.
 
 ## Iterasjon 16 (2026-10-30/31)
 
-Start: fre. 30. okt. 23:46 CET · Slutt: SLUTTID CET (~VARIGHET min) · gren `dev` (ikke publisert)
+Start: fre. 30. okt. 23:46 CET · Slutt: lør. 31. okt. 00:33 CET (~47 min) · gren `dev` (ikke publisert)
 
 ### Fokus
 Feiljakt med ekte tastatur/mus i Chromium: graving under sand, hogst av trær, lys/farger midt på dagen, kjernetesten. `__bv` bare til oppsett.
@@ -14,7 +14,7 @@ Feiljakt med ekte tastatur/mus i Chromium: graving under sand, hogst av trær, l
 2. Løv ga eple 8 % og pinner 10 % → nå som MC eik: eple 0,5 %, 1–2 pinner 2 %
 3. Kjernetest I2 prøvde å lage mobber med ukjente navn («zombi»/«skjelett») → bestod bare hvis det tilfeldigvis gikk mobber rundt (ble PARTIAL i denne runden). Bruker nå `vandrer`/`bueskytt` og krever en fiendtlig mobb
 4. Sand som landet i hodet løftet deg opp gjennom blokka, og kameraet så gjennom verden (røntgen). Nå: fast, ser sandteksturen, kveles (se ny funksjon)
-5. Landsbyer/ruiner/fangehull ble først bygd når du kom innen 2 chunks — hus «poppet» opp rett ved deg, oppå det du hadde bygd, eller rundt deg (fanget spilleren). Nå bygges de innen ~2 s etter at terrenget genereres, langt utenfor rekkevidde (som MC). Funnet fordi kjernetest B3 plutselig sto fast inne i en husvegg
+5. Landsbyer/ruiner/fangehull ble først bygd når du kom innen 2 chunks — hus «poppet» opp rett ved deg, oppå det du hadde bygd, eller rundt deg (fanget spilleren). Nå bygges de innen ~2 s etter at terrenget genereres, langt utenfor rekkevidde (som MC), og aldri innen 2 chunks fra der du står når verdenen starter/du teleporteres (en ny verden startet med spilleren inne i en husvegg). Funnet fordi kjernetest B3 plutselig sto fast inne i en husvegg
 6. Helt mørke huler (lys 0) var gråe og godt synlige; nå nesten svarte som i MC, mens fakkel-/dagslys er like sterkt eller sterkere enn før (ny lyskurve)
 7. Kjernetest-padden (`flatPad`) venter nå til terreng og bygninger rundt er generert før den flates ut
 
@@ -24,9 +24,9 @@ Feiljakt med ekte tastatur/mus i Chromium: graving under sand, hogst av trær, l
 - Løvforfall: hugger du et tre, forsvinner løvet gradvis over ~2–20 s (ikke løv som fortsatt er innen 6 av en annen stamme). Løv du plasserer selv forsvinner aldri
 
 ### Playtest
-- Core: **55 PASS / 0 FAIL / 0 PARTIAL** (`scripts/core-playtest.ts`, endelig bygg) — CORESTATUS
-- it16-verify: **VERIFYSTATUS** (`scripts/it16-verify.ts`: V, S1–S3, L1–L2; ny seksjon N i CORE-PLAYTEST.md)
-- VITESTSTATUS
+- Core: **55 PASS / 0 FAIL / 0 PARTIAL** (`scripts/core-playtest.ts`, endelig bygg) — kjørt alene etter siste endring; H2 (spise) trenger fortsatt ett nytt forsøk i headless, som før
+- it16-verify: **6/6 PASS** (`scripts/it16-verify.ts`: V, S1–S3, L1–L2; ny seksjon N i CORE-PLAYTEST.md)
+- 84 vitest grønne (13 nye: fallende sand, løvforfall, løvdrop-rater, kvelning/fysikk, lyskurve)
 
 ### Kjente begrensninger
 - Sand faller umiddelbart (ingen synlig fallanimasjon ennå)

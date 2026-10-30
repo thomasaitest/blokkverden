@@ -1,6 +1,8 @@
 import './style.css';
 import { BlockId, isSolid } from './blocks/types';
 import { Inventory } from './items/inventory';
+import { updateGravityAround } from './world/gravity';
+import { LeafDecay, LEAF_PERSISTENT } from './world/leafdecay';
 import { type ItemStack, ITEMS, breakDuration, dropForBlock, damageTool, armorPoints, ItemId, blockMaterial } from './items/types';
 import { bindDesktopControls, consumeLook, consumePlace, createInput } from './player/controls';
 import { createPlayer, movePlayer, EYE_HEIGHT } from './player/physics';
@@ -198,11 +200,17 @@ async function runGame(
   app.appendChild(deathEl);
 
   const doSave = () => saveWorldNamed(worldName, world, player, inv, drops, containers, dayTime, respawn, xp.toJSON(), structuresToJSON());
+  const leafDecay = new LeafDecay();
   const markMesh = () => { meshesDirty = true; renderer.markChunksDirty(); };
   // MC explosions: containers spill, chunks remesh, smoke puff
   mobs.takeContainer = (x, y, z) => { const c = containers.contentsAt(x, y, z); containers.removeAt(x, y, z); return c; };
   mobs.onBlast = (x, y, z, blocks) => {
     particles.burst(x, y, z, 0x555555, 40, 'break');
+    // MC: sand over the crater falls; blasted trees shed their leaves
+    for (const b of blocks) {
+      if (b.id === BlockId.Log || b.id === BlockId.Leaves) leafDecay.onRemoved(world, b.x, b.y, b.z);
+      updateGravityAround(world, b.x, b.y, b.z, (gx, gy, gz, gid) => { const gd = dropForBlock(gid, null); if (gd) drops.spawn(gx, gy, gz, gd); });
+    }
     if (blocks.length) { markMesh(); hud.markDirty(); }
   };
 
@@ -888,7 +896,7 @@ async function runGame(
     enterHelvete: () => {
       if (dimension === 'helvete') return { ok: false, reason: 'already' };
       owReturn = { x: player.x, y: player.y, z: player.z };
-      world.switchDimension('helvete');
+      leafDecay.clear(); world.switchDimension('helvete');
       dimension = 'helvete';
       const spawn = world.findHelveteSpawn();
       const rx = Math.floor(spawn.x) - 1, ry = Math.floor(spawn.y), rz = Math.floor(spawn.z) + 3;
@@ -906,7 +914,7 @@ async function runGame(
     },
     exitHelvete: () => {
       if (dimension !== 'helvete') return { ok: false, reason: 'not-in-helvete' };
-      world.switchDimension('overworld');
+      leafDecay.clear(); world.switchDimension('overworld');
       dimension = 'overworld';
       player.x = owReturn.x; player.y = owReturn.y; player.z = owReturn.z;
       player.vx = player.vy = player.vz = 0;
@@ -1093,7 +1101,7 @@ async function runGame(
       if (inPortal) {
         if (dimension === 'overworld') {
           owReturn = { x: player.x, y: player.y, z: player.z };
-          world.switchDimension('helvete');
+          leafDecay.clear(); world.switchDimension('helvete');
           dimension = 'helvete';
           const spawn = world.findHelveteSpawn();
           // Return portal near spawn (only once if not already lit nearby)
@@ -1109,7 +1117,7 @@ async function runGame(
           markMesh();
           renderer.syncChunks(world, true);
         } else {
-          world.switchDimension('overworld');
+          leafDecay.clear(); world.switchDimension('overworld');
           dimension = 'overworld';
           player.x = owReturn.x; player.y = owReturn.y; player.z = owReturn.z;
           player.vx = player.vy = player.vz = 0;
@@ -1256,6 +1264,10 @@ async function runGame(
               containers.removeAt(hit.x, hit.y, hit.z);
             }
             if (drop) drops.spawn(hit.x, hit.y, hit.z, drop);
+            // MC: cut logs/leaves make unconnected natural leaves decay over time
+            if (id === BlockId.Log || id === BlockId.Leaves) leafDecay.onRemoved(world, hit.x, hit.y, hit.z);
+            // MC: sand above the broken block falls
+            updateGravityAround(world, hit.x, hit.y, hit.z, (gx, gy, gz, gid) => { const gd = dropForBlock(gid, null); if (gd) drops.spawn(gx, gy, gz, gd); });
             // MC: a torch / red dust / pressure plate standing on the broken block pops off as an item
             {
               const above = world.getBlock(hit.x, hit.y + 1, hit.z);
@@ -1415,6 +1427,10 @@ async function runGame(
               );
               if (placeId != null && (dest === BlockId.Air || dest === BlockId.Water) && !intersectsPlayer) {
                 world.setBlock(px, py, pz, placeId);
+                // MC: player-placed leaves are persistent (never decay)
+                if (placeId === BlockId.Leaves) world.setMeta(px, py, pz, LEAF_PERSISTENT);
+                // MC: sand placed over air falls
+                updateGravityAround(world, px, py, pz, (gx, gy, gz, gid) => { const gd = dropForBlock(gid, null); if (gd) drops.spawn(gx, gy, gz, gd); });
                 if (player.creative) inv.add(taken); // restore
                 if (placeId === BlockId.PortalFrame) lightPortal(world, px, py, pz);
                 sound.placeBlock(); markMesh();
@@ -1426,6 +1442,13 @@ async function runGame(
         }
       }
       }
+    }
+
+    for (const lp of leafDecay.update(dt, world)) {
+      const ld = dropForBlock(BlockId.Leaves, null);
+      if (ld) drops.spawn(lp.x, lp.y, lp.z, ld);
+      particles.burst(lp.x + 0.5, lp.y + 0.5, lp.z + 0.5, 0x3f7f2f, 6, 'break');
+      markMesh();
     }
 
     dayTime += dt / DAY_LEN;

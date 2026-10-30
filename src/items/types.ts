@@ -193,11 +193,12 @@ export function dropForBlock(blockId: number, held: ItemStack | null): ItemStack
     return stack(2, 1);
   }
   if (blockId === 7) {
-    if (Math.random() < 0.08) return stack(52, 1);
-    if (Math.random() < 0.1) return stack(50, 1);
+    // MC oak leaves (no silk/shears): apple 0.5 %, 1–2 sticks 2 %
+    const r = Math.random();
+    if (r < 0.005) return stack(52, 1);
+    if (r < 0.025) return stack(50, 1 + (Math.random() < 0.5 ? 1 : 0));
     return null;
   }
-  if (blockId === 7 && Math.random() < 0.05) return stack(63, 1); // seeds from leaves rare — handled above
   if (blockId === 23) return null; // crops handled by harvestCrop
   if (blockId === 22) return stack(2, 1);
   if (blockId === 9) return null;

@@ -2,6 +2,44 @@
 
 Original voxel-sandkasse. Ingen Mojang-assets.
 
+## Iterasjon 19 (2026-10-31)
+
+Start: lør. 31. okt. 02:53 CET · Slutt: lør. 31. okt. 03:32 CET (~39 min) · gren `dev` (ikke publisert)
+
+### Fokus
+Feiljakt med ekte tastatur/mus i Chromium (baseline: core, it18-explore, it17/it18-verify), så nattlys og teksturer som viste seg å være feil i skjermbildene. Deretter tre MC-ting fra it18-listen: fyrstål + ild, lava som brenner, tynne dører. `__bv` bare til oppsett.
+
+### Fikset
+1. Fakler, ild, lava og glødstein lyste ikke opp noe ute om natta. Lyset var én verdi (maks av himmel- og blokklys), og hele scenen ble mørklagt om natta. Nå skilles himmellys og blokklys i meshen, og bare himmellyset dempes om natta (som i MC). En fakkel på gresset om natta gir nå en lys sirkel rundt seg
+2. Store flater viste én strukket tekstur: sammenslåtte flater (greedy meshing) strakk ÉN tekstur-rute over opptil 16×16 blokker. Flatt gress ble store uskarpe ruter, og en 5×3 vegg ble én stor planke. Nå gjentas teksturen én gang per blokk
+3. Lava gjorde ingenting: ingen skade, og du falt gjennom den som luft. Nå som MC: treg (~1 blokk/s), demper fall, 4 skade per 0,5 s, og du brenner i 15 s etterpå
+4. Dører kolliderte som en hel blokk. Nå er døra et tynt panel (3/16) på kanten, 2 blokker høyt. Åpen dør ligger inntil hengselsiden, og du går rett gjennom. Panelet tegnes også der det kolliderer
+5. it18-explore X6 (stige) feilet av og til fordi testen var for streng på hvor du står etter at du har klatret over kanten. Grensen er justert (du står fortsatt på veggen). X7 er oppdatert for tynne dører
+
+### Nye funksjoner (3)
+- Fyrstål: jernbarre + flint (fritt mønster), 64 bruk. Høyreklikk på en blokkside tenner ild foran (på fast grunn eller inntil noe som brenner), og høyreklikk på en helvetesportalramme tenner portalen
+- Ild: X-modell med egen tekstur, lysnivå 15, ingen kollisjon. Den slukkes med ett slag og gir ingenting. Ild brenner ut etter 3–7 s på stein og varer evig på helstein. Den sprer seg til og brenner opp tre, planker, løv, ull og planter, og vann slukker den. Sand og grus faller gjennom ild. Ild i lagrede verdener blir plukket opp igjen
+- Brenning: står du i ild, får du 1 skade per 0,5 s. Etterpå brenner du 1 skade/s i 8 s, med flammer nederst på skjermen. Vann slukker deg, og du slutter å brenne når du dør
+
+### Playtest
+- Core: **56 PASS / 0 FAIL / 0 PARTIAL** (`scripts/core-playtest.ts`; H2 trenger fortsatt ett nytt forsøk i headless, som før)
+- it19-verify: **8/8 PASS** (`scripts/it19-verify.ts`: FS0 lage fyrstål, FS1 tenne ild + brenne ut, FS2 ild sprer seg i hytte, FS3 gå gjennom ild → brenner → vann slukker, FS4 portal med fyrstål, L1 lava, D1 tynn dør, NL1 fakkel lyser om natta)
+- Regresjon: it18-verify 8/8, it18-explore 11/11, it17-verify 13/13, it16-verify 6/6
+- 127 vitest grønne (13 nye: ild/fyrstål/brenning, lava, dørpanel, blokklys vs himmellys, teksturgjentakelse)
+- Ny seksjon Q i CORE-PLAYTEST.md
+
+### Kjente begrensninger
+- Blokklys stopper ved chunk-grenser når nabochunken lyses på nytt (fakkel nær en chunk-kant lyser ikke inn i nabochunken). En enkel fiks ga «spøkelseslys» når fakkelen ble fjernet, så den ble ikke tatt med. Lyset må beregnes for flere chunker samtidig
+- Merkeboksen rundt dør og stige er fortsatt en hel blokk (bare kollisjonen er tynn)
+- Ild: regn slukker den ikke, lava tenner ikke ting rundt seg, og mobber tar ikke skade av ild eller lava
+- Helvetesportalen tennes fortsatt også med tom hånd (som før). Fyrstål virker i tillegg
+- Sand og grus faller fortsatt umiddelbart (ingen fallanimasjon), og beinmel på høyt gress gjør ingenting (ingen dobbelt høyt gress ennå)
+
+### Media
+public/progress/it19/ (lokalt på `dev`, ikke publisert): skjermbilder it19-01…10 (ild om natta, ild sprer seg, nedbrent hytte, brenning, portal, lava, tynn dør lukket/åpen, før/etter fakkel om natta, fakkel ovenfra), klipp `clip-it19-fyrstaal-ild.webm`, `clip-it19-ild-sprer-seg.webm`, `clip-it19-tynn-doer.webm`
+
+---
+
 ## Iterasjon 18 (2026-10-31)
 
 Start: lør. 31. okt. 01:50 CET · Slutt: lør. 31. okt. 02:36 CET (~46 min) · gren `dev` (ikke publisert)

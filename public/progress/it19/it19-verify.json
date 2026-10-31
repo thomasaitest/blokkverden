@@ -1,15 +1,45 @@
 {
-  "when": "2026-10-31T02:20:19.190Z",
+  "when": "2026-10-31T02:32:09.168Z",
   "results": [
+    {
+      "id": "FS0-craft-flint-and-steel",
+      "status": "PASS",
+      "notes": "{\"fs1\":1,\"iron\":1,\"flint\":1}"
+    },
+    {
+      "id": "FS1-light-fire",
+      "status": "PASS",
+      "notes": "{\"lit\":83,\"dur\":63,\"light\":15,\"burnedOutAfter\":3,\"after\":0}"
+    },
     {
       "id": "FS2-fire-spreads",
       "status": "PASS",
-      "notes": "{\"lit\":83,\"p0\":57,\"p1\":0,\"maxFires\":19}"
+      "notes": "{\"lit\":83,\"p0\":57,\"p1\":0,\"maxFires\":22}"
+    },
+    {
+      "id": "FS3-burn-and-water",
+      "status": "PASS",
+      "notes": "{\"h0\":20,\"h1\":19.66654999999997,\"inside\":{\"burn\":8,\"z\":7.8452938999999855,\"overlay\":\"block\"},\"s1\":{\"overlay\":\"none\",\"burn\":0,\"inWater\":true,\"z\":3.894985100000018}}"
+    },
+    {
+      "id": "FS4-portal-flint-and-steel",
+      "status": "PASS",
+      "notes": "{\"portal\":6,\"dur\":63}"
+    },
+    {
+      "id": "L1-lava",
+      "status": "PASS",
+      "notes": "{\"s\":{\"inLava\":true,\"hp\":16.112474999999993,\"burn\":15},\"speed\":\"0.98\",\"out\":{\"hp\":11.533275,\"burn\":13.4334}}"
     },
     {
       "id": "D1-door-thin-panel",
       "status": "PASS",
-      "notes": "{\"placed\":26,\"m\":0,\"zClosed\":\"17.56\",\"open\":1,\"zOpen\":\"11.44\"}"
+      "notes": "{\"placed\":26,\"m\":0,\"zClosed\":\"17.56\",\"open\":1,\"zOpen\":\"11.30\"}"
+    },
+    {
+      "id": "NL1-torch-lights-night",
+      "status": "PASS",
+      "notes": "{\"torch\":12,\"before\":{\"near\":27.04037262088477,\"far\":59.205403645833336},\"after\":{\"near\":54.949162487139915,\"far\":59.205403645833336}}"
     }
   ],
   "bugs": []

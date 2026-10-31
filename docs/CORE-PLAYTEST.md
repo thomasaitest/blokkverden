@@ -183,6 +183,8 @@ Last run: 2026-10-31 02:26–02:35 CET · it18 core (56 PASS / 0 FAIL) + scripts
 | Q5 | Portal | Flint and steel on a complete portal frame lights it (1 use) | PASS | FS4 |
 | Q6 | Lava | Slow (~1 b/s), breaks a fall, 4 dmg / 0.5 s, keeps burning 15 s after leaving | PASS | L1 + vitest (was: lava did nothing — no damage, fell through it like air) |
 | Q7 | Doors (thin) | A closed door collides only as a 3/16 panel on its edge (2 tall); open: panel against the hinge side, walk through | PASS | D1 + vitest (was: full block) |
+| Q8 | Light at night | Torch/fire/lava/glowstone light is not dimmed at night (only sky light is) | PASS | NL1 screenshots + vitest (was: one combined light value, so a torch at night lit nothing outdoors) |
+| Q9 | Textures | Every block face shows its own texture tile (also on big flat surfaces) | PASS | NL1/FS2/D1 screenshots + vitest (was: greedy-merged faces stretched ONE tile over up to 16×16 blocks) |
 
 ## Method rules
 1. **Real input:** synthesized keyboard/mouse via pointer lock. `__bv` may set up a scenario only — never perform the action under test.

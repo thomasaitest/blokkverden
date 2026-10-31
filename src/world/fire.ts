@@ -31,7 +31,7 @@ interface Fire { x: number; y: number; z: number; age: number; life: number; acc
 
 export const FIRE_TICK = 0.5;
 /** Chance per fire tick that one flammable neighbour catches fire (is burnt and replaced by fire). */
-export const SPREAD_CHANCE = 0.12;
+export const SPREAD_CHANCE = 0.2;
 
 /**
  * Active fires. Each fire ticks every 0.5 s: flammable neighbours may catch fire (they burn away and
@@ -86,7 +86,7 @@ export class FireSystem {
         const base = w.getBlock(f.x, f.y - 1, f.z);
         const unsupported = !isSolid(base) && !hasFlammableNeighbour(w, f.x, f.y, f.z);
         if (unsupported || (!isEternalBase(base) && f.age >= f.life && !hasFlammableNeighbour(w, f.x, f.y, f.z))
-          || (!isEternalBase(base) && f.age >= f.life * 3)) {
+          || (!isEternalBase(base) && f.age >= f.life * 4)) {
           w.setBlock(f.x, f.y, f.z, BlockId.Air);
           this.fires.delete(k);
           changed.push({ x: f.x, y: f.y, z: f.z });

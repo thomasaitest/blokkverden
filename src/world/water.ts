@@ -12,15 +12,18 @@ export function isWashable(id: number): boolean {
 
 /** Update budget for the 3×3 chunks around the focus (player). */
 export const NEAR_BUDGET = 400;
+const LAVA_DIRS = [[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], [0, -1, 0]] as const; // MC: water beside or above lava (not below it)
 
 /** Tick flowing water with a budget. onWash is called for each washable block water flows into (before it is replaced). */
 export function tickWater(
   world: World, budget = 80, onWash?: (x: number, y: number, z: number, id: number) => void,
   focus?: { x: number; z: number; radius?: number },
+  onLava?: (x: number, y: number, z: number) => void,
 ): number {
   let n = 0;
   const updates: { x: number; y: number; z: number; level: number }[] = [];
   const recede: { x: number; y: number; z: number; level: number }[] = [];
+  const lavaHits: { x: number; y: number; z: number }[] = [];
   // Never flow into chunks that aren't generated (it18: water at the edge of the loaded area kept
   // generating new chunks forever and ate the whole update budget, so water near you never moved).
   const loaded = (x: number, z: number) => world.hasChunkAt(x, z);
@@ -48,6 +51,14 @@ export function tickWater(
           const level = c.waterLevel[c.index(lx, y, lz)] || 7;
           const wx = ox + lx;
           const wz = oz + lz;
+
+          // it23 (MC): water touching lava turns the lava into obsidian (portalramme) with a fizz — near the player only
+          if (near) {
+            for (const [dx, dy, dz] of LAVA_DIRS) {
+              if (world.getBlock(wx + dx, y + dy, wz + dz) !== BlockId.Lava) continue;
+              lavaHits.push({ x: wx + dx, y: y + dy, z: wz + dz });
+            }
+          }
 
           // Fall down
           if (y > 0) {
@@ -102,6 +113,11 @@ export function tickWater(
     }
   }
 
+  for (const l of lavaHits) {
+    if (world.getBlock(l.x, l.y, l.z) !== BlockId.Lava) continue;
+    world.setBlock(l.x, l.y, l.z, BlockId.PortalFrame);
+    onLava?.(l.x, l.y, l.z);
+  }
   for (const r of recede) {
     if (world.getBlock(r.x, r.y, r.z) !== BlockId.Water) continue;
     world.setBlock(r.x, r.y, r.z, BlockId.Air);
@@ -115,5 +131,5 @@ export function tickWater(
     }
     world.setWater(u.x, u.y, u.z, u.level);
   }
-  return updates.length + recede.length;
+  return updates.length + recede.length + lavaHits.length;
 }

@@ -1317,7 +1317,10 @@ async function runGame(
         if (wid === BlockId.Crop) harvestCrop(world, wx, wy, wz, drops);
         else { const wd = dropForBlock(wid, null); if (wd) drops.spawn(wx, wy, wz, wd); }
         markMesh();
-      }, { x: player.x, z: player.z, radius: 4 });
+      }, { x: player.x, z: player.z, radius: 4 }, (lx, ly, lz) => {
+        // it23 (MC): water + lava → obsidian, with a fizz and a puff of steam
+        sound.fizz(); particles.burst(lx + 0.5, ly + 1.0, lz + 0.5, 0xdddddd, 10, 'break'); markMesh();
+      });
     }
     cropAcc += dt;
     if (cropAcc > 1.2) {

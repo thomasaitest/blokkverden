@@ -115,3 +115,25 @@ describe('it23 flowing water dries up (MC)', () => {
     expect(w.getWaterLevel(8, 21, 8)).toBe(7);
   });
 });
+
+describe('it23 water + lava → obsidian (MC)', () => {
+  it('water poured next to lava turns it into portalramme (obsidian); lava below water too; water below lava does not', () => {
+    const w = flat();
+    w.setBlock(8, 21, 8, BlockId.Lava);
+    pour(w, WATER_BUCKET, 9, 21, 8, false);
+    const fz: number[][] = [];
+    tickWater(w, 400, undefined, { x: 8, z: 8 }, (x, y, z) => fz.push([x, y, z]));
+    expect(w.getBlock(8, 21, 8)).toBe(BlockId.PortalFrame);
+    expect(fz).toEqual([[8, 21, 8]]);
+    // lava under a water source
+    w.setBlock(3, 21, 3, BlockId.Lava); w.setBlock(3, 22, 3, BlockId.Glass); w.setBlock(3, 22, 3, BlockId.Air);
+    w.setWater(3, 22, 3, 7);
+    tickWater(w, 400, undefined, { x: 8, z: 8 });
+    expect(w.getBlock(3, 21, 3)).toBe(BlockId.PortalFrame);
+    // lava sitting on top of water: stays (MC needs water beside/above the lava)
+    w.setWater(12, 21, 12, 7); w.setBlock(12, 22, 12, BlockId.Lava);
+    for (let x = 11; x <= 13; x++) for (let z = 11; z <= 13; z++) if (x !== 12 || z !== 12) w.setBlock(x, 21, z, BlockId.Stone);
+    tickWater(w, 400, undefined, { x: 8, z: 8 });
+    expect(w.getBlock(12, 22, 12)).toBe(BlockId.Lava);
+  });
+});

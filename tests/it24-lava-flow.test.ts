@@ -70,7 +70,7 @@ describe('it24 flowing lava (MC)', () => {
     expect(w.getWaterLevel(10, 21, 8)).toBe(6);
   });
   it('render height: source/falling full, flow 1–3 lower', () => {
-    expect(lavaHeight(7)).toBe(1); expect(lavaHeight(8)).toBe(1);
+    expect(lavaHeight(0)).toBe(1); expect(lavaHeight(8)).toBe(1); expect(lavaHeight(7)).toBe(0.875);
     expect(lavaHeight(3)).toBeLessThan(1); expect(lavaHeight(1)).toBeLessThan(lavaHeight(2));
   });
 });

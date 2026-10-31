@@ -17,7 +17,8 @@ export const LAVA_FALLING = 8;
  * Helvete lava drops 1 (7…1 → 7 blocks). Height = strength/8, so overworld heights are unchanged (0.75/0.5/0.25).
  */
 export function lavaHeight(meta: number): number {
-  if (meta >= 7) return 1;
+  // it26: source (0) and falling (8) are full; flowing strength 7 (next to a Helvete source) is 7/8, not full
+  if (meta === 0 || meta >= LAVA_FALLING) return 1;
   return Math.max(0.125, meta / 8);
 }
 

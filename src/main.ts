@@ -959,6 +959,7 @@ async function runGame(
     closeMap: () => { mapOpen = false; mapOverlay.style.display = 'none'; },
     openTrade: () => { if (traders[0]) openTrade(traders[0]); },
     getPerf: () => renderer.getPerfStats(),
+    boatSys: boats,
     setSectorMerge: (on: boolean) => renderer.setSectorMerge(on),
     setCreative: (on: boolean) => { player.creative = on; player.flying = on; },
     spawnWolf: () => {
@@ -1118,6 +1119,8 @@ async function runGame(
   (window as unknown as { __bv: typeof api; __BV: typeof api }).__bv = api;
   (window as unknown as { __BV: typeof api }).__BV = api;
 
+  // it26: a click that hit a boat must not also mine the block behind/under it (creative broke the ground)
+  let boatSwing = false;
   // Melee
   renderer.canvas.addEventListener('mousedown', (e) => {
     if (e.button !== 0 || invUi.isOpen() || dead || paused) return;
@@ -1129,6 +1132,20 @@ async function runGame(
       const atk = ITEMS[held?.id ?? -1]?.attack ?? 1;
       const crit = !player.onGround && player.vy < -0.05 ? 1.5 : 1;
       sound.swing();
+      // it26 (MC): punching a boat (not the one you sit in) breaks it after 3 quick hits and drops the boat item
+      const bp = boats.pickAt(player.x, player.y + EYE_HEIGHT, player.z, 3.2, player.yaw, player.pitch);
+      const bh = bp ? raycast(world, player) : null;
+      if (bp && (!bh || (bh.dist ?? 99) > bp.t)) {
+        const b = bp.boat;
+        boatSwing = true;
+        sound.mobHit();
+        particles.burst(b.x, b.y + 0.3, b.z, 0x8a6a3a, 6, 'sprint');
+        if (boats.hit(b, player.creative)) {
+          if (!player.creative) drops.spawn(Math.floor(b.x), Math.floor(b.y + 0.3), Math.floor(b.z), { id: ItemId.Boat, count: 1 });
+          sound.breakBlock();
+        }
+        return;
+      }
       const hit = mobs.hitAt(player.x, player.y + EYE_HEIGHT, player.z, 3.2, player.yaw, player.pitch, atk * crit, sound);
       if (hit) achieve.grant('first_kill');
       if (hit && held && ITEMS[held.id]?.tool === 'sword' && !player.creative) inv.setHeld(damageTool(held));
@@ -1460,7 +1477,8 @@ async function runGame(
       hit ? selectionBox(world.getBlock(hit.x, hit.y, hit.z), world.getWaterLevel(hit.x, hit.y, hit.z), world.getWaterLevel(hit.x, hit.y, hit.z),
         ladderWall(world.getWaterLevel(hit.x, hit.y, hit.z), (x, y, z) => world.getBlock(x, y, z), hit.x, hit.y, hit.z)) : undefined);
 
-    if (!invUi.isOpen() && input.breakHeld && hit && ITEMS[inv.held()?.id ?? -1]?.tool !== 'bow') {
+    if (!input.breakHeld) boatSwing = false;
+    if (!invUi.isOpen() && input.breakHeld && !boatSwing && hit && ITEMS[inv.held()?.id ?? -1]?.tool !== 'bow') {
       const key = `${hit.x},${hit.y},${hit.z}`;
       if (breakTarget !== key) { breakTarget = key; breakAcc = 0; }
       const id = world.getBlock(hit.x, hit.y, hit.z);

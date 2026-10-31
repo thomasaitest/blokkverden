@@ -356,7 +356,7 @@ function buildMesh(
         }
         const wLevel = id === BlockId.Water || id === BlockId.Lava || id === BlockId.Crop
           ? (chunk.waterLevel[chunk.index(lx, y, lz)] || (id === BlockId.Crop ? 0 : 7)) : 7;
-        let hTop = id === BlockId.Water || id === BlockId.Lava ? (id === BlockId.Lava ? lavaHeight(wLevel) : Math.min(1, Math.max(0.125, wLevel / 7)))
+        let hTop = id === BlockId.Water || id === BlockId.Lava ? (id === BlockId.Lava ? lavaHeight(chunk.waterLevel[chunk.index(lx, y, lz)] || 0) : Math.min(1, Math.max(0.125, wLevel / 7)))
           : id === BlockId.Crop ? Math.min(1, 0.4 + wLevel * 0.085) : 1;
         if (id === BlockId.Slab || id === BlockId.PressurePlate) hTop = id === BlockId.PressurePlate ? 0.1 : 0.5;
         const skipTop = (id === BlockId.Water || id === BlockId.Lava) && getWorld(wx, y + 1, wz) === id;
@@ -372,7 +372,7 @@ function buildMesh(
           if (!exposed && def.liquid && neighbor === id && face.dir[1] === 0 && getWorld(wx, y + 1, wz) !== id) {
             const nx = wx + face.dir[0], nz = wz + face.dir[2];
             const nm = getMeta(nx, y, nz);
-            const nh = getWorld(nx, y + 1, nz) === id ? 1 : id === BlockId.Lava ? lavaHeight(nm || 7) : Math.min(1, Math.max(0.125, (nm || 7) / 7));
+            const nh = getWorld(nx, y + 1, nz) === id ? 1 : id === BlockId.Lava ? lavaHeight(nm) : Math.min(1, Math.max(0.125, (nm || 7) / 7));
             exposed = nh < hTop - 0.01;
             // it25: draw only the step above the lower neighbour's surface (was from the cell bottom → two layers of
             // transparent water overlapped under the lower flow and looked darker)

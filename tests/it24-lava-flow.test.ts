@@ -129,7 +129,7 @@ describe('it24 lava flow in Helvete', () => {
       const fx = Math.floor(sp.x), fy = Math.floor(sp.y), fz = Math.floor(sp.z);
       expect(w.getBlock(fx, fy, fz)).not.toBe(BlockId.Lava);
       expect(w.getBlock(fx, fy + 1, fz)).not.toBe(BlockId.Lava);
-      expect(ms).toBeLessThan(process.env.CI ? 250 : 60);
+      expect(ms).toBeLessThan((globalThis as any).process?.env?.CI ? 250 : 60);
     }
   });
 });

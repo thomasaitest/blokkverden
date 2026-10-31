@@ -448,7 +448,7 @@ async function main() {
     await heal();
     await page.evaluate(() => {
       const bv = (window as any).__bv;
-      for (let x = 1; x <= 9; x++) for (let z = 12; z <= 20; z++) bv.world.setBlock(x, 50, z, 3); // roof
+      for (let x = 0; x <= 10; x++) for (let z = 12; z <= 26; z++) bv.world.setBlock(x, 50, z, 3); // roof (it25: larger — the burning pig sometimes wandered out from under a 9×9 roof)
       bv.forceRemeshAround?.();
       bv.mobs.clear();
       bv.mobs.spawn('gris', 5.5, 46.02, 17.5); bv.mobs.spawn('gris', 14.5, 46.02, 17.5);
@@ -472,12 +472,12 @@ async function main() {
     await shot(page, 'it22-08-regn-slukker.png');
     console.log('RB1 at shot', JSON.stringify(await page.evaluate(() => (window as any).__bv.mobInfo())));
     // pig 0 started under the roof, pig 1 in the open (they wander; check where they actually are)
-    const underRoof = (p: any) => p.x >= 1 && p.x < 10 && p.z >= 12 && p.z < 21;
+    const underRoof = (p: any) => p.x >= 0 && p.x < 11 && p.z >= 12 && p.z < 27;
     const roofPig = underRoof(pigs2[0]) ? pigs2[0] : null;
     const skyPig = !underRoof(pigs2[1]) ? pigs2[1] : null;
     record('RB1-rain-puts-out-burning', under > 5 && out.z < 11.5 && out.bt === 0 && pigs1[1] === 0 && !!roofPig && roofPig.bt > 3 && !!skyPig && skyPig.bt === 0 ? 'PASS' : 'FAIL',
       JSON.stringify({ under, out, pigs1, pigs2 }));
-    await page.evaluate(() => { const bv = (window as any).__bv; bv.mobs.clear(); bv.setWeather('clear', 0); bv.burn.burnTime = 0; for (let x = 1; x <= 9; x++) for (let z = 12; z <= 20; z++) bv.world.setBlock(x, 50, z, 0); });
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.mobs.clear(); bv.setWeather('clear', 0); bv.burn.burnTime = 0; for (let x = 0; x <= 10; x++) for (let z = 12; z <= 26; z++) bv.world.setBlock(x, 50, z, 0); });
     await sleep(300);
   }
 

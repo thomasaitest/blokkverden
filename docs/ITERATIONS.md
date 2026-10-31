@@ -2,6 +2,65 @@
 
 Original voxel-sandkasse. Ingen Mojang-assets.
 
+## Iterasjon 25 (2026-10-31)
+
+Start: lør. 31. okt. 08:48 CET · Slutt: lør. 31. okt. 09:23 CET (~35 min) · gren `dev` (ikke publisert)
+
+### Fokus
+Baseline først (core 56/56 med ekte tastatur/mus i Chromium). Deretter de kjente begrensningene fra it24: rennende væske hadde ingen strøm, lava i Helvete rant like kort som i oververdenen, og trinnsiden på vann ga dobbelt lag. Så de tilfeldige testene K1, BM1, X5/X6 og BK5. Til slutt melkebøtte. `__bv` bare til oppsett.
+
+### Fikset
+1. Rennende vann og lava hadde ingen strøm. Nå har væsken en strømretning som i MC (`getFlow`: mot lavere naboer og mot kanter der væsken faller). Står du stille i rennende vann, blir du båret med strømmen (ca. 1,4 blokker/s). Ting og dyr driver også med strømmen. Lava dytter mye svakere (sterkere i Helvete). En stille dam av kilder dytter ikke
+2. Lava i Helvete rant bare 3 blokker, som i oververdenen. Nå renner den 7 blokker og omtrent 3 ganger så fort (ett steg hvert 0,5 s), som i MC. Oververdenen er uendret: 3 blokker, ett steg hvert 1,5 s. Lavanivåene lagres nå som styrke 1–7 (oververden 6/4/2, Helvete 7…1). Høydene i oververdenen er de samme som før
+3. Trinnsiden mellom høy og lav væske ble tegnet helt fra bunnen av ruta. Under den lavere naboen lå det derfor to lag gjennomsiktig vann oppå hverandre (mørkere stripe). Nå tegnes bare trinnet over naboens overflate
+4. Tilfeldige tester (testoppsett og tidsmåling, ikke feil i spillet):
+   - K1 (slå ned tre): hogging for hånd tar 3 s spilltid, og headless Chromium går av og til under 20 fps. Testen ga opp etter 4,5 s veggtid. Nå venter den opptil 9 s, og står på tømmeret hvis det spratt unna (spillet plukker det opp selv)
+   - BM1 (beinmel på avling): avlingen rakk av og til å vokse ett steg av seg selv (tilfeldig vekst) i ventetiden før beinmelet, så kravet «steg 0 først» feilet. Nå sjekkes hoppet på 2–5 steg
+   - X5/X6 (hopp under tak, stige): målte etter veggtid. De måler nå etter spilltid (`simT`), og X5 tar høyeste punkt i hoppet i stedet for én måling rett ved toppen
+   - BK5 (vannbøtte på ild): ilden rakk av og til å brenne opp planken før vannet ble helt ut, og da landet vannet lavere. Testen bruker nå helstein (evig ild, brenner ikke), så den er stabil
+
+### Nye funksjoner (3)
+- Strøm i væske (se Fikset 1): spilleren, ting og dyr driver med rennende vann og lava
+- Melkebøtte: RMB på en ku med tom bøtte gir melkebøtte. Fra en stabel havner melkebøtta i inventaret, og andre dyr gir ingenting. Hold RMB i 1,6 s for å drikke, også med full sultlinje. Det fjerner effekter (Sult fra råttent kjøtt), og du får den tomme bøtta tilbake. Melk kan ikke helles ut. Eget hvitt ikon og egen lyd
+- Lava i Helvete renner 7 blokker, og fort (se Fikset 2)
+
+### Playtest
+- Core: **56 PASS / 0 FAIL / 0 PARTIAL** på endelig bygg. K1 gikk grønt (tømmeret plukket opp). H2 trenger fortsatt ett nytt forsøk, som før (`scripts/core-playtest.ts`). Baseline på it24-bygget: **56 PASS / 0 FAIL / 0 PARTIAL** (H2 trengte ett nytt forsøk, som før)
+- it25-verify: **8/8 PASS** (endelig bygg) (`scripts/it25-verify.ts`):
+  - CU1: heller vann (ekte RMB) i enden av en kanal (nivå 6/4/2 nedover). Står stille i strømmen og blir båret 2,1 blokker på 1,5 s spilltid, uten å komme ut av kurs
+  - CU2: tømmer kastet med Q ut i strømmen driver 2,3 blokker på 2 s
+  - CU3: en gris i kanalen (med høye vegger) driver ca. 3 blokker på 2 s
+  - MK1: RMB på en ku gir melkebøtte. Drikker (holder RMB), og Sult (20 s) er borte og den tomme bøtta er tilbake
+  - MK2: med 3 bøtter gir gris ingenting. Ku gir 2 bøtter igjen i hånda og melkebøtta i inventaret
+  - HL1: lava i Helvete (ekte RMB) har rent 7 blokker etter 4,5 s (113 ruter, styrke 1 ytterst). Henter kilden fra en søyle, og alt trekker seg tilbake (0 igjen, ingen skade)
+  - OW1: lava i oververdenen renner fortsatt 3 (25 ruter, 6/4/2)
+  - WS1: trinnsider i vann, sjekket på skjermbildet (tynne trinn, ingen mørk dobbeltstripe)
+- Første kjøring av it25-verify feilet på grunn av testoppsettet: siktet traff kanalveggen, spilleren døde i lavaen fordi testen sto i den, og grisen klatret ut av en lav kanal. Det ble rettet i testene
+- Regresjon, kjørt én og én på endelig bygg: it24-verify 5/5, it23-verify 6/6 (BK5 grønn med ny oppsett), it21-verify 6/6, it20-verify 7/7, it19-verify 8/8, it18-verify 8/8 (BM1 grønn), it16-verify 6/6 og it18-explore 11/11 (X5/X6 grønne med spilltid). I første runde feilet it22 SH1 (saks på høyt gress) og hele it17 etter N0, der all input var død (sannsynligvis mistet musefangst i headless Chromium, ikke i spillet). Begge var grønne da de ble kjørt på nytt alene: it17-verify 13/13 og it22 SH1. it22 RB1 feilet én gang fordi den brennende grisen vandret ut under det lille taket (9×9) og ble slukket av regnet. Taket i testen er gjort større (11×15), og it22-verify ga 8/8 på endelig bygg
+- 188 vitest grønne (7 nye: strømretning og stille dam, spiller dyttes, ting driver, gris driver, Helvete-lava 7 og trekker seg tilbake, melk fjerner Sult og gir bøtta tilbake, melk kan ikke helles ut). it24-testene er oppdatert til de nye lavanivåene (6/4/2), og Helvete-testen bruker nå Helvete-flyten
+- Ny seksjon W i CORE-PLAYTEST.md (V2 oppdatert med nye nivåer)
+
+### Kjente begrensninger
+- Strømmen dytter bare vannrett. Fallende vann trekker deg ikke ned raskere, og båter driver ikke med strømmen
+- Vann som koker bort i Helvete er fortsatt bare testet i vitest
+- Ingen fiskebøtte (det finnes ingen fisk som dyr i vannet ennå)
+- Melk fjerner bare Sult, fordi det er den eneste effekten som finnes. Ingen kake ennå
+- Lava i Helvete ved siden av kilden (styrke 7) tegnes i full høyde, som kilden
+
+### Media
+public/progress/it25/ (lokalt på `dev`, ikke publisert): skjermbilder it25-01…09:
+- 01–02: vannkanal med strøm, og spilleren som blir båret
+- 03: tømmer som driver
+- 04–05: melk fra ku, og drikking
+- 06: lava i Helvete (7 blokker)
+- 07: lava i oververdenen (3 blokker)
+- 08: trinnsider i vann
+- 09: gris i strømmen
+
+Klipp: `clip-it25-strom-helvete-lava.webm`
+
+---
+
 ## Iterasjon 24 (2026-10-31)
 
 Start: lør. 31. okt. 07:55 CET · Slutt: lør. 31. okt. 08:31 CET (~36 min) · gren `dev` (ikke publisert)

@@ -30,6 +30,9 @@ export const RECIPES: Recipe[] = [
   ...([[2, 1, [ItemId.IronIngot, ItemId.Flint]], [2, 1, [ItemId.Flint, ItemId.IronIngot]], [1, 2, [ItemId.IronIngot, ItemId.Flint]], [1, 2, [ItemId.Flint, ItemId.IronIngot]],
     [2, 2, [ItemId.IronIngot, 0, 0, ItemId.Flint]], [2, 2, [ItemId.Flint, 0, 0, ItemId.IronIngot]], [2, 2, [0, ItemId.IronIngot, ItemId.Flint, 0]], [2, 2, [0, ItemId.Flint, ItemId.IronIngot, 0]]] as [number, number, number[]][])
     .map(([w, h, pattern]) => ({ w, h, pattern, result: stack(ItemId.FlintAndSteel, 1, 64) })),
+  // it22 (MC): shears = two iron ingots diagonally (either diagonal)
+  { w: 2, h: 2, pattern: [0, ItemId.IronIngot, ItemId.IronIngot, 0], result: stack(ItemId.Shears, 1, 238) },
+  { w: 2, h: 2, pattern: [ItemId.IronIngot, 0, 0, ItemId.IronIngot], result: stack(ItemId.Shears, 1, 238) },
   // arrow
   { w: 1, h: 3, pattern: [ItemId.Flint, ItemId.Stick, ItemId.Feather], result: stack(ItemId.Arrow, 4) },
   // iron tools

@@ -17,11 +17,11 @@ export const ItemId = {
   DiamondHelmet: 128, DiamondChest: 129, DiamondLegs: 130, DiamondBoots: 131,
   Seeds: 63, Wheat: 64, Bread: 65, Boat: 66, FishingRod: 67, MapItem: 68, RawFish: 69, CookedFish: 70, Bone: 71, CookedMeat: 72, String: 73, Gunpowder: 74, RottenFlesh: 75,
   WoodHoe: 116, IronHoe: 117, EnchantTable: 24, Door: 26, Trapdoor: 27, Fence: 28, Gate: 29, Stairs: 30, Slab: 31, GlassPane: 32, Ladder: 33, Sign: 34, RedDust: 35, Lever: 36, Button: 37, Lamp: 38, PressurePlate: 39, Helstein: 40, Sjelegrus: 41, PortalFrame: 43,
-  Gravel: 49, Sapling: 76, Flint: 77, Dandelion: 79, Poppy: 80, BoneMeal: 81, FlintAndSteel: 82,
+  Gravel: 49, Sapling: 76, Flint: 77, Dandelion: 79, Poppy: 80, BoneMeal: 81, FlintAndSteel: 82, TallGrass: 78, Shears: 86,
 } as const;
 
 export type ItemId = (typeof ItemId)[keyof typeof ItemId];
-export type ToolKind = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'bow' | 'hoe' | 'none';
+export type ToolKind = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'bow' | 'hoe' | 'shears' | 'none';
 export type ArmorSlot = 'head' | 'chest' | 'legs' | 'feet';
 export type BlockMaterial = 'ground' | 'wood' | 'stone' | 'plant' | 'glass' | 'other';
 
@@ -143,6 +143,10 @@ export const ITEMS: Record<number, ItemDef> = {
   [81]: { id: 81, name: 'Beinmel', stackable: true, maxStack: 64, iconTile: 77 },
   // it19 (MC): fyrstål — tenner ild og helvetesportaler, 64 bruk
   [82]: tool(82, 'Fyrstål', 'none', undefined, 64, 1, 1, 81),
+  // it22 (MC): saks — klipper løv (gir løvblokka) og gress (gir gresset), 238 bruk
+  [86]: tool(86, 'Saks', 'shears', undefined, 238, 1, 1, 84),
+  // it22: høyt gress som ting (fra saks) — kan settes på gress
+  [78]: blk(78, 'Høyt gress', 76, 78),
 };
 
 export function blockMaterial(blockId: number): BlockMaterial {
@@ -184,6 +188,8 @@ export function breakDuration(blockId: number, held: ItemStack | null): number {
   const pref = preferredTool(mat);
   const def = held ? ITEMS[held.id] : undefined;
   let mult = 1;
+  // it22 (MC): shears cut leaves ×15 and wool ×5 faster
+  if (def?.tool === 'shears' && (blockId === 7 || blockId === 21)) return base / (blockId === 7 ? 15 : 5);
   if (def?.tool && def.tool === pref && def.mineSpeed) mult = def.mineSpeed;
   else if (mat === 'stone') mult = 0.2;
   // MC: a pickaxe that's too weak still uses its speed but /100 instead of /30 (≈3.3× slower)
@@ -204,6 +210,12 @@ export function dropForBlock(blockId: number, held: ItemStack | null): ItemStack
   if (blockId === 18) return stack(55, 1);
   // MC: a grass block always drops dirt; seeds come from tall grass (12.5 %)
   if (blockId === 1 || blockId === 19) return stack(2, 1);
+  // it22 (MC): shears keep leaves and grass as themselves (double tall grass → 2 tall grass)
+  if (held && ITEMS[held.id]?.tool === 'shears') {
+    if (blockId === 7) return stack(7, 1);
+    if (blockId === 78) return stack(78, 1);
+    if (blockId === 84) return stack(78, 2);
+  }
   if (blockId === 78) return Math.random() < 0.125 ? stack(63, 1) : null;
   // it21: double tall grass — MC: only the lower half drops (seeds 12.5 %)
   if (blockId === 84) return Math.random() < 0.125 ? stack(63, 1) : null;

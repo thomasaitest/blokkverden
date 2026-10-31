@@ -128,6 +128,25 @@ const P = {
     '................',
     '................',
   ],
+  // it22: shears — two iron blades crossing at the pivot, dark handle loops lower-left
+  shears: [
+    '................',
+    '...........Hh...',
+    '..........HHh...',
+    '.........HHh....',
+    '........HHh.....',
+    '...Hh..HHh......',
+    '...HHhHHh.......',
+    '....HHHh........',
+    '.....hHh........',
+    '....DDhHH.......',
+    '...D..D.HHh.....',
+    '...D..D..Hh.....',
+    '..DDDD..........',
+    '.D..D...........',
+    '.D..D...........',
+    '..DD............',
+  ],
   bow: [
     '................',
     '.....SSs......D.',
@@ -282,6 +301,7 @@ export function itemPattern(itemId: number): { rows: readonly string[]; head: [R
     return { rows: P[def.tool as 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'hoe'], head: TIER[def.tier] };
   }
   if (def.tool === 'bow') return { rows: P.bow, head: TIER.iron };
+  if (def.tool === 'shears') return { rows: P.shears, head: TIER.iron };
   if (itemId === 61) return { rows: P.arrow, head: TIER.stone };
   if (itemId === 73) return { rows: P.string, head: TIER.string };
   if (itemId === 74) return { rows: P.gunpowder, head: TIER.gunpowder };

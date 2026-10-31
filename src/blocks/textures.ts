@@ -442,6 +442,16 @@ export function createAtlasCanvas(): HTMLCanvasElement {
   fillTile(d, 82, (lx, ly, rnd) => dgBlade(lx, ly, rnd, false));
   fillTile(d, 83, (lx, ly, rnd) => dgBlade(lx, ly, rnd, true));
 
+  // it22: 84 shears (saks) icon — two grey blades crossing, dark handles lower-left
+  fillTile(d, 84, (lx, ly, rnd) => {
+    const bladeA = Math.abs(lx + ly - 15) <= 1 && lx >= 7 && lx <= 13;
+    const bladeB = Math.abs(lx - ly) <= 1 && lx >= 7 && lx <= 13 && ly >= 2 && ly <= 13 && lx + ly > 14;
+    const ring = (cx: number, cy: number) => { const dx = lx - cx, dy = ly - cy, r2 = dx * dx + dy * dy; return r2 >= 2 && r2 <= 6; };
+    if (ring(3, 12) || ring(7, 13.5)) return [60 + (rnd * 20 | 0), 40, 30, 255];
+    if (bladeA || bladeB) { const v = 185 + (rnd * 45 | 0); return [v, v, v + 6, 255]; }
+    return [0, 0, 0, 0];
+  });
+
   ctx.putImageData(img, 0, 0);
   return canvas;
 }

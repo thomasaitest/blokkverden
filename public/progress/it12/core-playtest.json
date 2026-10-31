@@ -3,17 +3,17 @@
     {
       "id": "A1",
       "status": "PASS",
-      "notes": "{\"below\":1,\"at\":0,\"py\":33,\"fps\":16.363636363636363}"
+      "notes": "{\"below\":1,\"at\":0,\"py\":33,\"fps\":15.881418740074105}"
     },
     {
       "id": "A2",
       "status": "PASS",
-      "notes": "y=33 fps=16.363636363636363"
+      "notes": "y=33 fps=15.881418740074105"
     },
     {
       "id": "B1",
       "status": "PASS",
-      "notes": "yaw=0.000 dz=-2.73"
+      "notes": "yaw=0.000 dz=-2.59"
     },
     {
       "id": "B2",
@@ -28,12 +28,12 @@
     {
       "id": "B4",
       "status": "PASS",
-      "notes": "z=5.29"
+      "notes": "z=5.42"
     },
     {
       "id": "B5",
       "status": "PASS",
-      "notes": "y=32.13"
+      "notes": "y=32.17"
     },
     {
       "id": "B6",
@@ -43,7 +43,7 @@
     {
       "id": "B7",
       "status": "PASS",
-      "notes": "z=40.98 y=46.00 stepped=true"
+      "notes": "z=41.05 y=46.00 stepped=true"
     },
     {
       "id": "C1",
@@ -63,7 +63,7 @@
     {
       "id": "C2",
       "status": "PASS",
-      "notes": "bareBroke=true bareMs=8343 pickMs=885"
+      "notes": "bareBroke=true bareMs=9447 pickMs=1110"
     },
     {
       "id": "C3",
@@ -188,7 +188,7 @@
     {
       "id": "H3",
       "status": "PASS",
-      "notes": "hp=8.308349999999987 dead=false"
+      "notes": "hp=8.329124999999987 dead=false"
     },
     {
       "id": "H1",
@@ -198,12 +198,12 @@
     {
       "id": "H2",
       "status": "PASS",
-      "notes": "click=10 heldMs=2021 hunger=14 apples=2"
+      "notes": "click=10 heldMs=1851 hunger=14 apples=2"
     },
     {
       "id": "H4",
       "status": "PASS",
-      "notes": "air=5.375750000000044 hp=20 headBlk=10"
+      "notes": "air=4.334250000000031 hp=20 headBlk=10"
     },
     {
       "id": "H5",
@@ -223,7 +223,7 @@
     {
       "id": "I4",
       "status": "PASS",
-      "notes": "{\"hp\":15,\"moved\":1.87}"
+      "notes": "{\"hp\":15,\"moved\":1.94}"
     },
     {
       "id": "I3",
@@ -243,12 +243,12 @@
     {
       "id": "J3",
       "status": "PASS",
-      "notes": "fps=20.003637024913832 (swiftshader)"
+      "notes": "fps=15.000937558596922 (swiftshader)"
     },
     {
       "id": "K1",
       "status": "PASS",
-      "notes": "logs=4 planted=true broke=true drop=false"
+      "notes": "logs=1 planted=true broke=true drop=false"
     },
     {
       "id": "K2",
@@ -282,5 +282,5 @@
     }
   ],
   "bugs": [],
-  "time": "2026-10-31T04:11:31.720Z"
+  "time": "2026-10-31T04:51:23.057Z"
 }

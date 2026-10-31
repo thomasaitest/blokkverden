@@ -117,6 +117,29 @@ async function runGame(
   // MC: a falling block that can't land drops itself (gravel never turns into flint here)
   const fallPop = (gx: number, gy: number, gz: number, gid: number) => { drops.spawn(gx, gy, gz, { id: gid, count: 1 }); };
   let orphanAcc = 0;
+  // it22 (MC): when a block is removed (mined, blasted, or a sand block starts to fall) whatever it held up pops off:
+  // a torch/plant/door/crop on top of it, and ladders hanging on its sides.
+  const popUnsupported = (x: number, y: number, z: number) => {
+    if (isSolid(world.getBlock(x, y, z))) return;
+    const above = world.getBlock(x, y + 1, z);
+    if (above === BlockId.Crop) harvestCrop(world, x, y + 1, z, drops);
+    else if (needsSupportBelow(above)) {
+      world.setBlock(x, y + 1, z, BlockId.Air);
+      const d2 = dropForBlock(above, null);
+      if (d2) drops.spawn(x, y + 1, z, d2);
+      if (above === BlockId.DoubleGrass && world.getBlock(x, y + 2, z) === BlockId.DoubleGrassTop) world.setBlock(x, y + 2, z, BlockId.Air);
+    }
+    const LD: [number, number, number][] = [[1, 0, 0], [-1, 0, 1], [0, 1, 2], [0, -1, 3]]; // ladder at x+dx hangs on wall dir d (towards −dx)
+    for (const [dx, dz, d] of LD) {
+      const lx = x + dx, lz = z + dz;
+      if (world.getBlock(lx, y, lz) !== BlockId.Ladder) continue;
+      const wall = ladderWall(world.getWaterLevel(lx, y, lz), (a, b, c) => world.getBlock(a, b, c), lx, y, lz);
+      if (wall !== d) continue;
+      world.setBlock(lx, y, lz, BlockId.Air);
+      drops.spawn(lx, y, lz, { id: BlockId.Ladder, count: 1 });
+    }
+  };
+  const onVacated = (x: number, y: number, z: number) => popUnsupported(x, y, z);
   const containers = new ContainerStore();
   const sound = new SoundBus();
   sound.setVolume(settings.volume);
@@ -311,7 +334,8 @@ async function runGame(
     // MC: sand over the crater falls; blasted trees shed their leaves
     for (const b of blocks) {
       if (b.id === BlockId.Log || b.id === BlockId.Leaves) leafDecay.onRemoved(world, b.x, b.y, b.z);
-      falling.updateAround(world, b.x, b.y, b.z);
+      falling.updateAround(world, b.x, b.y, b.z, onVacated);
+      popUnsupported(b.x, b.y, b.z);
     }
     if (blocks.length) { markMesh(); hud.markDirty(); }
   };
@@ -1438,22 +1462,15 @@ async function runGame(
             // it21 (MC): breaking either half of double tall grass removes both (only the lower half drops)
             if (isDoublePlant(id)) {
               const lower = breakPartner(world, hit.x, hit.y, hit.z, id);
-              if (lower && id === BlockId.DoubleGrassTop) { const d3 = dropForBlock(BlockId.DoubleGrass, null); if (d3) drops.spawn(lower[0], lower[1], lower[2], d3); }
+              if (lower && id === BlockId.DoubleGrassTop) { const d3 = dropForBlock(BlockId.DoubleGrass, inv.held()); if (d3) drops.spawn(lower[0], lower[1], lower[2], d3); }
             }
             // MC: cut logs/leaves make unconnected natural leaves decay over time
             if (id === BlockId.Log || id === BlockId.Leaves) leafDecay.onRemoved(world, hit.x, hit.y, hit.z);
             // MC: sand above the broken block falls
-            falling.updateAround(world, hit.x, hit.y, hit.z);
-            // MC: a torch / red dust / pressure plate / crop / sapling / tall grass on the broken block pops off as an item
-            {
-              const above = world.getBlock(hit.x, hit.y + 1, hit.z);
-              if (above === BlockId.Crop) harvestCrop(world, hit.x, hit.y + 1, hit.z, drops);
-              else if (needsSupportBelow(above)) {
-                world.setBlock(hit.x, hit.y + 1, hit.z, BlockId.Air);
-                const d2 = dropForBlock(above, null);
-                if (d2) drops.spawn(hit.x, hit.y + 1, hit.z, d2);
-              }
-            }
+            falling.updateAround(world, hit.x, hit.y, hit.z, onVacated);
+            // MC: a torch / red dust / pressure plate / crop / sapling / tall grass on the broken block pops off as an item,
+            // and so do ladders hanging on its sides (it22)
+            popUnsupported(hit.x, hit.y, hit.z);
             if (!player.creative) inv.setHeld(damageTool(inv.held()));
             sound.breakBlock();
             particles.burst(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5, blockParticleColor(id), 14, 'break');

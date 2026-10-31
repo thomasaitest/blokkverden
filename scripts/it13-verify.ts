@@ -285,16 +285,44 @@ async function main() {
   record('P3-esc-closes-inv', !p3.inv && !p3.paused ? 'PASS' : 'FAIL', JSON.stringify(p3));
 
   if (await page.evaluate(() => (window as any).__bv.input.inventoryOpen)) { await page.keyboard.press('KeyE'); await sleep(400); }
-  // P4 — keys held when focus/lock is lost do not stay stuck (Cmd+Tab on Mac)
+  // P4a — Cmd+Tab (tab hidden): held keys must clear (Mac never sends keyup in another app)
   await acquireLock(page);
   await page.keyboard.down('KeyW'); await sleep(300);
-  const p4a = await page.evaluate(() => ({ f: (window as any).__bv.input.forward, inv: (window as any).__bv.input.inventoryOpen, locked: (window as any).__bv.input.pointerLocked }));
-  await page.evaluate(() => document.exitPointerLock()); // what Chrome does on Cmd+Tab / window blur
-  await sleep(300);
-  const p4 = await page.evaluate(() => ({ f: (window as any).__bv.input.forward }));
+  const p4a = await page.evaluate(() => ({ f: (window as any).__bv.input.forward, locked: (window as any).__bv.input.pointerLocked }));
+  await page.evaluate(`(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+    document.dispatchEvent(new Event('visibilitychange'));
+  })()`);
+  await sleep(100);
+  const p4hidden = await page.evaluate(`(() => ({ f: window.__bv.input.forward }))()`) as { f: boolean };
+  await page.evaluate(`(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' });
+    document.dispatchEvent(new Event('visibilitychange'));
+  })()`);
   await page.keyboard.up('KeyW');
-  record('P4-no-stuck-keys', p4a.f && !p4.f ? 'PASS' : 'FAIL', `held=${JSON.stringify(p4a)} afterLockLoss=${JSON.stringify(p4)}`);
-  if (await isPaused(page)) { await page.locator('#p-resume').click(); await sleep(400); }
+  // P4b — Esc/lock loss while tab still visible must NOT wipe WASD (else resume feels stuck)
+  await acquireLock(page);
+  await page.keyboard.down('KeyW'); await sleep(200);
+  await page.evaluate(() => document.exitPointerLock());
+  await sleep(200);
+  const p4vis = await page.evaluate(() => ({ f: (window as any).__bv.input.forward, paused: !!(document.getElementById('pause-menu') && getComputedStyle(document.getElementById('pause-menu')!).display !== 'none') }));
+  // Resume with W still held — must walk without repressing
+  if (await isPaused(page)) { await page.locator('#p-resume').click(); await sleep(300); }
+  await acquireLock(page);
+  await sleep(500);
+  const p4walk = await page.evaluate(() => {
+    const bv = (window as any).__bv;
+    return { f: bv.input.forward, x: bv.player.x, z: bv.player.z };
+  });
+  await sleep(400);
+  const p4walk2 = await page.evaluate(() => {
+    const bv = (window as any).__bv;
+    return { x: bv.player.x, z: bv.player.z };
+  });
+  const moved = Math.hypot(p4walk2.x - p4walk.x, p4walk2.z - p4walk.z);
+  await page.keyboard.up('KeyW');
+  record('P4-no-stuck-keys', p4a.f && !p4hidden.f ? 'PASS' : 'FAIL', `held=${JSON.stringify(p4a)} afterHidden=${JSON.stringify(p4hidden)}`);
+  record('P4b-lockloss-keeps-wasd', p4vis.f && p4walk.f && moved > 0.3 ? 'PASS' : 'FAIL', `afterVisibleUnlock=${JSON.stringify(p4vis)} walk=${JSON.stringify(p4walk)} moved=${moved.toFixed(2)}`);
 
   // P6 — hotbar wheel: one wheel notch = one slot; a trackpad swipe (many tiny deltas) doesn't spin it
   await acquireLock(page);

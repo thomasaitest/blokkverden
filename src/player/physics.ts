@@ -142,8 +142,37 @@ function tryAxis(world: World, p: PlayerState, h: number, axis: 'x' | 'z', delta
       return;
     }
   }
-  if (axis === 'x') { p.x -= delta; p.vx = 0; }
-  else { p.z -= delta; p.vz = 0; }
+  // Clip to the last free point along this axis instead of fully reverting the step.
+  // Full revert at external corners / thin colliders could leave both axes blocked for many
+  // frames while the body was still free — felt like sudden "stuck" until the wish direction changed.
+  if (axis === 'x') p.x = ox; else p.z = oz;
+  if (collidesAt(world, p.x, p.y, p.z, h)) {
+    // Already embedded (falling sand etc.) — zero the axis and let Y resolution handle it.
+    if (axis === 'x') p.vx = 0; else p.vz = 0;
+    return;
+  }
+  let lo = 0, hi = 1;
+  for (let i = 0; i < 12; i++) {
+    const mid = (lo + hi) / 2;
+    if (axis === 'x') p.x = ox + delta * mid;
+    else p.z = oz + delta * mid;
+    if (collidesAt(world, p.x, p.y, p.z, h)) hi = mid;
+    else lo = mid;
+  }
+  if (axis === 'x') {
+    p.x = ox + delta * lo;
+    // Sneak-edge after clip
+    if (p.sneaking && p.onGround && !p.inWater && !p.flying && !hasGroundSupport(world, p.x, p.y, p.z)) {
+      p.x = ox; p.vx = 0; return;
+    }
+    p.vx = 0;
+  } else {
+    p.z = oz + delta * lo;
+    if (p.sneaking && p.onGround && !p.inWater && !p.flying && !hasGroundSupport(world, p.x, p.y, p.z)) {
+      p.z = oz; p.vz = 0; return;
+    }
+    p.vz = 0;
+  }
 }
 
 export function movePlayer(

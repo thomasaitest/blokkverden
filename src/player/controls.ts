@@ -26,6 +26,11 @@ export interface InputState {
   inventoryOpen: boolean;
 }
 
+/** Clear held WASD only when the tab is hidden (Cmd+Tab). In-tab lock loss (Esc) keeps them. */
+export function shouldClearKeysOnLockLoss(visibilityState: string): boolean {
+  return visibilityState === 'hidden';
+}
+
 export function createInput(): InputState {
   return {
     forward: false,
@@ -253,9 +258,17 @@ export function bindDesktopControls(
         wantBreak = false;
       }
     } else {
-      // Lock lost (Esc, Cmd+Tab, inventory): Mac Chrome never sends keyup for keys
-      // released in another app, so drop held keys/buttons (MC also stops on pause).
-      clearMovement();
+      // Lock lost. Mac Chrome never sends keyup for keys released in another app, so we
+      // must drop held keys when the tab is actually hidden (Cmd+Tab). But Esc/pause and
+      // other in-tab lock losses keep the key set: clearing here while WASD are still
+      // physically held left movement dead after resume until every key was released and
+      // pressed again ("suddenly stuck").
+      if (shouldClearKeysOnLockLoss(document.visibilityState)) clearMovement();
+      else {
+        // Still drop mouse buttons — a click-to-pause must not keep mining after resume.
+        input.breakHeld = false;
+        input.useHeld = false;
+      }
       wantBreak = false;
       draggingLook = false;
     }
@@ -278,7 +291,7 @@ export function bindDesktopControls(
   // Only clear stuck keys when the tab is actually hidden. window "blur" fires
   // during pointer-lock focus transitions on Chrome/Mac and was wiping WASD.
   const onVisibility = () => {
-    if (document.visibilityState === 'hidden') clearMovement();
+    if (shouldClearKeysOnLockLoss(document.visibilityState)) clearMovement();
   };
 
   window.addEventListener('keydown', onKeyDown);

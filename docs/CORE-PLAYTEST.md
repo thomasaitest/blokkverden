@@ -155,6 +155,7 @@ Last run: 2026-10-30 22:43–22:50 CET · it15 (55 PASS / 0 FAIL, I3/I4 now real
 | O6 | Gravel | Falls like sand; 10 % flint, else gravel; generated in stone blobs and ocean floors | PASS | G1, G2 + vitest |
 | O7 | Sapling | Leaves drop a sapling 5 %; RMB plants only on grass/dirt/farmland; no collision; grows into an oak (needs light ≥ 9 and room; grass under it turns to dirt) | PASS | S1–S3 + vitest |
 | O8 | Leaf decay saved | Chop a tree, save & quit at once, reload → the leaves still decay | PASS | L3 + vitest |
+| O10 | Arrow recipe | Flint + stick + feather (vertical) → 4 arrows (was cobble) | PASS | core F12 + vitest |
 | O9 | Jump tap | A quick Space tap (even shorter than a frame / just before landing) jumps | PASS | J 5/5, core B2 |
 
 ## Method rules

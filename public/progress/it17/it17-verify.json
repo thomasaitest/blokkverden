@@ -1,6 +1,26 @@
 {
-  "when": "2026-10-31T00:13:33.026Z",
+  "when": "2026-10-31T00:18:45.941Z",
   "results": [
+    {
+      "id": "N0-tallgrass-generated",
+      "status": "PASS",
+      "notes": "tufts within 24=136"
+    },
+    {
+      "id": "P1-break-tallgrass",
+      "status": "PASS",
+      "notes": "broken=7/7 (LMB 150 ms each)"
+    },
+    {
+      "id": "P2-place-into-tallgrass",
+      "status": "PASS",
+      "notes": "{\"at46\":2,\"at47\":0,\"left\":2}"
+    },
+    {
+      "id": "P3-break-torch",
+      "status": "PASS",
+      "notes": "placed=12 target=[12,46,10] after=0 drops=12"
+    },
     {
       "id": "P4a-harvest-crop-LMB",
       "status": "PASS",
@@ -10,10 +30,53 @@
       "id": "P4b-crop-pops",
       "status": "PASS",
       "notes": "{\"farmland\":0,\"crop\":0,\"drops\":[2,64,63],\"tgt\":[6,46,16],\"tgt2\":[6,46,16]}"
+    },
+    {
+      "id": "G1-gravel-falls",
+      "status": "PASS",
+      "notes": "col46..49=49,49,49,0"
+    },
+    {
+      "id": "G2-gravel-drops",
+      "status": "PASS",
+      "notes": "broken=30 gravel=26 flint=4 (10 % flint expected)"
+    },
+    {
+      "id": "S1-plant-sapling",
+      "status": "PASS",
+      "notes": "onStone=0 onGrass=76 left=2"
+    },
+    {
+      "id": "S2-sapling-no-collision",
+      "status": "PASS",
+      "notes": "z after walking through=7.69"
+    },
+    {
+      "id": "S3-sapling-grows",
+      "status": "PASS",
+      "notes": "logs=5 leaves=65 below=2"
+    },
+    {
+      "id": "J-jump-tap",
+      "status": "PASS",
+      "notes": "jumped 5/5"
+    },
+    {
+      "id": "L3-leaf-decay-after-reload",
+      "status": "PASS",
+      "notes": "logGone=true pendingBeforeQuit=9 leavesAfterLoad=9 end=0"
     }
   ],
   "bugs": [],
   "marks": {
-    "P4": 8.773
+    "N0": 7.052,
+    "P1": 10.719,
+    "P2": 15.379,
+    "P3": 16.303,
+    "P4": 17.853,
+    "G1": 20.389,
+    "S": 42.149,
+    "J": 48.479,
+    "L3": 56.811
   }
 }

@@ -25,7 +25,7 @@ export const RECIPES: Recipe[] = [
   { w: 3, h: 3, pattern: [0, ItemId.Stick, ItemId.String, ItemId.Stick, 0, ItemId.String, 0, ItemId.Stick, ItemId.String], result: stack(ItemId.Bow, 1, 200) },
   { w: 2, h: 2, pattern: [ItemId.String, ItemId.String, ItemId.String, ItemId.String], result: stack(ItemId.WoolItem, 1) },
   // arrow
-  { w: 1, h: 3, pattern: [ItemId.Cobble, ItemId.Stick, ItemId.Feather], result: stack(ItemId.Arrow, 4) },
+  { w: 1, h: 3, pattern: [ItemId.Flint, ItemId.Stick, ItemId.Feather], result: stack(ItemId.Arrow, 4) },
   // iron tools
   { w: 3, h: 3, pattern: [ItemId.IronIngot, ItemId.IronIngot, ItemId.IronIngot, 0, ItemId.Stick, 0, 0, ItemId.Stick, 0], result: stack(ItemId.IronPickaxe, 1, 250) },
   { w: 3, h: 3, pattern: [ItemId.IronIngot, ItemId.IronIngot, 0, ItemId.IronIngot, ItemId.Stick, 0, 0, ItemId.Stick, 0], result: stack(ItemId.IronAxe, 1, 250) },

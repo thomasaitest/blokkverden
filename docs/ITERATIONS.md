@@ -2,6 +2,45 @@
 
 Original voxel-sandkasse. Ingen Mojang-assets.
 
+## Iterasjon 17 (2026-10-31)
+
+Start: lør. 31. okt. 00:51 CET · Slutt: lør. 31. okt. 01:20 CET (~29 min) · gren `dev` (ikke publisert)
+
+### Fokus
+Feiljakt med ekte tastatur/mus i Chromium: sikting på små blokker, jordbruk, hopp, lagring av løvforfall. Så tre MC-ting som henger sammen med trær/gress: høyt gress, spirer, grus. `__bv` bare til oppsett.
+
+### Fikset
+1. Fakler, avlinger, rødtråd, stiger, spaker osv. kunne ikke siktes på — strålen gikk rett gjennom dem (fra it1). Fakler kunne derfor ikke fjernes, og «høste» traff jorda under. Nå kan alt med omriss siktes på og knuses med venstreklikk, som i MC
+2. Gressblokk ga frø i 12 % av tilfellene *i stedet for* jord (MC: alltid jord). Frø kommer nå fra høyt gress
+3. Knuser du blokka under en avling/spire/høyt gress, faller planten av som ting (før: svevde avlingen i lufta; bare fakkel/rødtråd/trykkplate falt av)
+4. Avlinger var en halvgjennomsiktig boks (gul søyle når moden). Nå MC-modell med fire plan («#») og nye hvete-teksturer: grønne strå som vokser, gylne aks når moden
+5. Kort trykk på mellomrom (kortere enn ett bilde, eller rett før du lander) ga ikke hopp ved lav fps → trykket huskes i 0,15 s. Kjernetest B2 feilet på dette i to runder i kveld
+6. Ventende løvforfall ble ikke lagret — lagret du rett etter hogst, ble løvet hengende for alltid. Nå lagres det med gjenstående tid, og venter til chunken er lastet etter innlasting
+7. Pil ble laget av brostein + pinne + fjær; nå MC: flint + pinne + fjær (4 piler). Kjernetest F12 lager den via arbeidsbenken
+8. Kjernetestens `flatPad` lot spilleren falle ~14 blokker mens området ble generert (−10 liv før B2). Står nå på en midlertidig blokk
+
+### Nye funksjoner (3)
+- Høyt gress: tuster på gress i slette/skog (X-modell, ingen kollisjon), knuses med en gang, 12,5 % frø. Plasserer du en blokk mot det, erstatter blokka gresset (MC «replaceable»). Mobber kan spawne i det
+- Spirer: løv gir spire 5 % (+ pinner 2 %, eple 0,5 %). Plantes bare på gress/jord/åkerjord, ingen kollisjon, vokser til en eik etter noen minutter når det er lys (≥ 9) og plass; gresset under blir jord
+- Grus og flint: grus faller som sand, gir flint 10 % (ellers grus); finnes i klumper i stein og på havbunnen
+
+### Playtest
+- Core: **56 PASS / 0 FAIL / 0 PARTIAL** (ny F12 pil) (`scripts/core-playtest.ts`, endelig bygg; H2 trenger fortsatt ett nytt forsøk i headless, som før)
+- it17-verify: **13/13 PASS** (`scripts/it17-verify.ts`: N0, P1–P4b, G1–G2, S1–S3, J, L3; ny seksjon O i CORE-PLAYTEST.md)
+- 97 vitest grønne (13 nye: drops for gress/høyt gress/grus/løv, planter, spirevekst, grus-tyngde, løvforfall lagret/venter på chunk, pil-oppskrift)
+
+### Kjente begrensninger
+- Partikler når du knuser planter er brune (jordfarge), ikke grønne
+- Ingen beinmel ennå (spirevekst kan ikke fremskyndes i spillet)
+- Sand/grus faller fortsatt umiddelbart (ingen fallanimasjon)
+- Flint brukes bare til piler ennå (fyrstål kommer senere)
+- Vann bryter ikke høyt gress/avlinger slik som i MC
+
+### Media
+public/progress/it17/ (lokalt på `dev`, ikke publisert)
+
+---
+
 ## Iterasjon 16 (2026-10-30/31)
 
 Start: fre. 30. okt. 23:46 CET · Slutt: lør. 31. okt. 00:33 CET (~47 min) · gren `dev` (ikke publisert)
@@ -24,7 +63,7 @@ Feiljakt med ekte tastatur/mus i Chromium: graving under sand, hogst av trær, l
 - Løvforfall: hugger du et tre, forsvinner løvet gradvis over ~2–20 s (ikke løv som fortsatt er innen 6 av en annen stamme). Løv du plasserer selv forsvinner aldri
 
 ### Playtest
-- Core: **55 PASS / 0 FAIL / 0 PARTIAL** (`scripts/core-playtest.ts`, endelig bygg) — kjørt alene etter siste endring; H2 (spise) trenger fortsatt ett nytt forsøk i headless, som før
+- Core: **56 PASS / 0 FAIL / 0 PARTIAL** (ny F12 pil) (`scripts/core-playtest.ts`, endelig bygg) — kjørt alene etter siste endring; H2 (spise) trenger fortsatt ett nytt forsøk i headless, som før
 - it16-verify: **6/6 PASS** (`scripts/it16-verify.ts`: V, S1–S3, L1–L2; ny seksjon N i CORE-PLAYTEST.md)
 - 84 vitest grønne (13 nye: fallende sand, løvforfall, løvdrop-rater, kvelning/fysikk, lyskurve)
 
@@ -60,7 +99,7 @@ Feiljakt i nattkamp og eksplosjoner med ekte tastatur/mus i Chromium: knallbolle
 - Fiendtlige mobber spawner i mørke huler (lys < 8), også om dagen; fakler holder hulene trygge
 
 ### Playtest
-- Core: **55 PASS / 0 FAIL / 0 PARTIAL** (`scripts/core-playtest.ts`, kjørt alene på endelig bygg; I3/I4 nå med ekte klikk)
+- Core: **56 PASS / 0 FAIL / 0 PARTIAL** (ny F12 pil) (`scripts/core-playtest.ts`, kjørt alene på endelig bygg; I3/I4 nå med ekte klikk)
 - it15-verify: **6/6 PASS** (`scripts/it15-verify.ts`, X1–X6, ny seksjon M i CORE-PLAYTEST.md)
 - Naturlig nattøkt (`scripts/it15-session.ts`, ~100 s natt i ny verden med steinsverd): drepte edderkopper/vandrer/bueskytter, 1 død av knallbolle, 0 JS-feil; fant feilen med mobber i tretoppene
 - 71 vitest grønne (10 nye), npm audit 0 sårbarheter, secrets-scan rent
@@ -100,7 +139,7 @@ Lengre overlevelsesøkter med ekte tastatur/mus i Chromium: grave rett ned, malm
 - Navnet på valgt gjenstand vises over hotbaren i ~2 s når du bytter (som i MC)
 
 ### Playtest
-- Core: **55 PASS / 0 FAIL / 0 PARTIAL** (`scripts/core-playtest.ts`, kjørt flere ganger)
+- Core: **56 PASS / 0 FAIL / 0 PARTIAL** (ny F12 pil) (`scripts/core-playtest.ts`, kjørt flere ganger)
 - it14-verify: **13/13 PASS** (`scripts/it14-verify.ts`, V1–V12, ny seksjon L i CORE-PLAYTEST.md)
 - Naturlig økt (`scripts/it14-session.ts`): gikk, gravde fra y≈29 ned til grunnfjell med steinhakke (fikk jernmalm), satte fakkel i sjakta, natt → morgen; 0 JS-feil, 21–45 fps (swiftshader)
 - Gammel bygg (it13) feilet V9 (plukket ting vises ikke i hotbar) — bekreftet ekte feil
@@ -135,7 +174,7 @@ Feiljakt for en ekte spiller i Chrome på Mac: pekerlås/Esc, inventar, mus/styr
 10. HUD: tomme hjerter synlige (også på dødsskjermen), fast bredde så sult/hjerter ikke forskyves; «Respawn» → «Gjenoppstå»
 
 ### Playtest
-- Core: **55 PASS / 0 FAIL / 0 PARTIAL** (`scripts/core-playtest.ts`, kjørt etter hver fiks)
+- Core: **56 PASS / 0 FAIL / 0 PARTIAL** (ny F12 pil) (`scripts/core-playtest.ts`, kjørt etter hver fiks)
 - it13-verify: **14/14 PASS** (`scripts/it13-verify.ts`, P1–P11)
 - 50 vitest grønne (nye: kontroller, hjul, siktlinje, mob-landing), npm audit 0 sårbarheter, secrets-scan rent
 
@@ -164,7 +203,7 @@ Feiljakt i overlevelseskjernen mot Minecraft-oppførsel (Chromium, ekte tastatur
 8. Playtest-skript: mer robust sprint/spise-test (swiftshader-hakk), ingen hengende vite preview
 
 ### Playtest
-- Core: **55 PASS / 0 FAIL / 0 PARTIAL** (`scripts/core-playtest.ts`)
+- Core: **56 PASS / 0 FAIL / 0 PARTIAL** (ny F12 pil) (`scripts/core-playtest.ts`)
 - it12-verify: **8/8 PASS**
 - 42 vitest grønne, npm audit 0 sårbarheter, secrets-scan rent
 

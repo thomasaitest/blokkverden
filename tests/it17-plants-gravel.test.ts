@@ -125,3 +125,14 @@ describe('it17 leaf decay waits for unloaded chunks', () => {
     expect(w.b.size).toBe(0);
   });
 });
+
+import { matchRecipe } from '../src/items/crafting';
+describe('it17 arrow recipe (MC)', () => {
+  it('flint + stick + feather → 4 arrows; cobble no longer works', () => {
+    const g = (top: number) => [top, 0, 0, ItemId.Stick, 0, 0, ItemId.Feather, 0, 0].map((id) => (id ? { id, count: 1 } : null));
+    const r = matchRecipe(g(ItemId.Flint));
+    expect(r?.result.id).toBe(ItemId.Arrow);
+    expect(r?.result.count).toBe(4);
+    expect(matchRecipe(g(ItemId.Cobble))?.result.id).not.toBe(ItemId.Arrow);
+  });
+});

@@ -615,6 +615,7 @@ async function main() {
   await doRecipe('F9', [6, 6, 6, 6, 0, 6, 6, 6, 6], 13, 1, [[6, 16]]); // chest
   await doRecipe('F10', [6, 6, 0, 6, 6, 0, 6, 6, 0], 26, 1, [[6, 12]]); // door 2x3
   await doRecipe('F11', [59, 59, 59, 6, 6, 6, 0, 0, 0], 20, 1, [[59, 4], [6, 8]]); // bed
+  await doRecipe('F12', [77, 0, 0, 50, 0, 0, 58, 0, 0], 61, 4, [[77, 1], [50, 1], [58, 1]]); // it17: arrow = flint + stick + feather (MC)
 
   await page.keyboard.press('KeyE');
   await sleep(200);

@@ -6,7 +6,8 @@ import type { World } from './world';
 export function isWashable(id: number): boolean {
   return id === BlockId.Torch || id === BlockId.RedDust || id === BlockId.Crop
     || id === BlockId.Sapling || id === BlockId.TallGrass || id === BlockId.Dandelion || id === BlockId.Poppy
-    || id === BlockId.Fire; // MC: water puts fire out
+    || id === BlockId.Fire // MC: water puts fire out
+    || id === BlockId.DoubleGrass || id === BlockId.DoubleGrassTop;
 }
 
 /** Update budget for the 3×3 chunks around the focus (player). */

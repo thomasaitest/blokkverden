@@ -43,6 +43,22 @@ function cliffAhead(world: World, x: number, y: number, z: number, dx: number, d
   return y - (ground + 1) > 2.2;
 }
 
+/**
+ * it21 (MC pathfinding): mobs treat fire and lava as dangerous and won't walk into them (or onto lava).
+ * Checks the feet, head and floor cells ~0.6 and ~1.1 blocks ahead.
+ */
+export function hazardAhead(world: { getBlock(x: number, y: number, z: number): number }, x: number, y: number, z: number, dx: number, dz: number): boolean {
+  const bad = (id: number) => id === BlockId.Fire || id === BlockId.Lava;
+  for (const d of [0.6, 1.1]) {
+    const bx = Math.floor(x + dx * d), bz = Math.floor(z + dz * d), by = Math.floor(y + 0.05);
+    if (bx === Math.floor(x) && bz === Math.floor(z)) continue;
+    if (bad(world.getBlock(bx, by, bz)) || bad(world.getBlock(bx, by + 1, bz)) || bad(world.getBlock(bx, by - 1, bz))) return true;
+    // stepping down a block into lava/fire
+    if (!isSolid(world.getBlock(bx, by - 1, bz)) && bad(world.getBlock(bx, by - 2, bz))) return true;
+  }
+  return false;
+}
+
 /** MC: mobs can't hit/shoot you through solid blocks. Sampled ray between two eye points. */
 export function lineOfSight(world: World, x0: number, y0: number, z0: number, x1: number, y1: number, z1: number): boolean {
   const dx = x1 - x0, dy = y1 - y0, dz = z1 - z0;
@@ -327,9 +343,16 @@ export class MobSystem {
       const len = Math.hypot(tx, tz) || 1;
       let ndx = (tx || tz) ? tx / len : 0, ndz = (tx || tz) ? tz / len : 0;
       if (tx || tz) {
-        if (feetWater(world, m.x + ndx, m.y, m.z + ndz) || cliffAhead(world, m.x, m.y, m.z, ndx, ndz)) {
+        if (feetWater(world, m.x + ndx, m.y, m.z + ndz) || cliffAhead(world, m.x, m.y, m.z, ndx, ndz)
+          || hazardAhead(world, m.x, m.y, m.z, ndx, ndz)) {
           m.yaw += Math.PI / 2 + (Math.random() - 0.5);
           ndx = Math.sin(m.yaw); ndz = Math.cos(m.yaw);
+          // it21: if the new way is dangerous too, stand still rather than walk into fire/lava
+          if (hazardAhead(world, m.x, m.y, m.z, ndx, ndz)) {
+            const inHazard = [world.getBlock(Math.floor(m.x), Math.floor(m.y + 0.05), Math.floor(m.z)), world.getBlock(Math.floor(m.x), Math.floor(m.y + 1), Math.floor(m.z))]
+              .some((id) => id === BlockId.Fire || id === BlockId.Lava);
+            if (!inHazard) { ndx = 0; ndz = 0; }
+          }
         }
       }
       const sitStop = m.kind === 'ulv' && m.tamed && m.sitting;

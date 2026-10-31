@@ -1,5 +1,6 @@
 import { BLOCKS, isOpaque, BlockId, isCrossPlant } from '../blocks/types';
 import { tileUV } from '../blocks/textures';
+import { ladderWall } from './ladder';
 import { CHUNK_HEIGHT, CHUNK_SIZE, type Chunk } from './chunk';
 
 export interface MeshData {
@@ -288,6 +289,18 @@ function buildMesh(
         const wx = ox + lx;
         const wz = oz + lz;
         if (isCrossPlant(id) || id === BlockId.Fire) { emitCross(a, wx, y, wz, def.tiles.side, getLight(wx, y, wz)); continue; }
+        if (id === BlockId.Ladder) {
+          // it21 (MC): flat against its wall, 1/16 off the wall surface (was a see-through full cube)
+          const wall = ladderWall(getMeta(wx, y, wz), getWorld, wx, y, wz);
+          const lt = getLight(wx, y, wz);
+          const col = Math.min(1.5, lightCurve(lt & 15) * 0.95), bcol = Math.min(1.5, lightCurve(lt >> 4) * 0.95);
+          const o = 1 / 16;
+          if (wall === 0) emitPlane(a, wx, y, wz, o, 1, o, 0, 1, def.tiles.side, col, bcol);
+          else if (wall === 1) emitPlane(a, wx, y, wz, 1 - o, 0, 1 - o, 1, 1, def.tiles.side, col, bcol);
+          else if (wall === 2) emitPlane(a, wx, y, wz, 0, o, 1, o, 1, def.tiles.side, col, bcol);
+          else emitPlane(a, wx, y, wz, 1, 1 - o, 0, 1 - o, 1, def.tiles.side, col, bcol);
+          continue;
+        }
         if (id === BlockId.Torch) { emitTorch(a, wx, y, wz, def.tiles.side, getLight(wx, y, wz)); continue; }
         if (id === BlockId.Crop) {
           // MC crop '#' model: 4 vertical planes, height grows with the stage (was a translucent box)

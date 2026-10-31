@@ -13,12 +13,14 @@ export function isGravityBlock(id: number): boolean { return id === BlockId.Sand
 export function needsSupportBelow(id: number): boolean {
   return id === BlockId.Torch || id === BlockId.RedDust || id === BlockId.PressurePlate
     || id === BlockId.Crop || id === BlockId.Sapling || id === BlockId.TallGrass
-    || id === BlockId.Dandelion || id === BlockId.Poppy || id === BlockId.Door;
+    || id === BlockId.Dandelion || id === BlockId.Poppy || id === BlockId.Door
+    || id === BlockId.DoubleGrass || id === BlockId.DoubleGrassTop;
 }
 
 /** Cells a falling block passes through (MC: air, water, lava, fire). */
 function passable(id: number): boolean {
-  return id === BlockId.Air || id === BlockId.Water || id === BlockId.Lava || id === BlockId.TallGrass || id === BlockId.Fire;
+  return id === BlockId.Air || id === BlockId.Water || id === BlockId.Lava || id === BlockId.TallGrass || id === BlockId.Fire
+    || id === BlockId.DoubleGrass;
 }
 
 export type FallResult = { landedY: number } | { popped: true; atY: number } | null;

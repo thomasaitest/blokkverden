@@ -150,7 +150,7 @@ export function blockMaterial(blockId: number): BlockMaterial {
     case 1: case 2: case 8: case 19: case 22: case 49: return 'ground';
     case 5: case 6: case 11: case 13: case 20: case 21: return 'wood';
     case 3: case 4: case 14: case 15: case 16: case 17: case 18: case 46: case 47: return 'stone';
-    case 7: case 76: case 78: case 79: case 80: return 'plant';
+    case 7: case 76: case 78: case 79: case 80: case 84: case 85: return 'plant';
     case 9: case 12: return 'glass';
     default: return 'other';
   }
@@ -205,6 +205,9 @@ export function dropForBlock(blockId: number, held: ItemStack | null): ItemStack
   // MC: a grass block always drops dirt; seeds come from tall grass (12.5 %)
   if (blockId === 1 || blockId === 19) return stack(2, 1);
   if (blockId === 78) return Math.random() < 0.125 ? stack(63, 1) : null;
+  // it21: double tall grass — MC: only the lower half drops (seeds 12.5 %)
+  if (blockId === 84) return Math.random() < 0.125 ? stack(63, 1) : null;
+  if (blockId === 85) return null;
   // MC gravel: 10 % flint, otherwise gravel
   if (blockId === 49) return Math.random() < 0.1 ? stack(77, 1) : stack(49, 1);
   if (blockId === 7) {

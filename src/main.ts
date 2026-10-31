@@ -6,6 +6,9 @@ import { updateGravityAround, needsSupportBelow } from './world/gravity';
 import { canPlantSapling, growOak, SAPLING_GROW_CHANCE, SAPLING_MIN_LIGHT } from './world/saplings';
 import { LeafDecay, LEAF_PERSISTENT } from './world/leafdecay';
 import { selectionBox } from './world/outline';
+import { FallingBlocks } from './world/fallingBlocks';
+import { ladderWall, ladderMetaFromNormal } from './world/ladder';
+import { isDoublePlant, breakPartner, fixOrphans } from './world/doubleGrass';
 import { FireSystem, burnTick, createBurnState, openToSky, lavaIgnite, LAVA_IGNITE_CHANCE } from './world/fire';
 import { type ItemStack, ITEMS, breakDuration, dropForBlock, damageTool, armorPoints, ItemId, blockMaterial, miningPenalty } from './items/types';
 import { bindDesktopControls, consumeLook, consumePlace, createInput } from './player/controls';
@@ -110,6 +113,9 @@ async function runGame(
   renderer.applySettings(settings.renderDistance, settings.fov);
   const inv = new Inventory();
   const drops = new DropSystem();
+  const falling = new FallingBlocks(); // it21: sand/gravel fall as moving blocks
+  const fallPop = (gx: number, gy: number, gz: number, gid: number) => { const gd = dropForBlock(gid, null); if (gd) drops.spawn(gx, gy, gz, gd); };
+  let orphanAcc = 0;
   const containers = new ContainerStore();
   const sound = new SoundBus();
   sound.setVolume(settings.volume);
@@ -206,7 +212,7 @@ async function runGame(
   deathEl.style.display = 'none';
   app.appendChild(deathEl);
 
-  const doSave = () => saveWorldNamed(worldName, world, player, inv, drops, containers, dayTime, respawn, xp.toJSON(), structuresToJSON(), leafDecay.toJSON());
+  const doSave = () => (falling.flush(world, fallPop), saveWorldNamed(worldName, world, player, inv, drops, containers, dayTime, respawn, xp.toJSON(), structuresToJSON(), leafDecay.toJSON()));
   const leafDecay = new LeafDecay();
   // it19 (MC): fire from flint and steel spreads to wood/leaves and burns out; fire/lava set the player burning
   const fire = new FireSystem();
@@ -304,11 +310,20 @@ async function runGame(
     // MC: sand over the crater falls; blasted trees shed their leaves
     for (const b of blocks) {
       if (b.id === BlockId.Log || b.id === BlockId.Leaves) leafDecay.onRemoved(world, b.x, b.y, b.z);
-      updateGravityAround(world, b.x, b.y, b.z, (gx, gy, gz, gid) => { const gd = dropForBlock(gid, null); if (gd) drops.spawn(gx, gy, gz, gd); });
+      falling.updateAround(world, b.x, b.y, b.z);
     }
     if (blocks.length) { markMesh(); hud.markDirty(); }
   };
 
+  // it21 (MC): rain streaks stop at the highest rain-blocking block of each column (roofs, leaves)
+  renderer.rainTop = (x, z) => {
+    const cy = Math.floor(player.y);
+    for (let y = Math.min(CHUNK_HEIGHT - 1, cy + 26); y >= cy - 6; y--) {
+      const id = world.getBlock(x, y, z);
+      if (id !== BlockId.Air && !openToSky(world, x, y - 1, z, y + 1)) return y + 1;
+    }
+    return -1e9;
+  };
   const applySettings = (s: GameSettings) => {
     settings = s;
     setViewRadius(s.renderDistance);
@@ -585,6 +600,9 @@ async function runGame(
       glLost: renderer.renderer.getContext()?.isContextLost?.() ?? null,
     }),
     forceSave: () => doSave(),
+    /** it21: falling sand/gravel entities (x, y, z, vy, id) */
+    falling: () => falling.list.map((f) => ({ x: f.x, y: f.y, z: f.z, vy: f.vy, id: f.id })),
+    mobsList: () => mobs.mobs.map((m) => ({ kind: m.kind, x: m.x, y: m.y, z: m.z, hp: m.hp })),
     leafDecayPending: () => leafDecay.pending.length,
     fire, burn,
     /** Test setup only: speed up sapling growth (MC bone-meal stand-in). */
@@ -1349,6 +1367,7 @@ async function runGame(
       hud.markDirty(); sound.pickup();
     }
     renderer.syncDrops(drops.drops);
+    renderer.syncFalling(falling.list);
     renderer.syncMobs(mobs.mobs, dt);
     renderer.syncWeather(weather.kind, weather.intensity, renderer.camera.position, weather.flash);
     renderer.syncProjectiles(projectiles.list);
@@ -1388,7 +1407,8 @@ async function runGame(
 
     const hit = raycast(world, player);
     renderer.setOutline(invUi.isOpen() ? null : hit,
-      hit ? selectionBox(world.getBlock(hit.x, hit.y, hit.z), world.getWaterLevel(hit.x, hit.y, hit.z), world.getWaterLevel(hit.x, hit.y, hit.z)) : undefined);
+      hit ? selectionBox(world.getBlock(hit.x, hit.y, hit.z), world.getWaterLevel(hit.x, hit.y, hit.z), world.getWaterLevel(hit.x, hit.y, hit.z),
+        ladderWall(world.getWaterLevel(hit.x, hit.y, hit.z), (x, y, z) => world.getBlock(x, y, z), hit.x, hit.y, hit.z)) : undefined);
 
     if (!invUi.isOpen() && input.breakHeld && hit && ITEMS[inv.held()?.id ?? -1]?.tool !== 'bow') {
       const key = `${hit.x},${hit.y},${hit.z}`;
@@ -1414,10 +1434,15 @@ async function runGame(
               containers.removeAt(hit.x, hit.y, hit.z);
             }
             if (drop) drops.spawn(hit.x, hit.y, hit.z, drop);
+            // it21 (MC): breaking either half of double tall grass removes both (only the lower half drops)
+            if (isDoublePlant(id)) {
+              const lower = breakPartner(world, hit.x, hit.y, hit.z, id);
+              if (lower && id === BlockId.DoubleGrassTop) { const d3 = dropForBlock(BlockId.DoubleGrass, null); if (d3) drops.spawn(lower[0], lower[1], lower[2], d3); }
+            }
             // MC: cut logs/leaves make unconnected natural leaves decay over time
             if (id === BlockId.Log || id === BlockId.Leaves) leafDecay.onRemoved(world, hit.x, hit.y, hit.z);
             // MC: sand above the broken block falls
-            updateGravityAround(world, hit.x, hit.y, hit.z, (gx, gy, gz, gid) => { const gd = dropForBlock(gid, null); if (gd) drops.spawn(gx, gy, gz, gd); });
+            falling.updateAround(world, hit.x, hit.y, hit.z);
             // MC: a torch / red dust / pressure plate / crop / sapling / tall grass on the broken block pops off as an item
             {
               const above = world.getBlock(hit.x, hit.y + 1, hit.z);
@@ -1606,13 +1631,17 @@ async function runGame(
                 : true;
               // MC: nothing can be placed into a door's upper half
               const intoDoorTop = below === BlockId.Door;
-              if (placeId != null && isReplaceable(dest) && !intersectsPlayer && supportOk && !intoDoorTop) {
+              // it21 (MC): ladders only hang on the side of a solid block
+              const ladderMeta = placeId === BlockId.Ladder ? (intoHit ? null : ladderMetaFromNormal(hit.nx, hit.ny, hit.nz)) : 0;
+              if (placeId != null && isReplaceable(dest) && !intersectsPlayer && supportOk && !intoDoorTop && ladderMeta != null && !(placeId === BlockId.Ladder && !isSolid(tid))) {
+                if (isDoublePlant(dest)) breakPartner(world, px, py, pz, dest); // placing into one half removes the other
                 world.setBlock(px, py, pz, placeId);
+                if (placeId === BlockId.Ladder) world.setMeta(px, py, pz, ladderMeta);
                 if (placeId === BlockId.Door) world.setMeta(px, py, pz, doorFacingFromYaw(player.yaw) << DOOR_FACING_SHIFT);
                 // MC: player-placed leaves are persistent (never decay)
                 if (placeId === BlockId.Leaves) world.setMeta(px, py, pz, LEAF_PERSISTENT);
                 // MC: sand placed over air falls
-                updateGravityAround(world, px, py, pz, (gx, gy, gz, gid) => { const gd = dropForBlock(gid, null); if (gd) drops.spawn(gx, gy, gz, gd); });
+                falling.updateAround(world, px, py, pz);
                 if (player.creative) inv.add(taken); // restore
                 if (placeId === BlockId.PortalFrame) lightPortal(world, px, py, pz);
                 sound.placeBlock(); markMesh();
@@ -1626,6 +1655,12 @@ async function runGame(
       }
     }
 
+    // it21 (MC): falling sand/gravel entities
+    if (falling.list.length) {
+      falling.step(Math.min(dt, 0.05), world, () => markMesh(), fallPop);
+    }
+    orphanAcc += dt;
+    if (orphanAcc > 1) { orphanAcc = 0; if (fixOrphans(world, Math.floor(player.x), Math.floor(player.y), Math.floor(player.z), 8)) markMesh(); }
     fireAdoptAcc += dt;
     if (fireAdoptAcc > 2) { fireAdoptAcc = 0; fire.adoptAround(world, player.x, player.y, player.z); } // e.g. fire saved in a world
     // it20 (MC): rain puts out fire under open sky; lava sets fire to flammable blocks nearby

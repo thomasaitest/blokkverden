@@ -34,6 +34,7 @@ export const BlockId = {
   Helstein: 40, Sjelegrus: 41, Portal: 42, PortalFrame: 43,
   Lava: 44, Glodstein: 45, Helkvarts: 46, Anvil: 47, Bedrock: 48,
   Gravel: 49, Sapling: 76, TallGrass: 78, Dandelion: 79, Poppy: 80, Fire: 83,
+  DoubleGrass: 84, DoubleGrassTop: 85,
 } as const;
 
 export type BlockId = (typeof BlockId)[keyof typeof BlockId];
@@ -114,17 +115,24 @@ export const BLOCKS: Record<number, BlockDef> = {
   [79]: B(79, 'Løvetann', false, false, true, false, 0.05, { top: 78, bottom: 78, side: 78 }),
   [80]: B(80, 'Valmue', false, false, true, false, 0.05, { top: 79, bottom: 79, side: 79 }),
   // it19 (MC): ild — ingen kollisjon, slukkes med ett slag, lyser 15
+  // it21 (MC): dobbelt høyt gress — to kryss-planter oppå hverandre (84 = nedre, 85 = øvre halvdel)
+  [84]: B(84, 'Dobbelt høyt gress', false, false, true, false, 0.05, { top: 82, bottom: 82, side: 82 }),
+  [85]: B(85, 'Dobbelt høyt gress', false, false, true, false, 0.05, { top: 83, bottom: 83, side: 83 }),
   [83]: B(83, 'Ild', false, false, true, false, 0.05, { top: 80, bottom: 80, side: 80 }, 15),
 };
 
 /** Cross-shaped plants (MC "X" models): no collision, break instantly, pop when the ground goes. */
 export function isCrossPlant(id: number): boolean {
-  return id === BlockId.Sapling || id === BlockId.TallGrass || id === BlockId.Dandelion || id === BlockId.Poppy;
+  return id === BlockId.Sapling || id === BlockId.TallGrass || id === BlockId.Dandelion || id === BlockId.Poppy
+    || id === BlockId.DoubleGrass || id === BlockId.DoubleGrassTop;
 }
 /** MC flowers (dandelion, poppy): planted on grass/dirt/farmland. */
 export function isFlower(id: number): boolean { return id === BlockId.Dandelion || id === BlockId.Poppy; }
 /** MC "replaceable" blocks: placing a block into them overwrites them (tall grass). */
-export function isReplaceable(id: number): boolean { return id === BlockId.Air || id === BlockId.Water || id === BlockId.TallGrass || id === BlockId.Fire; }
+export function isReplaceable(id: number): boolean {
+  return id === BlockId.Air || id === BlockId.Water || id === BlockId.TallGrass || id === BlockId.Fire
+    || id === BlockId.DoubleGrass || id === BlockId.DoubleGrassTop;
+}
 
 export function isSolid(id: number): boolean { return BLOCKS[id]?.solid ?? false; }
 export function isOpaque(id: number): boolean { return BLOCKS[id]?.opaque ?? false; }

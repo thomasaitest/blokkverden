@@ -22,7 +22,7 @@ export function blastResistance(id: number): number {
     case BlockId.CraftingTable: case BlockId.Chest: return 2.5;
     case BlockId.Furnace: return 3.5;
     case BlockId.Wool: case BlockId.Bed: return 0.8;
-    case BlockId.Sapling: case BlockId.TallGrass: case BlockId.Dandelion: case BlockId.Poppy: return 0;
+    case BlockId.Sapling: case BlockId.TallGrass: case BlockId.DoubleGrass: case BlockId.DoubleGrassTop: case BlockId.Dandelion: case BlockId.Poppy: return 0;
     case BlockId.Gravel: return 0.6;
     case BlockId.Torch: case BlockId.Crop: case BlockId.RedDust: case BlockId.Lever: case BlockId.Button: return 0;
     case BlockId.Ladder: return 0.4;

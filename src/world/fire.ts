@@ -7,7 +7,8 @@ export function isFlammable(id: number): boolean {
     || id === BlockId.TallGrass || id === BlockId.Dandelion || id === BlockId.Poppy || id === BlockId.Sapling
     || id === BlockId.Fence || id === BlockId.Gate || id === BlockId.Stairs || id === BlockId.Slab
     || id === BlockId.Ladder || id === BlockId.Bed || id === BlockId.CraftingTable || id === BlockId.Door
-    || id === BlockId.Trapdoor || id === BlockId.Sign;
+    || id === BlockId.Trapdoor || id === BlockId.Sign
+    || id === BlockId.DoubleGrass || id === BlockId.DoubleGrassTop;
 }
 
 const DIRS: [number, number, number][] = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
@@ -42,7 +43,8 @@ export function openToSky(w: BlockAccess, x: number, y: number, z: number, top =
   for (let yy = y + 1; yy < top; yy++) {
     const id = w.getBlock(x, yy, z);
     if (id !== BlockId.Air && id !== BlockId.Fire && id !== BlockId.TallGrass && id !== BlockId.Dandelion
-      && id !== BlockId.Poppy && id !== BlockId.Sapling && id !== BlockId.Torch) return false;
+      && id !== BlockId.Poppy && id !== BlockId.Sapling && id !== BlockId.Torch
+      && id !== BlockId.DoubleGrass && id !== BlockId.DoubleGrassTop) return false;
   }
   return true;
 }

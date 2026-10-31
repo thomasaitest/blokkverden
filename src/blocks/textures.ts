@@ -430,6 +430,18 @@ export function createAtlasCanvas(): HTMLCanvasElement {
     return [0, 0, 0, 0];
   });
 
+  // it21: 82/83 double tall grass (lower / upper half) — taller, denser blades; the top tile has the tips
+  const dgBlade = (lx: number, ly: number, rnd: number, upper: boolean): [number, number, number, number] => {
+    if (lx <= 0 || lx >= 15) return [0, 0, 0, 0];
+    const blade = (lx * 7 + 3) % 4;
+    const tip = upper ? 1 + ((lx * 11) % 9) : 0;
+    if (blade < 2 && ly >= tip) { const v = (rnd * 30) | 0; return [64 + v, 146 + v, 46, 255]; }
+    if (!upper && blade === 2 && ly >= 4 + ((lx * 5) % 6)) { const v = (rnd * 25) | 0; return [80 + v, 160 + v, 56, 255]; }
+    return [0, 0, 0, 0];
+  };
+  fillTile(d, 82, (lx, ly, rnd) => dgBlade(lx, ly, rnd, false));
+  fillTile(d, 83, (lx, ly, rnd) => dgBlade(lx, ly, rnd, true));
+
   ctx.putImageData(img, 0, 0);
   return canvas;
 }

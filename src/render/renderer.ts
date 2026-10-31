@@ -367,6 +367,25 @@ export class GameRenderer {
     return m;
   }
 
+  private fallPool: THREE.Mesh[] = [];
+  /** it21 (MC): sand/gravel falling as a full-size moving block. */
+  syncFalling(list: { x: number; y: number; z: number; id: number }[]): void {
+    while (this.fallPool.length < list.length) {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.98, 0.98, 0.98), this.dropMaterial(8));
+      this.fallPool.push(mesh);
+      this.dropGroup.add(mesh);
+    }
+    for (let i = 0; i < this.fallPool.length; i++) {
+      const mesh = this.fallPool[i];
+      if (i >= list.length) { mesh.visible = false; continue; }
+      const f = list[i];
+      mesh.visible = true;
+      mesh.position.set(f.x, f.y + 0.5, f.z);
+      const mat = this.dropMaterial(f.id);
+      if (mesh.material !== mat) mesh.material = mat;
+    }
+  }
+
   syncDrops(drops: DropEntity[]): void {
     while (this.dropPool.length < drops.length) {
       const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.28, 0.28), this.dropMaterial(1));
@@ -429,6 +448,10 @@ export class GameRenderer {
   /** it20: 0..1, eases towards 1 while it rains/thunders (≈3 s), used to darken the sky. */
   rainLevel = 0;
   private rainLines: THREE.LineSegments | null = null;
+  /** it21: top of the highest rain-blocking block in a column (rain stops on roofs instead of falling through). */
+  rainTop: ((x: number, z: number) => number) | null = null;
+  private rainTopCache = new Map<number, number>();
+  private rainTopFrame = 0;
 
   syncWeather(kind: WeatherKind, intensity: number, cam: THREE.Vector3, flash: number): void {
     this.weatherKind = kind;
@@ -453,10 +476,22 @@ export class GameRenderer {
       this.rainLines.position.set(cam.x, cam.y, cam.z);
       const rp = this.rainLines.geometry.attributes.position as THREE.BufferAttribute;
       const fall = 14 * 0.016 * (0.6 + intensity * 0.6);
+      if (++this.rainTopFrame >= 12) { this.rainTopFrame = 0; this.rainTopCache.clear(); }
       for (let i = 0; i < rp.count; i += 2) {
         let y = rp.getY(i) - fall;
         if (y < -5) y += 30;
-        rp.setY(i, y); rp.setY(i + 1, y + 0.7);
+        let y1 = y + 0.7;
+        if (this.rainTop) {
+          const cx = Math.floor(cam.x + rp.getX(i)), cz = Math.floor(cam.z + rp.getZ(i));
+          const key = (cx & 0xffff) * 65536 + (cz & 0xffff);
+          let top = this.rainTopCache.get(key);
+          if (top === undefined) { top = this.rainTop(cx, cz); this.rainTopCache.set(key, top); }
+          const lt = top - cam.y;
+          // MC: rain stops on the first solid surface (roof, leaves) — nothing falls under it
+          if (y1 <= lt) y1 = y;
+          else if (y < lt) y = lt;
+        }
+        rp.setY(i, y); rp.setY(i + 1, y1);
       }
       rp.needsUpdate = true;
       if (this.weatherPoints) this.weatherPoints.visible = false;

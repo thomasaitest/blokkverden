@@ -33,6 +33,8 @@ export interface Mob {
   hurtFlash?: number;
   /** Burning in sunlight (zombie/skeleton). */
   burning?: boolean;
+  /** it20: fire/lava burning (MC: mobs take fire and lava damage, then burn for a while). */
+  burn?: { burnTime: number; hotAcc: number; burnAcc: number };
   /** Seconds of AI-suppressed knockback. */
   knockBack?: number;
   deathT?: number;

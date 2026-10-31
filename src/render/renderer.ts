@@ -178,7 +178,7 @@ export class GameRenderer {
     this.sun.position.set(50, 80, 30);
     this.scene.add(this.ambient, this.hemi, this.sun);
 
-    const edges = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.002, 1.002, 1.002));
+    const edges = new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1));
     this.outline = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.7 }));
     this.outline.visible = false;
     this.outline.frustumCulled = false;
@@ -331,11 +331,17 @@ export class GameRenderer {
     this.camera.quaternion.setFromEuler(this._euler);
   }
 
-  setOutline(hit: Hit | null): void {
+  /** it20: `box` = the block's selection shape (MC: thin door panel, half slab, small plant boxes). */
+  setOutline(hit: Hit | null, box: [number, number, number, number, number, number] = [0, 0, 0, 1, 1, 1]): void {
     if (!hit) { this.outline.visible = false; return; }
     this.outline.visible = true;
-    this.outline.position.set(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
+    const e = 0.002;
+    const [x0, y0, z0, x1, y1, z1] = box;
+    this.outline.scale.set(x1 - x0 + 2 * e, y1 - y0 + 2 * e, z1 - z0 + 2 * e);
+    this.outline.position.set(hit.x + (x0 + x1) / 2, hit.y + (y0 + y1) / 2, hit.z + (z0 + z1) / 2);
+    this.lastOutlineBox = box;
   }
+  lastOutlineBox: [number, number, number, number, number, number] | null = null;
 
   private dropMats = new Map<number, THREE.Material>();
   /** Item-entity material with the item's real atlas icon (was an arbitrary id-hash colour: cobble showed blue). */

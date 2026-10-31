@@ -107,6 +107,11 @@ export class SoundBus {
     this.beep(320, 0.08, 'sine', 0.08);
   }
 
+  /** it20: hiss when rain/water puts out fire. */
+  fizz(): void {
+    this.noise(0.25, 0.12, 3000);
+  }
+
   swing(): void {
     this.noise(0.06, 0.1, 1200);
   }

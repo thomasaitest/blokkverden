@@ -1,3 +1,4 @@
+import { burnTick, createBurnState } from '../world/fire';
 import { isSolid, BlockId } from '../blocks/types';
 import type { World } from '../world/world';
 import { CHUNK_HEIGHT } from '../world/chunk';
@@ -250,6 +251,21 @@ export class MobSystem {
         m.hp -= dt * 2;
         if (m.hp <= 0) continue;
       } else m.burning = false;
+      // it20 (MC): mobs standing in fire or lava take damage and keep burning afterwards; water puts them out.
+      {
+        const bx = Math.floor(m.x), bz = Math.floor(m.z);
+        const feet = world.getBlock(bx, Math.floor(m.y + 0.1), bz), mid = world.getBlock(bx, Math.floor(m.y + m.height * 0.6), bz);
+        const inFire = feet === BlockId.Fire || mid === BlockId.Fire;
+        const inLava = feet === BlockId.Lava || mid === BlockId.Lava;
+        const inWater = feet === BlockId.Water || mid === BlockId.Water;
+        if (inFire || inLava || (m.burn && m.burn.burnTime > 0)) {
+          m.burn ??= createBurnState();
+          const dmg = burnTick(m.burn, inFire, inLava, inWater, dt);
+          if (dmg > 0) { m.hp -= dmg; m.hurtFlash = 0.25; }
+          if (m.burn.burnTime > 0 || inFire || inLava) m.burning = true;
+          if (m.hp <= 0) continue;
+        }
+      }
       m.attackCool -= dt;
       if (m.knockBack && m.knockBack > 0) m.knockBack -= dt;
       const def = MOB_DEFS[m.kind];
@@ -393,8 +409,10 @@ export class MobSystem {
 
   private dropLoot(m: Mob, drops: DropSystem): void {
     const x = Math.floor(m.x), y = Math.floor(m.y), z = Math.floor(m.z);
-    if (m.kind === 'gris') drops.spawn(x, y, z, stack(ItemId.RawMeat, 1));
-    if (m.kind === 'ku') { drops.spawn(x, y, z, stack(ItemId.Leather, 1)); drops.spawn(x, y, z, stack(ItemId.RawMeat, 1 + (Math.random() * 2 | 0))); }
+    // it20 (MC): animals that die while burning drop cooked meat
+    const meat = m.burning ? ItemId.CookedMeat : ItemId.RawMeat;
+    if (m.kind === 'gris') drops.spawn(x, y, z, stack(meat, 1));
+    if (m.kind === 'ku') { drops.spawn(x, y, z, stack(ItemId.Leather, 1)); drops.spawn(x, y, z, stack(meat, 1 + (Math.random() * 2 | 0))); }
     if (m.kind === 'sau') drops.spawn(x, y, z, stack(ItemId.WoolItem, 1));
     if (m.kind === 'høne') drops.spawn(x, y, z, stack(ItemId.Feather, 1));
     if (m.kind === 'ulv') drops.spawn(x, y, z, stack(ItemId.Bone, 1 + (Math.random() * 2 | 0)));

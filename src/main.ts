@@ -5,7 +5,8 @@ import { Inventory } from './items/inventory';
 import { updateGravityAround, needsSupportBelow } from './world/gravity';
 import { canPlantSapling, growOak, SAPLING_GROW_CHANCE, SAPLING_MIN_LIGHT } from './world/saplings';
 import { LeafDecay, LEAF_PERSISTENT } from './world/leafdecay';
-import { FireSystem, burnTick, createBurnState } from './world/fire';
+import { selectionBox } from './world/outline';
+import { FireSystem, burnTick, createBurnState, openToSky, lavaIgnite, LAVA_IGNITE_CHANCE } from './world/fire';
 import { type ItemStack, ITEMS, breakDuration, dropForBlock, damageTool, armorPoints, ItemId, blockMaterial, miningPenalty } from './items/types';
 import { bindDesktopControls, consumeLook, consumePlace, createInput } from './player/controls';
 import { createPlayer, movePlayer, EYE_HEIGHT, headInSolid } from './player/physics';
@@ -209,6 +210,7 @@ async function runGame(
   const leafDecay = new LeafDecay();
   // it19 (MC): fire from flint and steel spreads to wood/leaves and burns out; fire/lava set the player burning
   const fire = new FireSystem();
+  let lavaAcc = 0;
   const burn = createBurnState();
   let fireAdoptAcc = 0;
   let suffocateAcc = 0;
@@ -656,6 +658,10 @@ async function runGame(
       return true;
     },
     clearMobs: () => { mobs.clear(); },
+    // it20 test hooks (read-only)
+    outlineBox: () => renderer.lastOutlineBox,
+    mobInfo: () => mobs.mobs.map((m) => ({ kind: m.kind, x: m.x, y: m.y, z: m.z, hp: m.hp, burning: !!m.burning, burnTime: m.burn?.burnTime ?? 0, dead: m.hp <= 0 })),
+    fireCount: () => fire.fires.size,
     spawnMob: (kind: string, ox = 3, oy = 0, oz = 0) => {
       const x = player.x + ox, z = player.z + oz;
       let y = player.y + oy;
@@ -1381,7 +1387,8 @@ async function runGame(
     hud.refreshHotbar();
 
     const hit = raycast(world, player);
-    renderer.setOutline(invUi.isOpen() ? null : hit);
+    renderer.setOutline(invUi.isOpen() ? null : hit,
+      hit ? selectionBox(world.getBlock(hit.x, hit.y, hit.z), world.getWaterLevel(hit.x, hit.y, hit.z), world.getWaterLevel(hit.x, hit.y, hit.z)) : undefined);
 
     if (!invUi.isOpen() && input.breakHeld && hit && ITEMS[inv.held()?.id ?? -1]?.tool !== 'bow') {
       const key = `${hit.x},${hit.y},${hit.z}`;
@@ -1621,9 +1628,24 @@ async function runGame(
 
     fireAdoptAcc += dt;
     if (fireAdoptAcc > 2) { fireAdoptAcc = 0; fire.adoptAround(world, player.x, player.y, player.z); } // e.g. fire saved in a world
-    for (const fc of fire.update(dt, world)) {
-      particles.burst(fc.x + 0.5, fc.y + 0.5, fc.z + 0.5, fc.burnt != null ? 0x333333 : 0xff9a30, 4, 'break');
+    // it20 (MC): rain puts out fire under open sky; lava sets fire to flammable blocks nearby
+    const raining = (weather.kind === 'rain' || weather.kind === 'thunder') && weather.intensity > 0 && world.dimension !== 'helvete';
+    const rainedOn = raining ? (x: number, y: number, z: number) => openToSky(world, x, y, z) : undefined;
+    for (const fc of fire.update(dt, world, Math.random, rainedOn)) {
+      particles.burst(fc.x + 0.5, fc.y + 0.5, fc.z + 0.5, fc.rained ? 0xcccccc : fc.burnt != null ? 0x333333 : 0xff9a30, fc.rained ? 6 : 4, 'break');
+      if (fc.rained) sound.fizz();
       markMesh();
+    }
+    lavaAcc += dt;
+    if (lavaAcc >= 1) {
+      lavaAcc = 0;
+      const cx = Math.floor(player.x), cy = Math.floor(player.y), cz = Math.floor(player.z);
+      let lit = false;
+      for (let yy = Math.max(1, cy - 8); yy <= cy + 8; yy++) for (let xx = cx - 12; xx <= cx + 12; xx++) for (let zz = cz - 12; zz <= cz + 12; zz++) {
+        if (world.getBlock(xx, yy, zz) !== BlockId.Lava || Math.random() >= LAVA_IGNITE_CHANCE) continue;
+        if (lavaIgnite(fire, world, xx, yy, zz).length) lit = true;
+      }
+      if (lit) markMesh();
     }
     for (const lp of leafDecay.update(dt, world)) {
       const ld = dropForBlock(BlockId.Leaves, null);

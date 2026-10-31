@@ -2,6 +2,43 @@
 
 Original voxel-sandkasse. Ingen Mojang-assets.
 
+## Iterasjon 21 (2026-10-31)
+
+Start: lør. 31. okt. 04:55 CET · Slutt: lør. 31. okt. 05:38 CET (~43 min) · gren `dev` (ikke publisert)
+
+### Fokus
+Baseline først (core 56/56 med ekte tastatur/mus i Chromium), deretter punktene fra it20-listen over kjente begrensninger: regn under tak, mobber som går inn i ild og lava, merkeboks for stige, sand og grus som falt umiddelbart, og dobbelt høyt gress. `__bv` bare til oppsett.
+
+### Fikset
+1. Sand og grus falt umiddelbart. Nå faller de som en synlig blokk som i MC (≈16 blokker/s² med MC-luftmotstand). En søyle faller samlet og legger seg i riktig rekkefølge. Lander den på en fakkel, blir den til en ting. Blokker som ikke kan lande, gir seg selv (grus blir ikke lenger flint da). Blokker som faller når spillet lagres, legges på plass først, så ingenting forsvinner
+2. Stiger var en gjennomsiktig hel kube med merkeboks som en hel blokk. Nå henger stigen flatt inntil veggen (1/16 fra veggen), og merkeboksen er et tynt panel (3/16). Stige kan bare settes på siden av en fast blokk, som i MC (ikke oppå bakken). Gamle stiger finner veggen sin selv
+3. Sikting følger formen på tynne og små blokker: klikker du ved siden av en stige, treffer du veggen bak. Det gjelder også gress, spirer og blomster (før traff du hele ruta). Uten dette ble den 4. stigen oppover veggen satt på stigen under i stedet for på veggen
+4. Regnstreker falt gjennom tak. Nå stopper de på den øverste blokka som stenger for regn i hver kolonne (tak, løv). Under taket er det ingen streker, mens det regner helt ned til bakken ute
+5. Mobber gikk rett inn i ild og lava. Nå ser de etter ild og lava foran seg (føtter, hode og gulv, også ett trinn ned). De snur, eller blir stående hvis alle veier er farlige. I en kontrolltest uten fiksen gikk grisene inn i ilden og tok skade (MA1 FAIL). Med fiksen: 0 steg inn i fare på 30 s
+6. Regnet ble mørkere bildetakt for bildetakt (+0,006 per bilde). Ved lav bildefrekvens tok det derfor ~8 s i stedet for ~3 s (it20 RW1 feilet i første regresjonskjøring). Nå er overgangen tidsbasert, og det samme gjelder fallfarten til regnet
+
+### Nye funksjoner (1)
+- Dobbelt høyt gress: beinmel (høyreklikk) på høyt gress gjør det til 2 blokker høyt gress (krever luft over). Det har egne teksturer for nedre og øvre del og én merkeboks som er 2 høy. Slår du på én av delene, forsvinner begge, og bare den nederste kan gi frø (12,5 %). Det vaskes bort av vann, brenner, kan erstattes når du bygger, og gror naturlig på slettene (litt i skogen). Halvdeler uten partner ryddes bort
+
+### Playtest
+- Core: **56 PASS / 0 FAIL / 0 PARTIAL** (`scripts/core-playtest.ts`, endelig bygg; H2 trenger fortsatt ett nytt forsøk i headless, som før)
+- it21-verify: **6/6 PASS** (`scripts/it21-verify.ts`: FB1 LMB under en sandsøyle → synlig fall og landing, FB2 sand satt med RMB faller og grus på fakkel blir til ting, LD1 stige på vegg (meta, tynn ramme, ikke på bakken, klatring med W), RN1 ingen regnstreker under tak, MA1 dyr i ildring og zombie bak lavagrav går aldri inn (30 s), DG1 beinmel → dobbelt gress og LMB fjerner begge)
+- Regresjon: it20-verify 7/7, it19-verify 8/8, it18-verify 8/8, it18-explore 11/11, it17-verify 13/13, it16-verify 6/6 (alle kjørt én og én på endelig bygg). X6 (stige) i it18-explore bommet én gang på grensen (46,90 mot > 47,0) i den samlede kjøringen, men gikk grønt 3 av 3 ganger når den ble kjørt på nytt. it16-verify S2/S3 og it17-verify G2 venter nå på at sanden og grusen lander (fallet er synlig og tar ~0,35–0,7 s, som i MC)
+- 149 vitest grønne (12 nye: fallende blokker, stigeplassering, vegg, ramme og sikting forbi stige, dobbelt gress (beinmel, begge halvdeler, foreldreløse halvdeler, egenskaper), mobber unngår ild og lava)
+- Ny seksjon S i CORE-PLAYTEST.md
+
+### Kjente begrensninger
+- Fallende sand skader ikke mobber og knuser ikke ting den lander på bortsett fra fakler o.l. Den kan ikke dyttes av vann
+- Mobber unngår ild og lava bare én blokk fram (ingen ekte A*-veisøk rundt dem). En fiende som jager deg, kan bli stående ved kanten
+- Ingen regnlyd på taket og ingen pytter. Regnstrekene sjekker bare kolonnen sin omtrent hvert sekund
+- Dobbelt høyt gress kan ikke plukkes med saks (saks finnes ikke), og det finnes ingen bregner eller store blomster
+- Parallellkjøring av flere Chrome-tester gir tidsfeil. Sluttkjøringene gjøres derfor én og én
+
+### Media
+public/progress/it21/ (lokalt på `dev`, ikke publisert): skjermbilder it21-01…08 (sand i fall, sand landet, flat stige med tynn ramme, regn sett fra under tak, regn ute fra tak, dyr i ildring, zombie ved lavagrav, dobbelt høyt gress), klipp `clip-it21-sand-stige-regn.webm`
+
+---
+
 ## Iterasjon 20 (2026-10-31)
 
 Start: lør. 31. okt. 03:55 CET · Slutt: lør. 31. okt. 04:44 CET (~49 min) · gren `dev` (ikke publisert)

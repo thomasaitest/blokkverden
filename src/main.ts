@@ -49,8 +49,13 @@ import { ParticleSystem } from './world/particles';
 import { AchievementBus } from './ui/achievements';
 import { openCreativeInventory } from './ui/creative';
 import { lightPortal, buildPortalFrame, type DimId } from './world/helvete';
+import { MpClient } from './mp/client';
+import { openMpSheet, showMpToast, ensureMpHud } from './mp/ui';
+import type { PoseWire } from './mp/protocol';
 
 const DAY_LEN = 900; // ~15 min day cycle (MC is 20)
+
+type MpBoot = { role: 'host' | 'join'; name: string; code?: string };
 
 function qs(): URLSearchParams {
   return new URLSearchParams(location.search);
@@ -62,7 +67,7 @@ async function boot(): Promise<void> {
   const testMode = qs().get('test') === '1' || qs().get('test') === 'true';
   let settings = loadSettings();
 
-  const startGame = async (worldName: string, seed?: number, fresh = false, creative = false) => {
+  const startGame = async (worldName: string, seed?: number, fresh = false, creative = false, mp?: MpBoot) => {
     title.hide();
     app.querySelector('#game-root')?.remove();
     const root = document.createElement('div');
@@ -75,12 +80,24 @@ async function boot(): Promise<void> {
     }, () => {
       root.remove();
       void title.show();
-    }, creative);
+    }, creative, mp);
   };
 
   const title = createTitleMenu(app, {
     onPlay: (name, seed, fresh, creative) => { void startGame(name, seed, !!fresh, !!creative); },
     onSettingsChange: (s) => { settings = s; },
+    onSammen: () => {
+      void openMpSheet().then((r) => {
+        if (!r) return;
+        if (r.mode === 'host') {
+          const seed = (Math.random() * 1e9) | 0;
+          void startGame(`Sammen-${seed}`, seed, true, true, { role: 'host', name: r.name });
+        } else {
+          // Seed filled in after welcome; start with 0 and reload chunks from host.
+          void startGame(`Sammen-${r.code}`, 0, true, true, { role: 'join', name: r.name, code: r.code });
+        }
+      });
+    },
   });
 
   if (testMode) {
@@ -104,6 +121,7 @@ async function runGame(
   onSettings: (s: GameSettings) => void,
   onQuit: () => void,
   creativeMode = false,
+  mpBoot?: MpBoot,
 ): Promise<void> {
   setViewRadius(settings.renderDistance);
   // Session lifetime: quitting to title must stop the loop, listeners and autosave of this
@@ -529,6 +547,86 @@ async function runGame(
   await waitMeshesInner(world, renderer, 2500);
   renderer.syncChunks(world, true);
   hud.markDirty(); hud.refreshHotbar(); hud.updateBars(player);
+
+  // --- Multiplayer (optional; singleplayer unchanged when mpBoot is undefined) ---
+  const mpHud = ensureMpHud();
+  const refreshMpHud = () => {
+    if (!mp || !mp.active) { mpHud.style.display = 'none'; return; }
+    mpHud.style.display = 'block';
+    mpHud.textContent = mp.isHost
+      ? `Sammen · kode ${mp.code} · vert`
+      : `Sammen · ${mp.code}`;
+  };
+  let mp: MpClient | null = null;
+  const mpSilentBlock = { on: false };
+  mp = new MpClient({
+    scene: renderer.scene,
+    getPose: () => {
+      const moving = Math.hypot(player.vx, player.vz) > 0.4;
+      let pose: PoseWire = 'idle';
+      if (player.flying) pose = 'fly';
+      else if (player.inWater) pose = 'swim';
+      else if (!player.onGround) pose = 'jump';
+      else if (player.sneaking) pose = 'sneak';
+      else if (moving) pose = 'walk';
+      return { x: player.x, y: player.y, z: player.z, yaw: player.yaw, pitch: player.pitch, pose };
+    },
+    getWorldOffer: () => ({ seed: world.seed, chunks: world.serializeModified() }),
+    applyWorld: (seed, chunks) => {
+      if (world.seed !== seed) {
+        world.reseedForMp(seed);
+        world.updateAround(8, 8);
+        const spawn = world.findSpawn();
+        player.x = spawn.x; player.y = spawn.y; player.z = spawn.z;
+        player.vx = player.vy = player.vz = 0;
+      }
+      world.mergeChunks(chunks);
+      markMesh();
+      renderer.syncChunks(world, true);
+      showMpToast('Verden synkronisert', 'ok');
+    },
+    applyBlock: (x, y, z, id, meta) => {
+      mpSilentBlock.on = true;
+      world.setBlock(x, y, z, id);
+      if (meta != null) world.setMeta(x, y, z, meta);
+      mpSilentBlock.on = false;
+      markMesh();
+    },
+    applyDropSpawn: (dropId, x, y, z, itemId, count) => {
+      drops.spawn(x - 0.5, y - 0.3, z - 0.5, { id: itemId, count });
+      const ent = drops.drops[drops.drops.length - 1];
+      if (ent) (ent as { netId?: string }).netId = dropId;
+    },
+    applyDropTake: (dropId) => {
+      drops.drops = drops.drops.filter((d) => (d as { netId?: string }).netId !== dropId);
+    },
+    onHostLeft: () => {
+      showMpToast('Verten forlot rommet', 'bad');
+      refreshMpHud();
+    },
+    onStatus: (msg, kind) => { showMpToast(msg, kind ?? 'info'); refreshMpHud(); },
+    onChat: (name, text) => showMpToast(`${name}: ${text}`, 'info'),
+    onWelcomeSeed: (s) => {
+      if (world.seed !== s) {
+        world.reseedForMp(s);
+        world.updateAround(8, 8);
+      }
+    },
+  });
+  (window as unknown as { __bvMp?: MpClient }).__bvMp = mp;
+  if (mpBoot?.role === 'host') {
+    const code = mp.host(mpBoot.name, world.seed);
+    if (code) showMpToast(`Rom laget: ${code}`, 'ok');
+    refreshMpHud();
+  } else if (mpBoot?.role === 'join' && mpBoot.code) {
+    mp.join(mpBoot.name, mpBoot.code);
+    refreshMpHud();
+  }
+  const mpSendBlock = (x: number, y: number, z: number, id: number, meta?: number) => {
+    if (mpSilentBlock.on || !mp?.active) return;
+    mp.sendBlock(x, y, z, id, meta);
+  };
+
   updateXpUi();
   updateArmorUi();
 
@@ -703,7 +801,7 @@ async function runGame(
         inv.add(taken);
         return false;
       }
-      world.setBlock(px, py, pz, placeId);
+      world.setBlock(px, py, pz, placeId); mpSendBlock(px, py, pz, placeId, world.getWaterLevel(px, py, pz));
       if (player.creative) inv.add(taken);
       markMesh();
       return true;
@@ -1415,6 +1513,8 @@ async function runGame(
       if (Math.random() < dt * 4) particles.burst(d.x + 0.5, d.y + 0.15, d.z + 0.5, 0xff4422, 1, 'redstone');
     }
     particles.update(dt);
+    mp?.tick(dt);
+    refreshMpHud();
     if (boats.mounted) achieve.grant('boat_ride');
     if (player.creative && player.flying) achieve.grant('fly');
 
@@ -1497,6 +1597,8 @@ async function runGame(
           if (id !== BlockId.Air && id !== BlockId.Water) {
             const drop = dropForBlock(id, inv.held());
             world.setBlock(hit.x, hit.y, hit.z, BlockId.Air);
+            mpSendBlock(hit.x, hit.y, hit.z, BlockId.Air);
+            if (drop) mp?.sendDropSpawn(`d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, hit.x + 0.5, hit.y + 0.3, hit.z + 0.5, drop.id, drop.count);
             if (id === BlockId.Chest || id === BlockId.Furnace) {
               // MC: breaking a chest/furnace spills its contents instead of deleting them
               for (const s of containers.contentsAt(hit.x, hit.y, hit.z)) drops.spawn(hit.x, hit.y, hit.z, s);
@@ -1677,7 +1779,9 @@ async function runGame(
           }
         } else if (tid === BlockId.Door || tid === BlockId.Gate || tid === BlockId.Trapdoor) {
           const meta = world.getWaterLevel(hit.x, hit.y, hit.z);
-          world.setMeta(hit.x, hit.y, hit.z, meta ^ 1);
+          const next = meta ^ 1;
+          world.setMeta(hit.x, hit.y, hit.z, next);
+          mpSendBlock(hit.x, hit.y, hit.z, tid, next);
           sound.placeBlock(); markMesh();
         } else if (tid === BlockId.Lever) {
           redstone.toggleLever(world, hit.x, hit.y, hit.z); sound.placeBlock(); markMesh();
@@ -1774,7 +1878,7 @@ async function runGame(
               const ladderMeta = placeId === BlockId.Ladder ? (intoHit ? null : ladderMetaFromNormal(hit.nx, hit.ny, hit.nz)) : 0;
               if (placeId != null && isReplaceable(dest) && !intersectsPlayer && supportOk && !intoDoorTop && ladderMeta != null && !(placeId === BlockId.Ladder && !isSolid(tid))) {
                 if (isDoublePlant(dest)) breakPartner(world, px, py, pz, dest); // placing into one half removes the other
-                world.setBlock(px, py, pz, placeId);
+                world.setBlock(px, py, pz, placeId); mpSendBlock(px, py, pz, placeId, world.getWaterLevel(px, py, pz));
                 if (placeId === BlockId.Ladder) world.setMeta(px, py, pz, ladderMeta);
                 if (placeId === BlockId.Door) world.setMeta(px, py, pz, doorFacingFromYaw(player.yaw) << DOOR_FACING_SHIFT);
                 // MC: player-placed leaves are persistent (never decay)
@@ -1857,6 +1961,7 @@ async function runGame(
     if (!gameActive()) return;
     try { await doSave(); } catch { /* keep quitting */ }
     life.abort();
+    mp?.leave();
     unbindDesktop(); unbindTouch();
     try { music.stop(); } catch { /* */ }
     if (document.pointerLockElement) document.exitPointerLock();

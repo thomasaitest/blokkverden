@@ -26,6 +26,8 @@ export class World {
   private meshing = new Set<string>();
   private useWorker = true;
   meshRevision = 0;
+  /** Chunks edited this session (MP host snapshot). */
+  touchedChunks = new Set<string>();
   dimension: DimId = 'overworld';
   private stores: Record<DimId, {
     chunks: Map<string, Chunk>;
@@ -262,7 +264,22 @@ export class World {
     return c.get(lx, y, lz);
   }
 
-  /** True when the chunk containing (wx, wz) exists (generated). */
+  /**
+   * Multiplayer joiner: switch to the host seed and drop local chunks so terrain
+   * regenerates to match, then loadChunks overlays the host's modifications.
+   */
+  reseedForMp(seed: number): void {
+    (this as { seed: number }).seed = seed | 0;
+    this.chunks.clear();
+    this.meshes.clear();
+    this.dirtyMeshes.clear();
+    this.pending.clear();
+    this.meshing.clear();
+    this.touchedChunks.clear();
+    this.meshRevision++;
+  }
+
+    /** True when the chunk containing (wx, wz) exists (generated). */
   hasChunkAt(wx: number, wz: number): boolean {
     return this.chunks.has(chunkKey(Math.floor(wx / CHUNK_SIZE), Math.floor(wz / CHUNK_SIZE)));
   }
@@ -320,6 +337,7 @@ export class World {
     const { cx, cz, lx, lz } = this.worldToChunk(wx, wz);
     const c = this.ensureChunk(cx, cz);
     c.setMeta(lx, y, lz, meta);
+    this.touchedChunks.add(chunkKey(cx, cz));
     this.markLightAround(cx, cz);
     this.dirtyMeshes.add(chunkKey(cx, cz));
   }
@@ -329,6 +347,7 @@ export class World {
     const { cx, cz, lx, lz } = this.worldToChunk(wx, wz);
     const c = this.ensureChunk(cx, cz);
     c.set(lx, y, lz, id);
+    this.touchedChunks.add(chunkKey(cx, cz));
     this.markLightAround(cx, cz);
     this.dirtyMeshes.add(chunkKey(cx, cz));
     if (lx === 0) this.dirtyMeshes.add(chunkKey(cx - 1, cz));
@@ -514,7 +533,18 @@ export class World {
   }
 
   serializeModified(): { cx: number; cz: number; blocks: number[]; waterLevel: number[] }[] {
-    return [...this.chunks.values()].map((c) => c.toJSON());
+    const out: { cx: number; cz: number; blocks: number[]; waterLevel: number[] }[] = [];
+    // Prefer touched chunks (edits). Always include the spawn neighborhood if nothing touched yet.
+    const keys = this.touchedChunks.size
+      ? this.touchedChunks
+      : new Set([...this.chunks.keys()].slice(0, 9));
+    for (const key of keys) {
+      const c = this.chunks.get(key);
+      if (c) out.push(c.toJSON());
+    }
+    // Cap payload size for WS (~few hundred KB)
+    if (out.length > 48) return out.slice(0, 48);
+    return out;
   }
 
   loadChunks(data: { cx: number; cz: number; blocks: number[]; waterLevel?: number[] }[]): void {
@@ -523,9 +553,13 @@ export class World {
     this.dirtyMeshes.clear();
     this.pending.clear();
     this.meshing.clear();
+    this.mergeChunks(data);
+  }
+
+  /** MP: apply host chunk snapshots without wiping unrelated local chunks. */
+  mergeChunks(data: { cx: number; cz: number; blocks: number[]; waterLevel?: number[] }[]): void {
     for (const d of data) {
       const c = Chunk.fromJSON(d);
-      // it14 migration: worlds saved before bedrock had plain stone at y=0 (dig through → fall out of the world)
       for (let lx = 0; lx < CHUNK_SIZE; lx++) for (let lz = 0; lz < CHUNK_SIZE; lz++) {
         const b = c.get(lx, 0, lz);
         if (b === BlockId.Stone || b === BlockId.Air) c.set(lx, 0, lz, BlockId.Bedrock);

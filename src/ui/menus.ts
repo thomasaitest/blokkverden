@@ -5,6 +5,8 @@ import { listWorlds, deleteWorldNamed, renameWorldNamed } from '../storage/save'
 export interface MenuCallbacks {
   onPlay: (worldName: string, seed?: number, fresh?: boolean, creative?: boolean) => void;
   onSettingsChange: (s: GameSettings) => void;
+  /** Spill sammen — host or join. Optional so singleplayer tests stay unchanged. */
+  onSammen?: () => void;
 }
 
 export function createTitleMenu(root: HTMLElement, cb: MenuCallbacks): {
@@ -20,6 +22,7 @@ export function createTitleMenu(root: HTMLElement, cb: MenuCallbacks): {
       <p class="title-sub">En original voxel-sandkasse</p>
       <div class="title-btns">
         <button type="button" id="btn-single">Spill</button>
+        <button type="button" id="btn-sammen">Sammen</button>
         <button type="button" id="btn-settings-title">Innstillinger</button>
       </div>
       <div id="world-list" class="world-list" style="display:none"></div>
@@ -121,6 +124,7 @@ export function createTitleMenu(root: HTMLElement, cb: MenuCallbacks): {
     (el.querySelector('.title-btns') as HTMLElement).style.display = 'none';
     await renderWorlds();
   });
+  el.querySelector('#btn-sammen')!.addEventListener('click', () => { cb.onSammen?.(); });
   el.querySelector('#btn-settings-title')!.addEventListener('click', () => {
     (el.querySelector('.title-btns') as HTMLElement).style.display = 'none';
     settingsPanel.style.display = 'block';

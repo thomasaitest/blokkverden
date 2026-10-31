@@ -341,6 +341,7 @@ export function itemPattern(itemId: number): { rows: readonly string[]; head: [R
   if (def.tool === 'shears') return { rows: P.shears, head: TIER.iron };
   if (itemId === 87) return { rows: P.bucket, head: TIER.iron };
   if (itemId === 88) return { rows: P.bucketFull, head: TIER.iron, liquid: [[52, 96, 220], [92, 140, 240]] };
+  if (itemId === 90) return { rows: P.bucketFull, head: TIER.iron, liquid: [[236, 236, 230], [255, 255, 255]] };
   if (itemId === 89) return { rows: P.bucketFull, head: TIER.iron, liquid: [[236, 110, 20], [255, 190, 60]] };
   if (itemId === 61) return { rows: P.arrow, head: TIER.stone };
   if (itemId === 73) return { rows: P.string, head: TIER.string };

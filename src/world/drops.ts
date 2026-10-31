@@ -45,13 +45,14 @@ export class DropSystem {
    * items mined under a roof/in caves up onto the surface).
    */
   /** Returns how many stacks were (partly) picked up this frame. */
-  update(dt: number, player: PlayerState, inv: Inventory, solidAt: (x: number, y: number, z: number) => boolean): number {
+  update(dt: number, player: PlayerState, inv: Inventory, solidAt: (x: number, y: number, z: number) => boolean,
+    flowAt?: (x: number, y: number, z: number) => { x: number; z: number }): number {
     let picked = 0;
     // Sub-step so frame hitches can't tunnel items through floors.
     let rest = dt;
     while (rest > 1e-6) {
       const h = Math.min(rest, 1 / 30);
-      picked += this.step(h, player, inv, solidAt);
+      picked += this.step(h, player, inv, solidAt, flowAt);
       rest -= h;
     }
     this.mergeAcc += dt;
@@ -84,7 +85,8 @@ export class DropSystem {
     if (merged) this.drops = ds.filter((d) => d.stack.count > 0);
   }
 
-  private step(dt: number, player: PlayerState, inv: Inventory, solidAt: (x: number, y: number, z: number) => boolean): number {
+  private step(dt: number, player: PlayerState, inv: Inventory, solidAt: (x: number, y: number, z: number) => boolean,
+    flowAt?: (x: number, y: number, z: number) => { x: number; z: number }): number {
     let picked = 0;
     const keep: DropEntity[] = [];
     for (const d of this.drops) {
@@ -93,6 +95,13 @@ export class DropSystem {
       let guard = 0;
       while (solidAt(d.x, d.y, d.z) && guard++ < 4) { d.y = Math.floor(d.y) + 1.2; d.vy = 0; }
       d.vy -= 20 * dt;
+      // it25 (MC): items in flowing water drift along the current (MC ≈ 1.4 b/s), and float up in water
+      let inFlow = false;
+      if (flowAt) {
+        const f = flowAt(d.x, d.y, d.z);
+        if (f.x || f.z) {
+          inFlow = true; d.vx += (f.x * 1.4 - d.vx) * Math.min(1, dt * 4); d.vz += (f.z * 1.4 - d.vz) * Math.min(1, dt * 4); }
+      }
       const nx = d.x + d.vx * dt;
       const nz = d.z + d.vz * dt;
       // Horizontal collision: stop sideways motion into walls.
@@ -104,13 +113,11 @@ export class DropSystem {
       } else if (d.vy <= 0 && solidAt(d.x, ny - 0.2, d.z)) {
         d.y = Math.floor(ny - 0.2) + 1.2;
         d.vy = 0;
-        d.vx *= 0.7;
-        d.vz *= 0.7;
+        if (!inFlow) { d.vx *= 0.7; d.vz *= 0.7; }
       } else {
         d.y = ny;
       }
-      d.vx *= 0.95;
-      d.vz *= 0.95;
+      if (!inFlow) { d.vx *= 0.95; d.vz *= 0.95; }
       if (d.y < -16) continue; // fell out of world
       if (d.age > Math.max(0.5, d.pickupDelay ?? 0)) {
         const dist = Math.hypot(d.x - player.x, d.y - (player.y + 0.9), d.z - player.z);

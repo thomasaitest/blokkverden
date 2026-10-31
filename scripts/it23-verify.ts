@@ -435,7 +435,7 @@ async function main() {
   // BK5 — water bucket on a burning block puts the fire out (real RMB)
   if (run('BK5')) {
     await heal();
-    await page.evaluate(() => { const bv = (window as any).__bv; bv.world.setBlock(3, 46, 6, 6); bv.forceRemeshAround?.(); });
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.world.setBlock(3, 46, 6, 40); bv.forceRemeshAround?.(); }); // it25: helstein (eternal fire, not flammable) — a plank could burn away before the pour (random spread) and the water landed lower
     await setHeld(page, 82);
     await page.evaluate(() => { const bv = (window as any).__bv; bv.inv.slots[0].durability = 64; });
     await aim(page, 3.5, 46.05, 9.2, 3.5, 46.99, 6.5);

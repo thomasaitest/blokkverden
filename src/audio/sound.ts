@@ -118,6 +118,12 @@ export class SoundBus {
     setTimeout(() => this.noise(0.04, 0.1, 4800), 90);
   }
 
+  /** it25: milking a cow — a low moo and a splash into the bucket */
+  milk(): void {
+    this.beep(150, 0.35, 'sawtooth', 0.08, -40);
+    setTimeout(() => this.noise(0.12, 0.08, 1800), 120);
+  }
+
   swing(): void {
     this.noise(0.06, 0.1, 1200);
   }

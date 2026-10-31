@@ -945,7 +945,9 @@ async function main() {
   }, tree);
   console.log('K1 aim hit', hitOk);
   await page.mouse.down();
-  for (let i = 0; i < 45; i++) {
+  // it25: up to ~9 s wall (was 4.5 s): hand-mining a log is 3 s of GAME time, and headless Chromium sometimes runs
+  // under 20 fps where the game caps dt → the log occasionally wasn't broken in time (K1 flaky)
+  for (let i = 0; i < 90; i++) {
     await sleep(100);
     // re-aim each tick without mouse move
     await page.evaluate((t) => (window as any).__bv.lookAt(t.x + 0.5, t.y + 0.5, t.z + 0.5), tree);
@@ -962,6 +964,12 @@ async function main() {
   await page.keyboard.down('KeyW'); await sleep(400); await page.keyboard.up('KeyW');
   await sleep(400);
   let kLogs = await countItem(page, 5);
+  // it25: if the item bounced away, stand on it (real pickup by the game, not inv.add)
+  for (let i = 0; i < 10 && kLogs === 0; i++) {
+    await page.evaluate(() => { const bv = (window as any).__bv; const d = bv.drops.drops.find((q: any) => q.stack?.id === 5); if (d) bv.teleport(d.x, d.y, d.z); });
+    await sleep(300);
+    kLogs = await countItem(page, 5);
+  }
   const treeBroke = await page.evaluate((t) => (window as any).__bv.world.getBlock(t.x, t.y, t.z) === 0, tree);
   const groundDrop = await page.evaluate(() =>
     (window as any).__bv.drops.toJSON().some((d: any) => d.stack?.id === 5));

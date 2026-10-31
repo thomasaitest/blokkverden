@@ -25,8 +25,9 @@ import { ContainerStore } from './world/containers';
 import { World, setViewRadius, VIEW_RADIUS } from './world/world';
 import { CHUNK_HEIGHT, CHUNK_SIZE } from './world/chunk';
 import { tickWater } from './world/water';
-import { tickLava } from './world/lava';
-import { BUCKET, WATER_BUCKET, LAVA_BUCKET, fluidRaycast, scoop, pour, pourable } from './items/bucket';
+import { tickLava, LAVA_TICK_HELVETE, LAVA_TICK_OVERWORLD } from './world/lava';
+import { flowAt } from './world/flow';
+import { BUCKET, WATER_BUCKET, LAVA_BUCKET, MILK_BUCKET, drinkMilk, fluidRaycast, scoop, pour, pourable } from './items/bucket';
 import { applyBoneMeal, boneMealTarget } from './world/bonemeal';
 import { canPlaceDoor, doorFacingFromYaw, DOOR_FACING_SHIFT, doorFacing } from './world/doors';
 import { SoundBus } from './audio/sound';
@@ -1324,10 +1325,12 @@ async function runGame(
       });
     }
     lavaFlowAcc += dt;
-    if (lavaFlowAcc > 1.5) {
+    const inHelvete = world.dimension === 'helvete';
+    if (lavaFlowAcc > (inHelvete ? LAVA_TICK_HELVETE : LAVA_TICK_OVERWORLD)) {
       lavaFlowAcc = 0;
       // it24 (MC): lava flows slowly (3 blocks in the overworld) and recedes when its source is gone
-      if (tickLava(world, { x: player.x, z: player.z, radius: 1 }, 300, (wx, wy, wz, wid) => {
+      // it25 (MC): in Helvete lava flows 7 blocks and three times as fast
+      if (tickLava(world, { x: player.x, z: player.z, radius: 1, helvete: inHelvete }, 300, (wx, wy, wz, wid) => {
         if (wid !== BlockId.Fire) { const wd = dropForBlock(wid, null); if (wd) drops.spawn(wx, wy, wz, wd); }
       }, (sx, sy, sz) => { sound.fizz(); particles.burst(sx + 0.5, sy + 1.0, sz + 0.5, 0xdddddd, 10, 'break'); }) > 0) markMesh();
     }
@@ -1409,7 +1412,8 @@ async function runGame(
     if (meshesDirty) { renderer.syncChunks(world, true); meshesDirty = false; }
 
     // Picked-up items must show in the hotbar right away (hotbar only redraws when marked dirty).
-    if (drops.update(dt, player, inv, (x, y, z) => isSolid(world.getBlock(Math.floor(x), Math.floor(y), Math.floor(z)))) > 0) {
+    if (drops.update(dt, player, inv, (x, y, z) => isSolid(world.getBlock(Math.floor(x), Math.floor(y), Math.floor(z))),
+      (x, y, z) => flowAt((a, b, c) => world.getBlock(a, b, c), (a, b, c) => world.getWaterLevel(a, b, c), Math.floor(x), Math.floor(y), Math.floor(z))) > 0) {
       hud.markDirty(); sound.pickup();
     }
     renderer.syncDrops(drops.drops);
@@ -1515,7 +1519,20 @@ async function runGame(
         || tidE === BlockId.Lever || tidE === BlockId.Button || tidE === BlockId.Sign || tidE === BlockId.EnchantTable;
       const eating = !dead && !invUi.isOpen() && input.useHeld && !!hf && !!ITEMS[hf.id]?.food
         && !ITEMS[hf.id]?.placeBlock && player.hunger < 20 && !useableE;
-      if (eating && hf) {
+      // it25 (MC): drinking milk works like eating (hold RMB 1.6 s), also with a full hunger bar
+      const drinking = !dead && !invUi.isOpen() && input.useHeld && !!hf && hf.id === MILK_BUCKET && !useableE;
+      if (drinking && hf) {
+        eatTimer += dt;
+        eatSoundAcc += dt;
+        if (eatSoundAcc > 0.3) { eatSoundAcc = 0; sound.eat(); }
+        if (eatTimer >= EAT_TIME) {
+          eatTimer = 0;
+          const back = drinkMilk(player);
+          if (!player.creative) inv.setHeld({ id: back, count: 1 });
+          sound.eat(); hud.markDirty(); hud.refreshHotbar();
+        }
+        if (!input.breakHeld) hud.setBreakProgress(Math.min(1, eatTimer / EAT_TIME));
+      } else if (eating && hf) {
         eatTimer += dt;
         eatSoundAcc += dt;
         if (eatSoundAcc > 0.3) { eatSoundAcc = 0; sound.eat(); }
@@ -1558,7 +1575,19 @@ async function runGame(
             || t0 === BlockId.Door || t0 === BlockId.Gate || t0 === BlockId.Trapdoor || t0 === BlockId.Lever || t0 === BlockId.Button || t0 === BlockId.EnchantTable;
           if (!opens) {
             const cp = Math.cos(player.pitch);
-            if (bh.id === BUCKET) {
+            // it25 (MC): RMB a cow with an empty bucket → milk bucket (unless a fluid/block is closer)
+            const cow = bh.id === BUCKET ? mobs.pickAt(player.x, player.y + EYE_HEIGHT, player.z, 3.2, player.yaw, player.pitch) : null;
+            const cp0 = Math.cos(player.pitch);
+            const fl0 = cow && cow.kind === 'ku' ? fluidRaycast(world, player.x, player.y + EYE_HEIGHT, player.z, -Math.sin(player.yaw) * cp0, Math.sin(player.pitch), -Math.cos(player.yaw) * cp0, 5) : null;
+            const cowDist = cow ? Math.hypot(cow.x - player.x, cow.z - player.z) : 99;
+            if (cow && cow.kind === 'ku' && (!fl0 || fl0.dist > cowDist) && (!hit || hit.dist > cowDist - 0.6)) {
+              bucketUsed = true;
+              if (!player.creative) {
+                if (bh.count <= 1) inv.setHeld({ id: MILK_BUCKET, count: 1 });
+                else { bh.count -= 1; if (inv.add({ id: MILK_BUCKET, count: 1 }) > 0) drops.spawn(player.x, player.y + 1, player.z, { id: MILK_BUCKET, count: 1 }); }
+              }
+              sound.milk(); hud.markDirty(); hud.refreshHotbar();
+            } else if (bh.id === BUCKET) {
               const f = fluidRaycast(world, player.x, player.y + EYE_HEIGHT, player.z, -Math.sin(player.yaw) * cp, Math.sin(player.pitch), -Math.cos(player.yaw) * cp, 5);
               if (f && (!hit || f.dist <= hit.dist + 1e-3)) {
                 const filled = scoop(world, f);

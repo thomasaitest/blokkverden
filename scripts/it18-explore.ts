@@ -112,6 +112,12 @@ async function shot(page: Page, name: string) {
   fs.copyFileSync(p, path.join(SHOTS, name));
 }
 
+/** it25: wait for `sec` of GAME time (simT) — headless Chromium sometimes drops under 20 fps and the game caps dt at 0.05 s, so wall-clock waits gave less movement (X5/X6 flaky). */
+async function simSleep(page: Page, sec: number) {
+  const t0 = await page.evaluate(() => (window as any).__bv.getState().simT ?? 0);
+  for (let i = 0; i < 400; i++) { const t = await page.evaluate(() => (window as any).__bv.getState().simT ?? 0); if (t - t0 >= sec) return; await sleep(20); }
+}
+
 async function st(page: Page) {
   return page.evaluate(() => {
     const bv = (window as any).__bv;
@@ -388,10 +394,20 @@ async function main() {
     await hold(page, 1600);
     await sleep(300);
     const gone = (await gb(8, 48, 5)) === 0;
-    await page.keyboard.down('Space'); await sleep(400);
-    const p = await st(page);
+    // it25: track the peak over 0.6 s game time (was one sample at 0.4 s wall time → right at/after the apex, flaky)
+    const y0 = (await st(page)).y;
+    await page.keyboard.down('Space');
+    const t0 = await page.evaluate(() => (window as any).__bv.getState().simT ?? 0);
+    let peak = y0;
+    for (let i = 0; i < 200; i++) {
+      const s2 = await page.evaluate(() => { const s = (window as any).__bv.getState(); return { y: s.y, t: s.simT ?? 0 }; });
+      peak = Math.max(peak, s2.y);
+      if (s2.t - t0 >= 0.6) break;
+      await sleep(15);
+    }
     await page.keyboard.up('Space');
-    record('X5-mine-ceiling-jump', gone && p.y > 47.0 ? 'PASS' : 'FAIL', `gone=${gone} peakY=${p.y.toFixed(2)}`);
+    const p = { y: peak };
+    record('X5-mine-ceiling-jump', gone && p.y > 47.0 ? 'PASS' : 'FAIL', `gone=${gone} peakY=${p.y.toFixed(2)} y0=${y0.toFixed(2)}`);
   }
 
 
@@ -410,13 +426,13 @@ async function main() {
     await shot(page, 'it18-x6-stige-avstand.png');
     await page.evaluate(() => { const bv = (window as any).__bv; bv.teleport(5.5, 46.0, 18.2); bv.look(Math.PI, 0); });
     await sleep(500);
-    await page.keyboard.down('KeyW'); await sleep(1000);
+    await page.keyboard.down('KeyW'); await simSleep(page, 1.0); // it25: game time, not wall time
     const yClimb = (await st(page)).y;
     await page.keyboard.up('KeyW');
-    await page.keyboard.down('ShiftLeft'); await sleep(800);
+    await page.keyboard.down('ShiftLeft'); await simSleep(page, 0.8);
     const yHold = (await st(page)).y;
     await page.keyboard.up('ShiftLeft');
-    await sleep(500);
+    await simSleep(page, 0.5);
     const ySlide = (await st(page)).y;
     await shot(page, 'it18-x6-stige.png');
     await page.keyboard.down('KeyW');

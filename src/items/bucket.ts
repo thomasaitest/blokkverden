@@ -7,7 +7,13 @@ import { BlockId, isSolid } from '../blocks/types';
 import type { World } from '../world/world';
 import { isWashable } from '../world/water';
 
-export const BUCKET = 87, WATER_BUCKET = 88, LAVA_BUCKET = 89;
+export const BUCKET = 87, WATER_BUCKET = 88, LAVA_BUCKET = 89, MILK_BUCKET = 90;
+
+/** it25 (MC): drinking milk (hold RMB 1.6 s) clears status effects (here: Sult from rotten flesh) and gives the bucket back. */
+export function drinkMilk(p: { hungerEffect?: number }): number {
+  p.hungerEffect = 0;
+  return BUCKET;
+}
 
 /** First fluid cell along the ray (stops at any non-fluid, non-air block). Water must be a source (level 7). */
 export function fluidRaycast(world: World, ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, maxDist = 5):

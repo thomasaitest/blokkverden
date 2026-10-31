@@ -89,6 +89,7 @@ function emitQuad(
   getLight: GetLight,
   getMeta: GetMeta,
   hTop = 1,
+  hBot = 0,
 ): void {
   const def = BLOCKS[id]!;
   let tileIdx = def.tiles[face.tile];
@@ -130,11 +131,11 @@ function emitQuad(
     } else if (face.dir[0] !== 0) {
       px += face.dir[0] > 0 ? 1 : 0;
       pz += c[2] === 0 ? 0 : du;
-      py += c[1] === 0 ? 0 : dv * hTop;
+      py += c[1] === 0 ? hBot : dv * hTop;
     } else {
       pz += face.dir[2] > 0 ? 1 : 0;
       px += c[0] === 0 ? 0 : du;
-      py += c[1] === 0 ? 0 : dv * hTop;
+      py += c[1] === 0 ? hBot : dv * hTop;
     }
     corners.push([px, py, pz]);
   }
@@ -365,6 +366,7 @@ function buildMesh(
           if ((id === BlockId.Water || id === BlockId.Lava) && face.dir[1] === -1 && getWorld(wx, y - 1, wz) === id) continue;
           const neighbor = getWorld(wx + face.dir[0], y + face.dir[1], wz + face.dir[2]);
           let exposed = faceExposed(id, neighbor, def);
+          let hBot = 0;
           // it24 (MC): a liquid side facing a lower cell of the same liquid shows the step (was culled → you looked
           // straight through the higher cell and the lower flow vanished at an angle)
           if (!exposed && def.liquid && neighbor === id && face.dir[1] === 0 && getWorld(wx, y + 1, wz) !== id) {
@@ -372,9 +374,12 @@ function buildMesh(
             const nm = getMeta(nx, y, nz);
             const nh = getWorld(nx, y + 1, nz) === id ? 1 : id === BlockId.Lava ? lavaHeight(nm || 7) : Math.min(1, Math.max(0.125, (nm || 7) / 7));
             exposed = nh < hTop - 0.01;
+            // it25: draw only the step above the lower neighbour's surface (was from the cell bottom → two layers of
+            // transparent water overlapped under the lower flow and looked darker)
+            if (exposed) hBot = nh;
           }
           if (!exposed) continue;
-          emitQuad(a, face, wx, y, wz, 1, 1, id, getWorld, getLight, getMeta, hTop);
+          emitQuad(a, face, wx, y, wz, 1, 1, id, getWorld, getLight, getMeta, hTop, hBot);
         }
       }
     }

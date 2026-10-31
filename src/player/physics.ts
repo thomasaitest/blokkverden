@@ -1,3 +1,4 @@
+import { flowAt, WATER_PUSH, LAVA_PUSH, LAVA_PUSH_HELVETE } from '../world/flow';
 import { BlockId, collidesBlock, isSolid, isOpaque, isCrossPlant, isTallCollider } from '../blocks/types';
 import type { World } from '../world/world';
 import { CHUNK_HEIGHT } from '../world/chunk';
@@ -21,6 +22,8 @@ export interface PlayerState {
   inWater: boolean;
   /** it19: feet/body in lava (MC: slow swimming, burns). */
   inLava?: boolean;
+  /** it25: current push applied this frame (blocks/s), for tests/debug. */
+  flowX?: number; flowZ?: number;
   air: number; // 0–20
   creative: boolean;
   flying: boolean;
@@ -213,6 +216,19 @@ export function movePlayer(
   }
   p.vx = mx;
   p.vz = mz;
+  // it25 (MC): flowing water/lava pushes you along its current (still pools of sources don't)
+  if (liquid) {
+    const cx = Math.floor(p.x), cz = Math.floor(p.z);
+    let cy = Math.floor(p.y + 0.4);
+    const lid = p.inLava ? BlockId.Lava : BlockId.Water;
+    if (world.getBlock(cx, cy, cz) !== lid) cy = Math.floor(p.y + 1.0);
+    const gm = typeof world.getWaterLevel === 'function' ? (x: number, y: number, z: number) => world.getWaterLevel(x, y, z) : () => 0;
+    const f = flowAt((x, y, z) => world.getBlock(x, y, z), gm, cx, cy, cz);
+    const push = p.inLava ? ((world as { dimension?: string }).dimension === 'helvete' ? LAVA_PUSH_HELVETE : LAVA_PUSH) : WATER_PUSH;
+    p.vx += f.x * push;
+    p.vz += f.z * push;
+    p.flowX = f.x * push; p.flowZ = f.z * push;
+  } else { p.flowX = 0; p.flowZ = 0; }
   const vPrev = p.vy;
   p.vy -= gravity * dt;
   if (p.inLava) p.vy *= 0.8; else if (p.inWater) p.vy *= 0.9;

@@ -47,11 +47,11 @@ describe('it24 flowing lava (MC)', () => {
     expect(w.getWaterLevel(8, 21, 8)).toBe(0);
     tickLava(w, F);
     expect(w.getBlock(9, 21, 8)).toBe(BlockId.Lava);
-    expect(w.getWaterLevel(9, 21, 8)).toBe(3);
+    expect(w.getWaterLevel(9, 21, 8)).toBe(6); // it25: strength 6/4/2 (MC 8−level)
     expect(w.getBlock(10, 21, 8)).toBe(BlockId.Air);
     for (let i = 0; i < 6; i++) tickLava(w, F);
-    expect(w.getWaterLevel(10, 21, 8)).toBe(2);
-    expect(w.getWaterLevel(11, 21, 8)).toBe(1);
+    expect(w.getWaterLevel(10, 21, 8)).toBe(4);
+    expect(w.getWaterLevel(11, 21, 8)).toBe(2);
     expect(w.getBlock(12, 21, 8)).toBe(BlockId.Air);
     expect(countAt(w, 21, BlockId.Lava)).toBe(25); // diamond of radius 3
     // flowing lava can't be scooped; the source can
@@ -67,7 +67,7 @@ describe('it24 flowing lava (MC)', () => {
     for (let i = 0; i < 10; i++) tickLava(w, F);
     expect(w.getWaterLevel(9, 23, 8)).toBe(LAVA_FALLING);
     expect(w.getBlock(9, 21, 8)).toBe(BlockId.Lava);
-    expect(w.getWaterLevel(10, 21, 8)).toBe(3);
+    expect(w.getWaterLevel(10, 21, 8)).toBe(6);
   });
   it('render height: source/falling full, flow 1–3 lower', () => {
     expect(lavaHeight(7)).toBe(1); expect(lavaHeight(8)).toBe(1);
@@ -124,7 +124,7 @@ describe('it24 lava flow in Helvete', () => {
       for (let cx = -1; cx <= 1; cx++) for (let cz = -1; cz <= 1; cz++) w.ensureChunk(cx, cz);
       const sp = w.findHelveteSpawn();
       const t0 = performance.now();
-      for (let i = 0; i < 20; i++) tickLava(w, { x: sp.x, z: sp.z, radius: 1 });
+      for (let i = 0; i < 20; i++) tickLava(w, { x: sp.x, z: sp.z, radius: 1, helvete: true }); // it25: Helvete flow (7 blocks)
       const ms = (performance.now() - t0) / 20;
       const fx = Math.floor(sp.x), fy = Math.floor(sp.y), fz = Math.floor(sp.z);
       expect(w.getBlock(fx, fy, fz)).not.toBe(BlockId.Lava);

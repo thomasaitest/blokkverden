@@ -391,7 +391,7 @@ async function main() {
     await sleep(500);
     await shot(page, 'it24-04-lava-trukket-tilbake.png');
     const hp = await page.evaluate(() => (window as any).__bv.player.health);
-    record('LV1-lava-flows-recedes', placed === 44 && meta0 === 0 && early <= 5 && full === 25 && m1 === 3 && m3 === 1 && out === 0 && h?.id === 89 && left === 0 && hp === 20 ? 'PASS' : 'FAIL',
+    record('LV1-lava-flows-recedes', placed === 44 && meta0 === 0 && early <= 5 && full === 25 && m1 === 6 && m3 === 2 && out === 0 && h?.id === 89 && left === 0 && hp === 20 ? 'PASS' : 'FAIL',
       JSON.stringify({ placed, meta0, early, full, m1, m3, out, h, left, hp }));
     await page.evaluate(() => { const bv = (window as any).__bv; for (let x = 0; x <= 10; x++) for (let z = 0; z <= 10; z++) bv.world.setBlock(x, 46, z, 0); bv.fire?.clear?.(); });
   }

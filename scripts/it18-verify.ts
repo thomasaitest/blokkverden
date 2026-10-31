@@ -364,7 +364,8 @@ async function main() {
     const left3 = await countItem(page, 81);
     await sleep(500);
     await shot(page, 'it18-02-avling-etter-beinmel.png');
-    const ok = s0 === 0 && s1 >= 2 && s1 <= 5 && left1 === 9 && s2 === 7 && left3 === left2;
+    // it25: s0 may already be 1 — the crop can grow by itself (random tick) during the 0.7 s wait; check the jump instead
+    const ok = s0 <= 2 && s1 - s0 >= 2 && s1 - s0 <= 5 && left1 === 9 && s2 === 7 && left3 === left2;
     record('BM1-bonemeal-crop', ok ? 'PASS' : 'FAIL', JSON.stringify({ s0, s1, left1, s2, left2, left3 }));
   }
 

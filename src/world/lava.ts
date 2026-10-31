@@ -11,16 +11,26 @@ import { isWashable } from './water';
 
 export const LAVA_FALLING = 8;
 
-/** Render height of a lava cell from its meta (as read by the mesher: 0 → 7). */
+/**
+ * Render height of a lava cell from its meta (as read by the mesher: 0 → 7).
+ * it25: flowing strength 1–7 (MC level 8−n); overworld lava drops 2 per block (6, 4, 2 → 3 blocks),
+ * Helvete lava drops 1 (7…1 → 7 blocks). Height = strength/8, so overworld heights are unchanged (0.75/0.5/0.25).
+ */
 export function lavaHeight(meta: number): number {
   if (meta >= 7) return 1;
-  return Math.max(0.125, meta * 0.25);
+  return Math.max(0.125, meta / 8);
 }
 
-/** Strength used for spreading: source/falling 4, flowing 1–3. */
+/** Strength used for spreading: source/falling 8, flowing 1–7. */
 function strength(meta: number): number {
-  return meta === 0 || meta === LAVA_FALLING ? 4 : meta;
+  return meta === 0 || meta === LAVA_FALLING ? 8 : meta;
 }
+
+/** it25 (MC): lava in Helvete flows 7 blocks (drop 1) and three times as fast; overworld 3 blocks (drop 2). */
+export const LAVA_DROP_OVERWORLD = 2;
+export const LAVA_DROP_HELVETE = 1;
+export const LAVA_TICK_OVERWORLD = 1.5;
+export const LAVA_TICK_HELVETE = 0.5;
 
 const SIDES = [[1, 0], [-1, 0], [0, 1], [0, -1]] as const;
 
@@ -29,7 +39,7 @@ const SIDES = [[1, 0], [-1, 0], [0, 1], [0, -1]] as const;
  * onWash: plant/torch/fire the lava flows into (before it is replaced). onStone: lava fell onto water → stone.
  */
 export function tickLava(
-  world: World, focus: { x: number; z: number; radius?: number }, budget = 300,
+  world: World, focus: { x: number; z: number; radius?: number; helvete?: boolean }, budget = 300,
   onWash?: (x: number, y: number, z: number, id: number) => void,
   onStone?: (x: number, y: number, z: number) => void,
 ): number {
@@ -38,6 +48,7 @@ export function tickLava(
   const recede: { x: number; y: number; z: number; meta: number }[] = [];
   const stones: { x: number; y: number; z: number }[] = [];
   let n = 0;
+  const drop = focus.helvete ? LAVA_DROP_HELVETE : LAVA_DROP_OVERWORLD;
   const lavaMeta = (x: number, y: number, z: number) => world.getWaterLevel(x, y, z);
   for (const c of world.chunks.values()) {
     if (Math.abs(c.cx - fcx) > r || Math.abs(c.cz - fcz) > r) continue;
@@ -56,7 +67,7 @@ export function tickLava(
           if (fed) break;
           if (world.getBlock(x + dx, y, z + dz) === BlockId.Lava && strength(lavaMeta(x + dx, y, z + dz)) > meta) fed = true;
         }
-        if (!fed) { recede.push({ x, y, z, meta: meta - 1 }); n++; continue; }
+        if (!fed) { recede.push({ x, y, z, meta: meta - drop }); n++; continue; }
       }
       // fall
       if (y > 0) {
@@ -67,8 +78,8 @@ export function tickLava(
       }
       if (meta !== 0 && y > 0 && world.getBlock(x, y - 1, z) === BlockId.Lava && lavaMeta(x, y - 1, z) !== 0) continue; // MC: keeps falling, no side spread
       const s = strength(meta);
-      if (s <= 1) continue;
-      const spread = s - 1;
+      const spread = s - drop;
+      if (spread < 1) continue;
       for (const [dx, dz] of SIDES) {
         const nx = x + dx, nz = z + dz;
         if (!world.hasChunkAt(nx, nz)) continue;

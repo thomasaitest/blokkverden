@@ -2,6 +2,54 @@
 
 Original voxel-sandkasse. Ingen Mojang-assets.
 
+## Iterasjon 23 (2026-10-31)
+
+Start: lør. 31. okt. 06:50 CET · Slutt: lør. 31. okt. __END__ CET (~__MIN__ min) · gren `dev` (ikke publisert)
+
+### Fokus
+Baseline først (core 56/56 med ekte tastatur/mus i Chromium). Deretter det åpne punktet fra it22: it18-explore X3 (gå gjennom planter) var ustabil. Til slutt bøtter, som var et stort hull mot MC: vann og lava kunne ikke flyttes. `__bv` bare til oppsett.
+
+### Fikset
+1. X3 (gå gjennom planter) var ustabil på it22-bygget. Det var ikke en feil i bevegelsen. Samme gåsimulering på it21- og it22-koden ga nøyaktig lik strekning ved 144/60/30/20 fps, og i nettleseren gikk du 4,32 blokker/s i alle 5 kjøringene (100 % av MC-farten, plantene bremser ikke). Det som varierte, var spilltiden: headless Chromium falt av og til under 20 fps, og spillet tar maks 0,05 s per bilde. Da ble 1,5 s veggtid bare 1,30–1,48 s spilltid. Testen måler nå spilltid (`simT`, bare for test) og sjekker farten i stedet for veggtid
+2. Rennende vann ble liggende for alltid, også når kilden var borte. Nå tørker vann som ikke lenger får påfyll (ikke vann over og ingen nabo med høyere nivå) gradvis opp, som i MC. Henter du kilden med bøtta, er alt vannet rundt borte etter noen sekunder. En kilde holder strømmen stabil (ingen flimring, testet i vitest)
+
+### Nye funksjoner (2)
+- Bøtter: tom bøtte lages av 3 jernbarrer i V på arbeidsbenk og stables til 16. RMB på en vannkilde gir vannbøtte (rennende vann kan ikke hentes), og RMB på lava gir lavabøtte. RMB med full bøtte på en blokkside heller ut en kilde, som erstatter gress, blomster og ild (vann slukker ild). Vann i Helvete koker bort. En lavabøtte i ovnen brenner i 1000 s, og den tomme bøtta blir liggende igjen i brenselsplassen. Egne ikoner for tom bøtte, vannbøtte og lavabøtte
+- Vann + lava → obsidian: lava som vann renner inn i (fra siden eller ovenfra), blir til obsidian (portalramme), med fres og damp, som i MC. Lava oppå vann blir liggende, som i MC. Før skjedde ingenting når vann og lava møttes
+
+### Playtest
+- Core: **56 PASS / 0 FAIL / 0 PARTIAL** på endelig bygg (`scripts/core-playtest.ts`), kjørt både som baseline og på endelig bygg. H2 trenger fortsatt ett nytt forsøk, som før
+- it23-verify: **5/5 PASS** (endelig bygg) (`scripts/it23-verify.ts`):
+  - BK1: bøtte laget på arbeidsbenk (RMB på benken og UI-klikk)
+  - BK2: henter vann fra en 1×1-dam, heller ut (25–41 ruter vann), henter kilden igjen, og alt vannet tørker opp (0 igjen)
+  - BK3: henter lava, heller den i et hull, heller vann ved siden av, og lavaen blir obsidian
+  - BK4: lavabøtte som brensel via ovns-UI (burnMax 20000, tom bøtte igjen)
+  - BK5: vannbøtte på en brennende planke slukker ilden
+- BK3 feilet første gang fordi testen siktet på kanten av gresset i stedet for ned i hullet (feil i testen). Den gikk grønt etter at siktet ble flyttet
+- Regresjon, kjørt én og én på endelig bygg: __REG__
+- X3: 5 av 5 grønne med ny måling (4,32 b/s, spilltid 1,30–1,48 s for 1,5 s veggtid)
+- 172 vitest grønne (9 nye: bøtteoppskrift, henting av kilde/rennende vann/lava, helling og erstatning av planter/ild, Helvete, svømming i hellet vann, lavabøtte i ovn, vann som tørker opp, stabil kilde, vann + lava → obsidian)
+- Ny seksjon U i CORE-PLAYTEST.md
+
+### Kjente begrensninger
+- Fallende vann (fosser) har nivå 7 og blir derfor ikke skilt fra kilder. Vann som har rent ned en kant, blir liggende nede selv om kilden over er borte
+- Lava renner ikke, så rennende lava + vann → brostein finnes ikke. Bare lavakilder (→ obsidian)
+- Ingen melkebøtte (ku) eller fiskebøtte ennå
+- Vann som koker bort i Helvete er bare testet i vitest, ikke i nettleseren
+- Gjerder tegnes fortsatt som en hel blokk (fra it22)
+
+### Media
+public/progress/it23/ (lokalt på `dev`, ikke publisert): skjermbilder it23-01…08:
+- 01: bøtte laget på arbeidsbenk
+- 02–04: dam før, vann helt ut, vann hentet og tørket opp
+- 05–06: lava helt ut, lava blitt obsidian
+- 07: lavabøtte i ovn
+- 08: ild slukket med vannbøtte
+
+Klipp: `clip-it23-botter-vann-lava.webm`
+
+---
+
 ## Iterasjon 22 (2026-10-31)
 
 Start: lør. 31. okt. 05:48 CET · Slutt: lør. 31. okt. 06:35 CET (~47 min) · gren `dev` (ikke publisert)

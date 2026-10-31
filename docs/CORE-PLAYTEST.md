@@ -216,6 +216,17 @@ Last run: 2026-10-31 02:26–02:35 CET · it18 core (56 PASS / 0 FAIL) + scripts
 | T6 | Shears | 2 iron ingots diagonally; leaves break ×15 faster and drop the leaf block; tall grass drops itself (placeable on grass); durability 238 | PASS | SH1 (UI craft, LMB, RMB place) + vitest |
 | T7 | Shearing sheep | RMB with shears on a woolly sheep → 1–3 wool, it turns slim and skin-coloured; again → nothing; it eats grass (grass → dirt) and the wool grows back; a shorn sheep drops no wool | PASS | SS1 + vitest |
 
+## U. Buckets, water drying up, water + lava → obsidian (it23, `scripts/it23-verify.ts`, real input)
+| # | Check | Minecraft-expected | Status | Notes |
+|---|--------|-------------------|--------|-------|
+| U1 | Craft a bucket | 3 iron ingots in a V at a crafting table → 1 bucket (stacks to 16) | PASS | BK1 (RMB on table + UI clicks) + vitest |
+| U2 | Water bucket | RMB on a water source with an empty bucket → water bucket, the source is gone; flowing water can't be scooped; RMB on a block face pours a source that spreads | PASS | BK2 + vitest |
+| U3 | Flow dries up | Scoop the source back up → all the flowing water around it drains away within a few seconds; a source keeps its flow steady | PASS | BK2 (0 water left) + vitest (was: flowing water never went away) |
+| U4 | Lava bucket + obsidian | Scoop lava → lava bucket; pour it; water touching lava (beside or above) turns it into obsidian (portalramme) with a fizz | PASS | BK3 + vitest |
+| U5 | Lava bucket fuel | In the furnace fuel slot a lava bucket burns 1000 s (20000 ticks) and the empty bucket stays in the slot | PASS | BK4 (furnace UI) + vitest |
+| U6 | Water puts out fire | Pouring water on a burning block puts the fire out | PASS | BK5 |
+| U7 | Water in Helvete | Water poured in Helvete boils away (the bucket still empties) | PASS (vitest) | not tested in the browser |
+
 ## Method rules
 1. **Real input:** synthesized keyboard/mouse via pointer lock. `__bv` may set up a scenario only — never perform the action under test.
 2. Log every bug and every deviation from Minecraft.

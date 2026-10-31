@@ -18,8 +18,8 @@ export function fluidRaycast(world: World, ox: number, oy: number, oz: number, d
     if (x === lx && y === ly && z === lz) continue;
     lx = x; ly = y; lz = z;
     const id = world.getBlock(x, y, z);
-    if (id === BlockId.Water) { if ((world.getWaterLevel(x, y, z) || 7) >= 7) return { x, y, z, id, dist: t }; continue; }
-    if (id === BlockId.Lava) return { x, y, z, id, dist: t };
+    if (id === BlockId.Water) { if ((world.getWaterLevel(x, y, z) || 7) === 7) return { x, y, z, id, dist: t }; continue; }
+    if (id === BlockId.Lava) { if (world.getWaterLevel(x, y, z) === 0) return { x, y, z, id, dist: t }; continue; } // it24: only a lava source
     if (id !== BlockId.Air) return null;
   }
   return null;

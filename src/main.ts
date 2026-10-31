@@ -25,6 +25,7 @@ import { ContainerStore } from './world/containers';
 import { World, setViewRadius, VIEW_RADIUS } from './world/world';
 import { CHUNK_HEIGHT, CHUNK_SIZE } from './world/chunk';
 import { tickWater } from './world/water';
+import { tickLava } from './world/lava';
 import { BUCKET, WATER_BUCKET, LAVA_BUCKET, fluidRaycast, scoop, pour, pourable } from './items/bucket';
 import { applyBoneMeal, boneMealTarget } from './world/bonemeal';
 import { canPlaceDoor, doorFacingFromYaw, DOOR_FACING_SHIFT, doorFacing } from './world/doors';
@@ -244,7 +245,7 @@ async function runGame(
   const leafDecay = new LeafDecay();
   // it19 (MC): fire from flint and steel spreads to wood/leaves and burns out; fire/lava set the player burning
   const fire = new FireSystem();
-  let lavaAcc = 0;
+  let lavaAcc = 0, lavaFlowAcc = 0;
   const burn = createBurnState();
   let fireAdoptAcc = 0;
   let suffocateAcc = 0;
@@ -1321,6 +1322,14 @@ async function runGame(
         // it23 (MC): water + lava → obsidian, with a fizz and a puff of steam
         sound.fizz(); particles.burst(lx + 0.5, ly + 1.0, lz + 0.5, 0xdddddd, 10, 'break'); markMesh();
       });
+    }
+    lavaFlowAcc += dt;
+    if (lavaFlowAcc > 1.5) {
+      lavaFlowAcc = 0;
+      // it24 (MC): lava flows slowly (3 blocks in the overworld) and recedes when its source is gone
+      if (tickLava(world, { x: player.x, z: player.z, radius: 1 }, 300, (wx, wy, wz, wid) => {
+        if (wid !== BlockId.Fire) { const wd = dropForBlock(wid, null); if (wd) drops.spawn(wx, wy, wz, wd); }
+      }, (sx, sy, sz) => { sound.fizz(); particles.burst(sx + 0.5, sy + 1.0, sz + 0.5, 0xdddddd, 10, 'break'); }) > 0) markMesh();
     }
     cropAcc += dt;
     if (cropAcc > 1.2) {

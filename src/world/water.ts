@@ -10,6 +10,9 @@ export function isWashable(id: number): boolean {
     || id === BlockId.DoubleGrass || id === BlockId.DoubleGrassTop;
 }
 
+/** it24: level of falling water (a column below a source/flow). Sources are 7, horizontal flows 1–6. */
+export const FALLING = 8;
+
 /** Update budget for the 3×3 chunks around the focus (player). */
 export const NEAR_BUDGET = 400;
 const LAVA_DIRS = [[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], [0, -1, 0]] as const; // MC: water beside or above lava (not below it)
@@ -64,14 +67,14 @@ export function tickWater(
           if (y > 0) {
             const below = world.getBlock(wx, y - 1, wz);
             if (below === BlockId.Air || isWashable(below)) {
-              updates.push({ x: wx, y: y - 1, z: wz, level: 7 });
+              updates.push({ x: wx, y: y - 1, z: wz, level: FALLING });
               n++;
               continue;
             }
             if (below === BlockId.Water) {
               const bl = world.getWaterLevel(wx, y - 1, wz);
               if (bl < 7) {
-                updates.push({ x: wx, y: y - 1, z: wz, level: 7 });
+                updates.push({ x: wx, y: y - 1, z: wz, level: FALLING });
                 n++;
               }
             }
@@ -79,7 +82,10 @@ export function tickWater(
 
           // it23 (MC): flowing water (level < 7) dries up when nothing feeds it any more — no water above and no
           // neighbour with a higher level (e.g. you scooped the source back up with a bucket)
-          if (level < 7) {
+          // it24 (MC): falling water (level 8) is only fed by water directly above it — without that it vanishes
+          if (level === FALLING) {
+            if (!(y + 1 < CHUNK_HEIGHT && world.getBlock(wx, y + 1, wz) === BlockId.Water)) { recede.push({ x: wx, y, z: wz, level: 0 }); n++; continue; }
+          } else if (level < 7) {
             let fed = y + 1 < CHUNK_HEIGHT && world.getBlock(wx, y + 1, wz) === BlockId.Water;
             for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
               if (fed) break;
@@ -89,6 +95,9 @@ export function tickWater(
           }
 
           if (level <= 1) continue;
+          // MC isWaterHole: flowing/falling water above more flowing water keeps going down, not sideways
+          if (level !== 7 && y > 0 && world.getBlock(wx, y - 1, wz) === BlockId.Water && world.getWaterLevel(wx, y - 1, wz) !== 7) continue;
+          const spread = level === FALLING ? 6 : level - 1; // MC: falling water spreads like a level-7 flow
           // Spread horizontally
           for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
             const nx = wx + dx;
@@ -98,12 +107,12 @@ export function tickWater(
             if (y > 0 && world.getBlock(nx, y - 1, nz) === BlockId.Door && world.getBlock(nx, y, nz) === BlockId.Air) continue;
             const nb = world.getBlock(nx, y, nz);
             if (nb === BlockId.Air || isWashable(nb)) {
-              updates.push({ x: nx, y, z: nz, level: level - 1 });
+              updates.push({ x: nx, y, z: nz, level: spread });
               n++;
             } else if (nb === BlockId.Water) {
               const ol = world.getWaterLevel(nx, y, nz);
-              if (ol < level - 1) {
-                updates.push({ x: nx, y, z: nz, level: level - 1 });
+              if (ol < spread) {
+                updates.push({ x: nx, y, z: nz, level: spread });
                 n++;
               }
             }
@@ -115,7 +124,8 @@ export function tickWater(
 
   for (const l of lavaHits) {
     if (world.getBlock(l.x, l.y, l.z) !== BlockId.Lava) continue;
-    world.setBlock(l.x, l.y, l.z, BlockId.PortalFrame);
+    // it24 (MC): a lava source becomes obsidian, flowing/falling lava becomes cobblestone
+    world.setBlock(l.x, l.y, l.z, world.getWaterLevel(l.x, l.y, l.z) === 0 ? BlockId.PortalFrame : BlockId.Cobble);
     onLava?.(l.x, l.y, l.z);
   }
   for (const r of recede) {

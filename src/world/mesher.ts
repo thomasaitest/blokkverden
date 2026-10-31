@@ -1,6 +1,7 @@
 import { BLOCKS, isOpaque, BlockId, isCrossPlant } from '../blocks/types';
 import { tileUV } from '../blocks/textures';
 import { ladderWall } from './ladder';
+import { lavaHeight } from './lava';
 import { CHUNK_HEIGHT, CHUNK_SIZE, type Chunk } from './chunk';
 
 export interface MeshData {
@@ -252,6 +253,43 @@ function emitTorch(a: Arrays, wx: number, y: number, wz: number, tile: number, l
   quad([[lo, h, hi], [hi, h, hi], [hi, h, lo], [lo, h, lo]], [su0, fv1, su1, fv1, su1, fv0, su0, fv0]); // top (flame)
 }
 
+/** it24: axis-aligned box (in block units 0–1) with face UVs cut from the matching part of the tile. */
+function emitBox(a: Arrays, wx: number, y: number, wz: number, b: number[], tile: number, light: number): void {
+  const [x0, y0, z0, x1, y1, z1] = b;
+  const uv = tileUV(tile);
+  const du = uv.u1 - uv.u0, dv = uv.v1 - uv.v0;
+  const col = Math.min(1.5, lightCurve(light & 15) * 0.95);
+  const bcol = Math.min(1.5, lightCurve(light >> 4) * 0.95);
+  const U = (t: number) => uv.u0 + du * t, V = (t: number) => uv.v1 - dv * t;
+  const quad = (p: number[][], n: number[], uu: number[], shade: number) => {
+    for (const c of p) { a.positions.push(wx + c[0], y + c[1], wz + c[2]); a.normals.push(n[0], n[1], n[2]); a.colors.push(col * shade, bcol * shade, col * shade, 1); }
+    a.uvs.push(...uu);
+    const vb = a.vBase;
+    a.indices.push(vb, vb + 1, vb + 2, vb, vb + 2, vb + 3);
+    a.vBase += 4;
+  };
+  quad([[x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]], [0, 0, 1], [U(x0), V(y0), U(x1), V(y0), U(x1), V(y1), U(x0), V(y1)], 0.8);
+  quad([[x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0]], [0, 0, -1], [U(1 - x1), V(y0), U(1 - x0), V(y0), U(1 - x0), V(y1), U(1 - x1), V(y1)], 0.8);
+  quad([[x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1]], [1, 0, 0], [U(1 - z1), V(y0), U(1 - z0), V(y0), U(1 - z0), V(y1), U(1 - z1), V(y1)], 0.6);
+  quad([[x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0]], [-1, 0, 0], [U(z0), V(y0), U(z1), V(y0), U(z1), V(y1), U(z0), V(y1)], 0.6);
+  quad([[x0, y1, z1], [x1, y1, z1], [x1, y1, z0], [x0, y1, z0]], [0, 1, 0], [U(x0), V(z0), U(x1), V(z0), U(x1), V(z1), U(x0), V(z1)], 1);
+  quad([[x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1]], [0, -1, 0], [U(x0), V(z0), U(x1), V(z0), U(x1), V(z1), U(x0), V(z1)], 0.5);
+}
+
+/** it24 (MC): fence = 4/16 post + two 2/16 rails to each connected neighbour (fence, gate or full solid block). */
+export function fenceBoxes(connects: (dx: number, dz: number) => boolean): number[][] {
+  const lo = 6 / 16, hi = 10 / 16;
+  const boxes: number[][] = [[lo, 0, lo, hi, 1, hi]];
+  const r0 = 7 / 16, r1 = 9 / 16;
+  for (const [ry0, ry1] of [[6 / 16, 9 / 16], [12 / 16, 15 / 16]]) {
+    if (connects(1, 0)) boxes.push([hi, ry0, r0, 1, ry1, r1]);
+    if (connects(-1, 0)) boxes.push([0, ry0, r0, lo, ry1, r1]);
+    if (connects(0, 1)) boxes.push([r0, ry0, hi, r1, ry1, 1]);
+    if (connects(0, -1)) boxes.push([r0, ry0, 0, r1, ry1, lo]);
+  }
+  return boxes;
+}
+
 /** MC crop model: '#' of four planes at 1/4 and 3/4. */
 function emitHash(a: Arrays, wx: number, y: number, wz: number, tile: number, light: number, h: number): void {
   const col = Math.min(1.5, lightCurve(light & 15) * 0.95);
@@ -289,6 +327,12 @@ function buildMesh(
         const wx = ox + lx;
         const wz = oz + lz;
         if (isCrossPlant(id) || id === BlockId.Fire) { emitCross(a, wx, y, wz, def.tiles.side, getLight(wx, y, wz)); continue; }
+        if (id === BlockId.Fence) {
+          const lt = getLight(wx, y, wz);
+          const conn = (dx: number, dz: number) => { const n = getWorld(wx + dx, y, wz + dz); return n === BlockId.Fence || n === BlockId.Gate || isFullCube(n) && isOpaque(n); };
+          for (const b of fenceBoxes(conn)) emitBox(a, wx, y, wz, b, def.tiles.side, lt);
+          continue;
+        }
         if (id === BlockId.Ladder) {
           // it21 (MC): flat against its wall, 1/16 off the wall surface (was a see-through full cube)
           const wall = ladderWall(getMeta(wx, y, wz), getWorld, wx, y, wz);
@@ -310,7 +354,7 @@ function buildMesh(
         }
         const wLevel = id === BlockId.Water || id === BlockId.Lava || id === BlockId.Crop
           ? (chunk.waterLevel[chunk.index(lx, y, lz)] || (id === BlockId.Crop ? 0 : 7)) : 7;
-        let hTop = id === BlockId.Water || id === BlockId.Lava ? Math.max(0.125, wLevel / 7)
+        let hTop = id === BlockId.Water || id === BlockId.Lava ? (id === BlockId.Lava ? lavaHeight(wLevel) : Math.min(1, Math.max(0.125, wLevel / 7)))
           : id === BlockId.Crop ? Math.min(1, 0.4 + wLevel * 0.085) : 1;
         if (id === BlockId.Slab || id === BlockId.PressurePlate) hTop = id === BlockId.PressurePlate ? 0.1 : 0.5;
         const skipTop = (id === BlockId.Water || id === BlockId.Lava) && getWorld(wx, y + 1, wz) === id;

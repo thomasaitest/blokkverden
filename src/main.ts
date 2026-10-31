@@ -160,6 +160,7 @@ async function runGame(
   let lastSave = 0;
   let frames = 0, fps = 0, fpsT = performance.now();
   let hungerAcc = 0, waterAcc = 0, cropAcc = 0, starveAcc = 0;
+  let jumpTapAge = 0;
   let eatTimer = 0, eatSoundAcc = 0;
   const EAT_TIME = 1.6;
   let respawn = { x: 8.5, y: 40, z: 8.5 };
@@ -201,7 +202,7 @@ async function runGame(
   deathEl.style.display = 'none';
   app.appendChild(deathEl);
 
-  const doSave = () => saveWorldNamed(worldName, world, player, inv, drops, containers, dayTime, respawn, xp.toJSON(), structuresToJSON());
+  const doSave = () => saveWorldNamed(worldName, world, player, inv, drops, containers, dayTime, respawn, xp.toJSON(), structuresToJSON(), leafDecay.toJSON());
   const leafDecay = new LeafDecay();
   let suffocateAcc = 0;
   // MC: with your head inside a block you see that block's texture (darkened), not through the world
@@ -406,6 +407,7 @@ async function runGame(
         world.loadChunks(saved.chunks);
         // Old saves (pre-it12) have no list: treat every saved chunk as already stamped.
         resetStructures(saved.structures ?? saved.chunks.map((c) => `${c.cx},${c.cz}`));
+        leafDecay.loadJSON(saved.leafDecay);
         player = createPlayer(saved.player.x, saved.player.y, saved.player.z);
         player.yaw = saved.player.yaw; player.pitch = saved.player.pitch;
         player.health = saved.player.health; player.hunger = saved.player.hunger;
@@ -537,6 +539,7 @@ async function runGame(
       glLost: renderer.renderer.getContext()?.isContextLost?.() ?? null,
     }),
     forceSave: () => doSave(),
+    leafDecayPending: () => leafDecay.pending.length,
     /** Test setup only: speed up sapling growth (MC bone-meal stand-in). */
     setSaplingChance: (c: number) => { saplingChance = c; },
     openInv: () => { invUi.openPlayer(); input.inventoryOpen = true; },
@@ -1102,9 +1105,12 @@ async function runGame(
         boats.dismount(player);
       }
       if (!boats.mounted) {
-        // it17: latch short taps — a <1-frame Space press (low fps) was lost and the player didn't jump
+        // it17: latch short Space taps for up to 0.15 s — a quick tap while landing (or shorter than a
+        // frame at low fps) was lost and the player didn't jump
+        if (input.jumpTap) jumpTapAge += dt; else jumpTapAge = 0;
+        const wasGround = player.onGround || player.inWater;
         const move = movePlayer(player, world, wishX, wishZ, input.jump || !!input.jumpTap, dt);
-        input.jumpTap = false;
+        if (wasGround || jumpTapAge > 0.15) { input.jumpTap = false; jumpTapAge = 0; }
         if (move.fallDamage > 0) hurtPlayer(move.fallDamage, 0, 0, true);
       }
       // MC suffocation: eye inside a full solid block → 1 damage every 0.5 s (dig out!)

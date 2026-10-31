@@ -1,19 +1,14 @@
 {
-  "when": "2026-10-31T00:00:57.310Z",
+  "when": "2026-10-31T00:05:09.429Z",
   "results": [
     {
-      "id": "G1-gravel-falls",
+      "id": "L3-leaf-decay-after-reload",
       "status": "PASS",
-      "notes": "col46..49=49,49,49,0"
-    },
-    {
-      "id": "G2-gravel-drops",
-      "status": "PASS",
-      "notes": "broken=30 gravel=28 flint=2 (10 % flint expected)"
+      "notes": "logGone=true pendingBeforeQuit=9 leavesAfterLoad=9 end=0"
     }
   ],
   "bugs": [],
   "marks": {
-    "G1": 8.655
+    "L3": 8.886
   }
 }

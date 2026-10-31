@@ -37,6 +37,8 @@ export interface SaveData {
   xp?: { xp: number; level: number };
   /** Chunk keys that already had their village/ruin/dungeon stamped (it12). */
   structures?: string[];
+  /** Pending leaf decays [x,y,z,secondsLeft] (it17). */
+  leafDecay?: [number, number, number, number][];
   savedAt: number;
 }
 
@@ -93,6 +95,7 @@ export async function saveWorldNamed(
   respawn: { x: number; y: number; z: number } | null,
   xp?: { xp: number; level: number },
   structures?: string[],
+  leafDecay?: [number, number, number, number][],
 ): Promise<void> {
   const data: SaveData = {
     version: 5,
@@ -111,6 +114,7 @@ export async function saveWorldNamed(
     chunks: world.serializeModified(),
     xp,
     structures,
+    leafDecay,
     savedAt: Date.now(),
   };
   const db = await openDb();

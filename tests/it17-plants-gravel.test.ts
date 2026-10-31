@@ -87,3 +87,41 @@ describe('it17 gravel gravity', () => {
     expect(w.getBlock(0, 6, 0)).toBe(0);
   });
 });
+
+import { LeafDecay } from '../src/world/leafdecay';
+describe('it17 leaf decay persistence', () => {
+  it('pending decays survive toJSON/loadJSON with their remaining time', () => {
+    const w = { b: new Map<string, number>(), getBlock(x: number, y: number, z: number) { return this.b.get(`${x},${y},${z}`) ?? 0; },
+      setBlock(x: number, y: number, z: number, id: number) { const k = `${x},${y},${z}`; if (id) this.b.set(k, id); else this.b.delete(k); return true; },
+      getWaterLevel() { return 0; } };
+    for (let x = 0; x < 3; x++) w.setBlock(x, 5, 0, BlockId.Leaves);
+    const a = new LeafDecay();
+    a.onRemoved(w, 0, 4, 0, () => 0.5); // 2 + 9 = 11 s
+    expect(a.pending.length).toBe(3);
+    a.update(5, w);
+    const saved = JSON.parse(JSON.stringify(a.toJSON()));
+    const b = new LeafDecay();
+    b.loadJSON(saved);
+    expect(b.pending.length).toBe(3);
+    expect(b.update(5, w).length).toBe(0); // 10 s total: not yet
+    expect(b.update(2, w).length).toBe(3); // 12 s: gone
+    expect(w.b.size).toBe(0);
+  });
+});
+
+describe('it17 leaf decay waits for unloaded chunks', () => {
+  it('a due decay in a not-yet-loaded chunk is kept, then runs once the chunk is there', () => {
+    let loaded = false;
+    const w = { b: new Map<string, number>([['0,5,0', BlockId.Leaves]]),
+      getBlock(x: number, y: number, z: number) { return loaded ? (this.b.get(`${x},${y},${z}`) ?? 0) : 0; },
+      setBlock(x: number, y: number, z: number, id: number) { const k = `${x},${y},${z}`; if (id) this.b.set(k, id); else this.b.delete(k); return true; },
+      getWaterLevel() { return 0; }, hasChunkAt() { return loaded; } };
+    const d = new LeafDecay();
+    d.loadJSON([[0, 5, 0, 0.5]]);
+    expect(d.update(1, w).length).toBe(0);
+    expect(d.pending.length).toBe(1);
+    loaded = true;
+    expect(d.update(1.5, w).length).toBe(1);
+    expect(w.b.size).toBe(0);
+  });
+});

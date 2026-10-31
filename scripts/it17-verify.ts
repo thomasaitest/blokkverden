@@ -295,6 +295,26 @@ async function main() {
   const dropIds = () => page.evaluate(() => (window as any).__bv.drops.drops.map((d: any) => d.stack.id));
   const clearDrops = () => page.evaluate(() => { (window as any).__bv.drops.drops.length = 0; });
 
+  // B2probe — replicate core B2 (fresh spawn → teleport up 14 blocks → fall → teleport → Space tap 50 ms)
+  if (run('B2')) {
+    for (let i = 0; i < 3; i++) {
+      await page.evaluate(() => { const bv = (window as any).__bv; bv.teleport(8.5, 46.05, 8.5); bv.world.updateAround(8.5, 8.5); });
+      await sleep(2500);
+      await page.evaluate(() => { const bv = (window as any).__bv; for (let x = 0; x <= 16; x++) for (let z = 0; z <= 16; z++) { bv.world.setBlock(x, 45, z, 1); for (let yy = 46; yy <= 51; yy++) bv.world.setBlock(x, yy, z, 0); } bv.teleport(8.5, 46.05, 8.5); bv.look(0, 0); });
+      await sleep(150);
+      await focusGame(page);
+      await page.keyboard.down('KeyW'); await sleep(600); await page.keyboard.up('KeyW');
+      await page.evaluate(() => { const bv = (window as any).__bv; bv.teleport(8.5, 46.35, 8.5); bv.look(0, 0); }); // airborne: lands ~0.1 s later
+      const s0 = await page.evaluate(() => { const p = (window as any).__bv.player; return { y: p.y, g: p.onGround, hp: p.health, tap: (window as any).__bv.input.jumpTap, lock: (window as any).__bv.input.pointerLocked, inv: (window as any).__bv.input.inventoryOpen }; });
+      await page.keyboard.down('Space'); await sleep(50);
+      const sMid = await page.evaluate(() => { const bv = (window as any).__bv; return { tap: bv.input.jumpTap, jump: bv.input.jump, y: bv.player.y }; });
+      await page.keyboard.up('Space');
+      await sleep(150);
+      const s1 = await page.evaluate(() => { const p = (window as any).__bv.player; return { y: p.y, g: p.onGround, vy: p.vy, fps: (window as any).__bv.getState().fps, paused: !!document.querySelector('#pause-menu') && getComputedStyle(document.querySelector('#pause-menu')!).display !== 'none' }; });
+      console.log('B2probe', i, JSON.stringify({ s0, sMid, s1 }));
+    }
+  }
+
   // N0 — natural terrain: tall grass tufts near spawn (look at the nearest one)
   if (run('N0')) {
     mark('N0');
@@ -519,6 +539,46 @@ async function main() {
       await sleep(1300);
     }
     record('J-jump-tap', ok === 5 ? 'PASS' : 'FAIL', `jumped ${ok}/5`);
+  }
+
+  // L3 — chop a tree (real LMB), quit to title right away (Esc → «Til tittel», saves), reload the world: leaves still decay
+  if (run('L3')) {
+    mark('L3');
+    await page.evaluate(() => {
+      const bv = (window as any).__bv;
+      bv.world.setBlock(10, 46, 14, 5);
+      for (let x = 9; x <= 11; x++) for (let z = 13; z <= 15; z++) if (!(x === 10 && z === 14)) bv.world.setBlock(x, 47, z, 7);
+      bv.world.setBlock(10, 47, 14, 7); bv.world.setBlock(10, 48, 14, 7);
+      bv.forceRemeshAround?.();
+    });
+    await sleep(800);
+    await setHeld(page, 101);
+    await aim(page, 10.5, 46.05, 16.5, 10.5, 46.5, 15.0);
+    await sleep(200);
+    for (let t = 0; t < 12 && (await gb(10, 46, 14)) === 5; t++) await hold(page, 400);
+    const logGone = (await gb(10, 46, 14)) === 0;
+    const pend = await page.evaluate(() => (window as any).__bv.leafDecayPending?.() ?? -1);
+    await page.keyboard.press('Escape');
+    await sleep(300);
+    await page.locator('#p-quit').click();
+    await sleep(1200);
+    await page.locator('#btn-single').click().catch(() => {});
+    await sleep(500);
+    await page.evaluate(() => { const b = document.querySelector('[data-play="It17Verify"]') as HTMLButtonElement | null; b?.click(); });
+    await page.waitForSelector('canvas#game', { timeout: 60000 });
+    for (let i = 0; i < 40; i++) { if (await page.evaluate(() => !!(window as any).__bv?.world)) break; await sleep(250); }
+    await sleep(1500);
+    await acquireLock(page);
+    const leavesNow = () => page.evaluate(() => { const bv = (window as any).__bv; let n = 0; for (let x = 9; x <= 11; x++) for (let z = 13; z <= 15; z++) for (let y = 47; y <= 48; y++) if (bv.world.getBlock(x, y, z) === 7) n++; return n; });
+    const afterLoad = await leavesNow();
+    let end = afterLoad;
+    for (let i = 0; i < 30 && end > 0; i++) { await sleep(1000); end = await leavesNow(); }
+    await aim(page, 10.5, 47.0, 18.5, 10.5, 47.0, 14.5);
+    await sleep(800);
+    await shot(page, 'it17-06-loev-etter-lasting.png');
+    const dbg = await page.evaluate(() => { const bv = (window as any).__bv; const out: any[] = []; for (let x = 9; x <= 11; x++) for (let z = 13; z <= 15; z++) for (let y = 47; y <= 48; y++) if (bv.world.getBlock(x, y, z) === 7) out.push([x, y, z, bv.world.getWaterLevel(x, y, z)]); return { out, pend: bv.leafDecayPending() }; });
+    console.log('L3 dbg', JSON.stringify(dbg));
+    record('L3-leaf-decay-after-reload', logGone && afterLoad >= 6 && end === 0 ? 'PASS' : 'FAIL', `logGone=${logGone} pendingBeforeQuit=${pend} leavesAfterLoad=${afterLoad} end=${end}`);
   }
 
   const report = { when: new Date().toISOString(), results, bugs, marks };

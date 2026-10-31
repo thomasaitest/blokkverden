@@ -151,7 +151,8 @@ async function flatPad(page: Page, y = 45) {
   // into the pad *after* it was flattened, and the B3 teleport then put the player inside its planks wall
   // (now MC suffocation; before it16 the player was silently lifted out of the wall).
   // Teleport first, let terrain + structures generate, then flatten.
-  await page.evaluate((y) => { const bv = (window as any).__bv; bv.teleport(8.5, y + 1.05, 8.5); bv.world.updateAround(8.5, 8.5); }, y);
+  // it17: stand on a temporary block while the area generates (was: fell up to ~14 blocks → ~10 fall damage before B2)
+  await page.evaluate((y) => { const bv = (window as any).__bv; bv.world.updateAround(8.5, 8.5); bv.world.setBlock(8, y, 8, 1); bv.teleport(8.5, y + 1.05, 8.5); }, y);
   await sleep(2500); // structures for freshly generated chunks are placed on a 2 s tick
 
   await page.evaluate((y) => {

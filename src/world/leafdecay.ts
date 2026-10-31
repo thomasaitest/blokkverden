@@ -8,6 +8,8 @@ export const LEAF_PERSISTENT = 1;
 
 export interface MetaAccess extends BlockAccess {
   getWaterLevel(x: number, y: number, z: number): number;
+  /** Optional: false while the chunk isn't loaded (e.g. right after loading a save). */
+  hasChunkAt?(x: number, z: number): boolean;
 }
 
 /** True if the leaf at (x,y,z) connects to a log within LEAF_RANGE steps through leaves. */
@@ -44,6 +46,20 @@ export class LeafDecay {
 
   clear(): void { this.pending = []; this.keys.clear(); }
 
+  /** Save pending decays as [x,y,z,secondsLeft] (it17: were lost on save → leaves hung forever). */
+  toJSON(): [number, number, number, number][] {
+    return this.pending.map((p) => [p.x, p.y, p.z, Math.max(0, p.at - this.time)]);
+  }
+  loadJSON(list: [number, number, number, number][] | undefined): void {
+    this.clear();
+    for (const [x, y, z, left] of list ?? []) {
+      const k = `${x},${y},${z}`;
+      if (this.keys.has(k)) continue;
+      this.keys.add(k);
+      this.pending.push({ x, y, z, at: this.time + left });
+    }
+  }
+
   /** Call after a Log or Leaves block at (x,y,z) is removed. */
   onRemoved(w: MetaAccess, x: number, y: number, z: number, rnd = Math.random): void {
     const R = LEAF_RANGE - 1;
@@ -69,6 +85,8 @@ export class LeafDecay {
     const keep: Pending[] = [];
     for (const p of this.pending) {
       if (p.at > this.time) { keep.push(p); continue; }
+      // it17: right after loading a save the chunk may not be there yet — wait instead of dropping the decay
+      if (w.hasChunkAt && !w.hasChunkAt(p.x, p.z)) { p.at = this.time + 1; keep.push(p); continue; }
       this.keys.delete(`${p.x},${p.y},${p.z}`);
       if (w.getBlock(p.x, p.y, p.z) !== BlockId.Leaves) continue;
       if (w.getWaterLevel(p.x, p.y, p.z) & LEAF_PERSISTENT) continue;

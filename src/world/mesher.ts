@@ -157,9 +157,12 @@ function emitQuad(
     a.positions.push(corners[i][0], corners[i][1], corners[i][2]);
     a.normals.push(face.normal[0], face.normal[1], face.normal[2]);
   }
-  // Single atlas tile stretched across greedy quad (no bleed into neighbors)
-  void du; void dv;
-  a.uvs.push(uv.u0, uv.v1, uv.u1, uv.v1, uv.u1, uv.v0, uv.u0, uv.v0);
+  // it19: tile-local UVs (0..du, 0..dv) + tile index in colour B (negative) — the chunk shader repeats the
+  // tile once per block. Was: one atlas tile stretched across the whole greedy quad (flat ground showed
+  // huge blurry squares, a 5×3 wall one giant plank texture).
+  void uv;
+  a.uvs.push(0, dv, du, dv, du, 0, 0, 0);
+  const tileCode = -(tileIdx + 1);
 
   let powerBoost = 1;
   if (id === BlockId.RedDust && meta > 0) powerBoost = 1.35;
@@ -168,7 +171,7 @@ function emitQuad(
     const col = Math.min(1.5, aos[i] * shade * lightMul * powerBoost);
     const bcol = Math.min(1.5, aos[i] * shade * blockMul * powerBoost);
     const alpha = def.transparent ? (def.liquid ? (id === BlockId.Lava ? 0.85 : 0.55) : id === BlockId.Torch ? 0.95 : 0.75) : 1;
-    a.colors.push(col, bcol, col, alpha);
+    a.colors.push(col, bcol, tileCode, alpha);
   }
   const vb = a.vBase;
   if (aos[0] + aos[2] > aos[1] + aos[3]) {

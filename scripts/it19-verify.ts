@@ -510,7 +510,9 @@ async function main() {
     const before = await lum('it19-09a-foer-fakkel.png');
     await hold(page, 80, 'right'); await sleep(1500);
     const torch = await gb(16, 46, 6);
-    const after = await lum('it19-09-fakkel-natt.png');
+    let after = await lum('it19-09-fakkel-natt.png');
+    // remesh after the torch can take a moment in headless swiftshader
+    for (let i = 0; i < 6 && after.near < before.near * 1.8; i++) { await sleep(1000); after = await lum('it19-09-fakkel-natt.png'); }
     await page.evaluate(() => { const bv = (window as any).__bv; bv.player.creative = true; bv.player.flying = true; bv.teleport(16.5, 58, 20.5); bv.lookAt(16.5, 46, 6.5); });
     await sleep(1500);
     await shot(page, 'it19-10-fakkel-ovenfra.png');

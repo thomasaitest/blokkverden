@@ -31,4 +31,18 @@ describe('it19 block light vs sky light in the mesh (MC: torches light the night
     expect(p >> 4).toBe(13);
     expect(w.getLight(9, 46, 8)).toBe(15);
   });
+  it('greedy quads repeat the tile once per block (UV 0..w × 0..h, tile index in colour B) instead of stretching it', () => {
+    const c = new Chunk(0, 0);
+    c.generated = true;
+    for (let z = 0; z < 8; z++) for (let x = 0; x < 8; x++) c.set(x, 5, z, BlockId.Grass);
+    const get = (x: number, y: number, z: number) => (y === 5 && x >= 0 && x < 8 && z >= 0 && z < 8 ? BlockId.Grass : BlockId.Air);
+    const m = meshChunk(c, get, () => 15).opaque;
+    let maxU = 0;
+    for (let i = 0; i < m.uvs.length; i += 2) maxU = Math.max(maxU, m.uvs[i]);
+    expect(maxU).toBe(8);
+    expect(m.colors[2]).toBeLessThan(-0.5); // tile code
+    const codes = new Set<number>();
+    for (let i = 2; i < m.colors.length; i += 4) codes.add(m.colors[i]);
+    expect(codes.has(-(0 + 1))).toBe(true); // grass top tile 0
+  });
 });

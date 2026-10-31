@@ -1,10 +1,15 @@
 {
-  "when": "2026-10-31T02:13:35.979Z",
+  "when": "2026-10-31T02:20:19.190Z",
   "results": [
     {
-      "id": "NL1-torch-lights-night",
+      "id": "FS2-fire-spreads",
       "status": "PASS",
-      "notes": "{\"torch\":12,\"before\":{\"near\":20.89134837962963,\"far\":17.17111545138889},\"after\":{\"near\":54.967005851337454,\"far\":47.247829861111114}}"
+      "notes": "{\"lit\":83,\"p0\":57,\"p1\":0,\"maxFires\":19}"
+    },
+    {
+      "id": "D1-door-thin-panel",
+      "status": "PASS",
+      "notes": "{\"placed\":26,\"m\":0,\"zClosed\":\"17.56\",\"open\":1,\"zOpen\":\"11.44\"}"
     }
   ],
   "bugs": []

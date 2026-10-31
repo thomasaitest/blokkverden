@@ -1,6 +1,6 @@
 import { proceduralIcon } from './itemIcons';
 import * as THREE from 'three';
-import { createAtlasCanvas, tileUV, ATLAS_W, ATLAS_H } from '../blocks/textures';
+import { createAtlasCanvas, tileUV, ATLAS_W, ATLAS_H, COLS as ATLAS_COLS, ROWS as ATLAS_ROWS } from '../blocks/textures';
 import type { ChunkMeshes, MeshData } from '../world/mesher';
 import type { World } from '../world/world';
 import type { PlayerState } from '../player/physics';
@@ -137,6 +137,18 @@ export class GameRenderer {
     const patchBlockLight = (m: THREE.Material) => {
       m.onBeforeCompile = (sh) => {
         sh.fragmentShader = sh.fragmentShader
+          .replace('#include <map_fragment>', `
+            #ifdef USE_MAP
+              vec2 bvUv = vMapUv;
+              #if defined( USE_COLOR_ALPHA ) || defined( USE_COLOR )
+                if ( vColor.b < -0.5 ) {
+                  float bvT = floor( -vColor.b - 0.5 );
+                  bvUv = ( vec2( mod( bvT, ${ATLAS_COLS}.0 ), floor( bvT / ${ATLAS_COLS}.0 ) ) + fract( vMapUv ) ) / vec2( ${ATLAS_COLS}.0, ${ATLAS_ROWS}.0 );
+                }
+              #endif
+              diffuseColor *= texture2D( map, bvUv );
+            #endif
+          `)
           .replace('#include <color_fragment>', `
             vec3 bvBase = diffuseColor.rgb;
             #if defined( USE_COLOR_ALPHA )

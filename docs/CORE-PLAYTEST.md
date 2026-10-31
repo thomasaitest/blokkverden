@@ -193,6 +193,7 @@ Last run: 2026-10-31 02:26–02:35 CET · it18 core (56 PASS / 0 FAIL) + scripts
 | R2 | Lava lights things | Lava sets fire to flammable blocks near/above it (wooden wall next to a lava pool catches fire); lava among stone never makes fire | PASS | LV1 + vitest |
 | R3 | Mobs burn | Mobs in fire/lava take damage (fire 1 / 0.5 s, lava 4 / 0.5 s), keep burning afterwards (glow), water puts them out; lava slows them; animals that die burning drop cooked meat | PASS | MF1 (pig, fire lit by RMB), ML1 (zombie in lava) + vitest |
 | R4 | Outline shape | Selection outline follows the block: door = thin 2-tall panel, slab = half, flowers/grass/saplings/crops = smaller boxes | PASS | OL1 screenshots + vitest (was: always a full cube) |
+| R6 | Torch model | A torch is a thin stick with a flame (one torch from every angle) | PASS | BL1 screenshot + vitest (was: see-through cube with the torch picture on each face, looked like two torches) |
 | R5 | Light across chunk borders | A torch a few blocks from a chunk border lights the ground on the other side (also diagonal chunks); removing it leaves no ghost light | PASS | BL1 + vitest (was: block light stopped at the chunk border) |
 
 ## Method rules

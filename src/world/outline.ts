@@ -15,7 +15,9 @@ export function selectionBox(id: number, meta: number, level = 0, ladderWallDir 
   switch (id) {
     case BlockId.Door: { const [x0, z0, x1, z1] = doorPanel(meta); return [x0, 0, z0, x1, 2, z1]; }
     case BlockId.Ladder: { const [x0, z0, x1, z1] = ladderPanel(ladderWallDir); return [x0, 0, z0, x1, 1, z1]; }
-    case BlockId.DoubleGrass: case BlockId.DoubleGrassTop: return [2 * p, 0, 2 * p, 14 * p, 1, 14 * p];
+    // MC: one 2-tall outline around both halves
+    case BlockId.DoubleGrass: return [2 * p, 0, 2 * p, 14 * p, 2, 14 * p];
+    case BlockId.DoubleGrassTop: return [2 * p, -1, 2 * p, 14 * p, 1, 14 * p];
     case BlockId.Slab: return [0, 0, 0, 1, 0.5, 1];
     case BlockId.PressurePlate: return [p, 0, p, 1 - p, p, 1 - p];
     case BlockId.TallGrass: return [2 * p, 0, 2 * p, 14 * p, 13 * p, 14 * p];

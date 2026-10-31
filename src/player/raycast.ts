@@ -81,7 +81,9 @@ export function raycast(world: World, p: PlayerState, maxDist = 6): Hit | null {
       if (!shapedTarget(id)) return { x: ix, y: iy, z: iz, nx, ny, nz, dist: t };
       const meta = world.getWaterLevel(ix, iy, iz);
       const box = selectionBox(id, meta, meta, id === BlockId.Ladder ? ladderWall(meta, (a, b, c) => world.getBlock(a, b, c), ix, iy, iz) : 2);
-      const h = rayBox(x, y, z, dx, dy, dz, box, ix, iy, iz);
+      // clip the box to this cell (the 2-tall double-grass outline spans both halves)
+      const cb = [box[0], Math.max(0, box[1]), box[2], box[3], Math.min(1, box[4]), box[5]];
+      const h = rayBox(x, y, z, dx, dy, dz, cb, ix, iy, iz);
       if (h && h.t <= maxDist) return { x: ix, y: iy, z: iz, nx: h.nx, ny: h.ny, nz: h.nz, dist: h.t };
     }
     // MC: a door is 2 blocks tall — the cell above a Door block is its upper half and targets the door

@@ -329,11 +329,12 @@ async function main() {
     for (let i = 0; i < 40; i++) {
       await sleep(50);
       const f = await page.evaluate(() => (window as any).__bv.falling());
-      if (f.length) { seen = f; maxN = Math.max(maxN, f.length); ys.push(+Math.min(...f.map((q: any) => q.y)).toFixed(2)); if (ys.length === 3) { await page.mouse.up(); await page.evaluate(() => (window as any).__bv.lookAt(8.5, 49, 4.5)); await shot(page, 'it21-01-sand-faller.png'); } }
+      if (f.length) { seen = f; maxN = Math.max(maxN, f.length); ys.push(+Math.min(...f.map((q: any) => q.y)).toFixed(2)); if (ys.length === 1) { await page.mouse.up(); await page.evaluate(() => { const bv = (window as any).__bv; bv.player.flying = true; bv.teleport(12.5, 49.5, 9.5); bv.lookAt(8.5, 51, 4.5); }); } if (ys.length === 5) await shot(page, 'it21-01-sand-faller.png'); }
       if (ys.length && !f.length) break;
     }
     await page.mouse.up();
     await sleep(800);
+    await page.evaluate(() => { (window as any).__bv.player.flying = false; });
     const col = [];
     for (let y = 45; y <= 49; y++) col.push(await gb(8, y, 4));
     await shot(page, 'it21-02-sand-landet.png');

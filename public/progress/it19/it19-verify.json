@@ -1,0 +1,11 @@
+{
+  "when": "2026-10-31T02:01:53.406Z",
+  "results": [
+    {
+      "id": "D1-door-thin-panel",
+      "status": "PASS",
+      "notes": "{\"placed\":26,\"m\":0,\"zClosed\":\"17.56\",\"open\":1,\"zOpen\":\"11.37\"}"
+    }
+  ],
+  "bugs": []
+}

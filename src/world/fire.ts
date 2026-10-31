@@ -54,6 +54,17 @@ export class FireSystem {
     this.fires.set(`${x},${y},${z}`, { x, y, z, age: 0, life: 3 + rng() * 4, acc: 0 });
   }
 
+  /** Pick up fire blocks that aren't tracked (e.g. after loading a save) in a box around (x,y,z). */
+  adoptAround(w: BlockAccess, x: number, y: number, z: number, r = 16, ry = 12, rng: () => number = Math.random): number {
+    let n = 0;
+    const cx = Math.floor(x), cy = Math.floor(y), cz = Math.floor(z);
+    for (let yy = Math.max(1, cy - ry); yy <= cy + ry; yy++) for (let xx = cx - r; xx <= cx + r; xx++) for (let zz = cz - r; zz <= cz + r; zz++) {
+      if (w.getBlock(xx, yy, zz) !== BlockId.Fire || this.fires.has(`${xx},${yy},${zz}`)) continue;
+      this.track(xx, yy, zz, rng); n++;
+    }
+    return n;
+  }
+
   /** Advance fires. Returns cells that changed (for remeshing / particles). */
   update(dt: number, w: BlockAccess, rng: () => number = Math.random): { x: number; y: number; z: number; burnt?: number }[] {
     const changed: { x: number; y: number; z: number; burnt?: number }[] = [];

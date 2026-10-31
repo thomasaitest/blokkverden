@@ -43,6 +43,15 @@ describe('it19 fire (MC)', () => {
     for (let t = 0; t < 60; t += 0.5) f.update(0.5, w, rng);
     expect(w.getBlock(3, 10, 3)).toBe(BlockId.Fire);
   });
+  it('untracked fire (e.g. from a loaded save) is adopted and burns out', () => {
+    const w = new FakeWorld(); floor(w);
+    w.setBlock(2, 10, -2, BlockId.Fire);
+    const f = new FireSystem(); const rng = lcg(3);
+    expect(f.adoptAround(w, 0, 10, 0, 4, 4, rng)).toBe(1);
+    expect(f.adoptAround(w, 0, 10, 0, 4, 4, rng)).toBe(0);
+    for (let t = 0; t < 30; t += 0.5) f.update(0.5, w, rng);
+    expect(w.getBlock(2, 10, -2)).toBe(BlockId.Air);
+  });
   it('fire spreads into a wooden wall and burns it away', () => {
     const w = new FakeWorld(); floor(w);
     for (let x = -3; x <= 3; x++) for (let y = 10; y <= 12; y++) w.setBlock(x, y, 1, BlockId.Planks);

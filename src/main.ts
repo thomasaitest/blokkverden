@@ -210,6 +210,7 @@ async function runGame(
   // it19 (MC): fire from flint and steel spreads to wood/leaves and burns out; fire/lava set the player burning
   const fire = new FireSystem();
   const burn = createBurnState();
+  let fireAdoptAcc = 0;
   let suffocateAcc = 0;
   // MC: with your head inside a block you see that block's texture (darkened), not through the world
   const inBlockOverlay = document.createElement('div');
@@ -236,6 +237,24 @@ async function runGame(
     }
     inBlockOverlay.style.backgroundImage = `url(${url})`;
     inBlockOverlay.style.display = 'block';
+  };
+  // it19 (MC): while burning, flames cover the lower part of the screen
+  const fireOverlay = document.createElement('div');
+  fireOverlay.id = 'fire-overlay';
+  fireOverlay.style.cssText = 'position:fixed;left:0;right:0;bottom:0;height:38vh;pointer-events:none;z-index:5;display:none;image-rendering:pixelated;background-size:19vh 19vh;background-repeat:repeat-x;background-position:bottom;opacity:0.75;';
+  document.body.appendChild(fireOverlay);
+  let fireOverlayShown = false;
+  const updateFireOverlay = (on: boolean) => {
+    if (on === fireOverlayShown) return;
+    fireOverlayShown = on;
+    if (on && !fireOverlay.style.backgroundImage) {
+      inBlockAtlas ??= createAtlasCanvas();
+      const uv = tileUV(80);
+      const c = document.createElement('canvas'); c.width = 16; c.height = 16;
+      c.getContext('2d')!.drawImage(inBlockAtlas, uv.u0 * ATLAS_W, uv.v0 * ATLAS_H, 16, 16, 0, 0, 16, 16);
+      fireOverlay.style.backgroundImage = `url(${c.toDataURL()})`;
+    }
+    fireOverlay.style.display = on ? 'block' : 'none';
   };
   // MC: break particles take the colour of the broken block's texture (was always brown)
   const particleColors = new Map<number, number>();
@@ -518,6 +537,7 @@ async function runGame(
     hud.markDirty(); hud.refreshHotbar(); updateArmorUi();
   }
   function respawnPlayer(): void {
+    burn.burnTime = 0; burn.hotAcc = 0; burn.burnAcc = 0; updateFireOverlay(false);
     dead = false;
     deathEl.style.display = 'none';
     player.health = 20; player.hunger = 20; player.air = 20;
@@ -1151,6 +1171,7 @@ async function runGame(
         const bd = player.creative ? 0 : burnTick(burn, inFire, !!player.inLava, player.inWater, dt);
         if (player.creative) burn.burnTime = 0;
         if (bd > 0) hurtPlayer(bd, 0, 0, false);
+        updateFireOverlay(burn.burnTime > 0 || inFire || !!player.inLava);
         if (burn.burnTime > 0 && Math.random() < dt * 12) particles.burst(player.x, player.y + 0.4 + Math.random() * 1.2, player.z, 0xff8a1a, 2, 'sprint');
       }
       updateInBlockOverlay();
@@ -1598,6 +1619,8 @@ async function runGame(
       }
     }
 
+    fireAdoptAcc += dt;
+    if (fireAdoptAcc > 2) { fireAdoptAcc = 0; fire.adoptAround(world, player.x, player.y, player.z); } // e.g. fire saved in a world
     for (const fc of fire.update(dt, world)) {
       particles.burst(fc.x + 0.5, fc.y + 0.5, fc.z + 0.5, fc.burnt != null ? 0x333333 : 0xff9a30, 4, 'break');
       markMesh();

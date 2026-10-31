@@ -565,6 +565,7 @@ async function runGame(
     closeInv: () => { invUi.close(); input.inventoryOpen = false; },
     look: (y: number, p: number) => { player.yaw = y; player.pitch = p; },
     targetHit: () => raycast(world, player),
+    particleCount: () => particles.count(),
 
     lookAt: (x: number, y: number, z: number) => {
       const dx = x - player.x, dy = y - (player.y + EYE_HEIGHT), dz = z - player.z;

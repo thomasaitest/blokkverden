@@ -42,7 +42,7 @@ export function applyBoneMeal(w: BoneMealAccess, x: number, y: number, z: number
     const dy = Math.floor(rnd() * 3) - 1;
     const gx = x + dx, gy = y + dy, gz = z + dz;
     if (w.getBlock(gx, gy, gz) !== BlockId.Grass || w.getBlock(gx, gy + 1, gz) !== BlockId.Air) continue;
-    if (rnd() < 0.5) continue; // MC: patchy, not a full carpet
+    if (rnd() < 0.25) continue; // MC: patchy, not a full carpet
     const r = rnd();
     w.setBlock(gx, gy + 1, gz, r < 0.06 ? BlockId.Dandelion : r < 0.1 ? BlockId.Poppy : BlockId.TallGrass);
   }

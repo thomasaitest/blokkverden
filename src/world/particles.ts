@@ -33,6 +33,8 @@ export class ParticleSystem {
     }
   }
 
+  count(): number { return this.list.length; }
+
   update(dt: number): void {
     this.list = this.list.filter((p) => {
       p.life -= dt;

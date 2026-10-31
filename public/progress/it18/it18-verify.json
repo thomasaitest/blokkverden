@@ -1,0 +1,11 @@
+{
+  "when": "2026-10-31T00:57:33.436Z",
+  "results": [
+    {
+      "id": "PC1-particle-colours",
+      "status": "PASS",
+      "notes": "{\"caught\":true,\"leaves\":[30,121,25],\"sand\":[218,198,130],\"stone\":[130,130,135]}"
+    }
+  ],
+  "bugs": []
+}

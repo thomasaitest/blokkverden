@@ -228,6 +228,16 @@ Last run: 2026-10-31 02:26–02:35 CET · it18 core (56 PASS / 0 FAIL) + scripts
 | U7 | Water in Helvete | Water poured in Helvete boils away (the bucket still empties) | PASS (vitest) | not tested in the browser |
 | U8 | Bucket stack | Scooping with a stack of empty buckets leaves the rest in your hand; the filled bucket goes to the inventory | PASS | BK6 |
 
+## V. Falling water, flowing lava, cobblestone/stone, fence model (it24, `scripts/it24-verify.ts`, real input)
+| # | Check | Minecraft-expected | Status | Notes |
+|---|--------|-------------------|--------|-------|
+| V1 | Falling water dries up | Water poured on a pillar falls down (falling water, level 8, not a source) and spreads at the bottom; scoop the source → the waterfall and all water below it disappear | PASS | FW1 (0 water left) + vitest (was: water that had run down a ledge stayed forever) |
+| V2 | Flowing lava | A lava source spreads 3 blocks in the overworld, one step every ~1.5 s, lower at the edges; flowing lava can't be scooped; scoop the source → the flow recedes and vanishes | PASS | LV1 (25 cells, metas 3/1, 0 left) + vitest |
+| V3 | Cobblestone generator | Water meeting flowing lava turns the lava into cobblestone (a source still makes obsidian); mine it and it forms again | PASS | CB1 (iron pickaxe, real LMB) + vitest |
+| V4 | Lava onto water → stone | Lava falling onto water turns the water into stone, with a fizz | PASS | ST1 + vitest |
+| V5 | Liquid steps | Flowing water/lava cells of different heights show the step side; lower flow cells no longer vanish when seen at an angle | PASS (visual) | screenshots it24-01/03 |
+| V6 | Fence model | Fence = thin post + two rails to neighbouring fences, gates and solid blocks, plank texture (was a full block with a fence picture) | PASS (visual) | FN1 (placed with RMB) + vitest |
+
 ## Method rules
 1. **Real input:** synthesized keyboard/mouse via pointer lock. `__bv` may set up a scenario only — never perform the action under test.
 2. Log every bug and every deviation from Minecraft.

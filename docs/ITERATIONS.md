@@ -2,6 +2,55 @@
 
 Original voxel-sandkasse. Ingen Mojang-assets.
 
+## Iterasjon 24 (2026-10-31)
+
+Start: lør. 31. okt. 07:55 CET · Slutt: lør. 31. okt. 08:31 CET (~36 min) · gren `dev` (ikke publisert)
+
+### Fokus
+Baseline først (core 56/56 med ekte tastatur/mus i Chromium). Deretter de kjente begrensningene fra it23: fosser som aldri tørket opp, lava som ikke rant, og gjerder tegnet som hel blokk. Til slutt brosteinsgenerator, som var det store hullet mot MC etter bøttene. `__bv` bare til oppsett.
+
+### Fikset
+1. Fallende vann (fosser) hadde nivå 7, akkurat som kilder. Vann som hadde rent ned en kant, ble derfor liggende for alltid når kilden var borte, og du kunne hente «kilder» midt i en foss med bøtta. Nå har fallende vann eget nivå (8). Det lever bare så lenge det er vann rett over, sprer seg som nivå 6 når det lander, og kan ikke hentes med bøtte. Henter du kilden på toppen, er hele fossen og alt vannet nedenfor borte etter noen sekunder, som i MC
+2. Vann og lava som faller ned i mer rennende væske, sprer seg ikke lenger sidelengs underveis i fallet (MC sin «isWaterHole»-regel). Før ble det ekstra fosser ved siden av den ekte
+3. Rennende væske med ulike høyder ble tegnet feil: siden mot en lavere nabo ble fjernet, så de lavere rutene forsvant når du så på dem på skrå (sjakkbrettmønster, synlig på både vann og lava). Nå tegnes trinnet mellom høy og lav væske, som i MC
+4. Gjerder ble tegnet som en hel blokk med et gjerdebilde på. Nå er de en tynn stolpe (4/16) med to sprosser mot naboer (gjerder, grinder og hele blokker), med plankestruktur. De tegnes i den faste (ugjennomsiktige) passen
+
+### Nye funksjoner (2)
+- Rennende lava: en lavakilde renner 3 blokker i oververdenen, ett steg omtrent hvert 1,5 sekund (mye tregere enn vann), og blir lavere ut mot kantene. Lava faller ned kanter, og rennende lava kan ikke hentes med bøtte. Henter du kilden, trekker lavaen seg tilbake og forsvinner. Planter og fakler i veien blir til ting
+- Brostein og stein: vann som møter rennende lava gjør lavaen til brostein (en kilde blir fortsatt obsidian). Dermed virker den klassiske brosteinsgeneratoren: hogg brosteinen, og ny brostein dannes. Lava som faller ned på vann, gjør vannet til stein, med fres og damp
+
+### Playtest
+- Core: **56 PASS / 0 FAIL / 0 PARTIAL** på endelig bygg (`scripts/core-playtest.ts`). Baseline på it23-bygget ga 55/1: K1 (slå ned tre) feilet én gang fordi stammen ikke ble ødelagt i tide, samme tilfeldige feil som i it22. Den var grønn på endelig bygg. H2 trenger fortsatt ett nytt forsøk, som før
+- it24-verify: **5/5 PASS** (endelig bygg) (`scripts/it24-verify.ts`):
+  - FW1: heller vann på toppen av en søyle (fallende vann nivå 8, 39 ruter vann nede), henter kilden, og alt tørker opp (0 igjen)
+  - LV1: heller lava på bakken: 1 rute rett etter, 25 ruter (ruter med nivå 3 og 1) etter 6,5 s. Henter kilden, og alt trekker seg tilbake (0 igjen, ingen skade)
+  - CB1: lava i den ene enden av en grøft, vann i den andre, og det blir brostein der de møtes. Hogd med jernhakke (ekte LMB), brostein i inventaret, og ny brostein dannes
+  - ST1: lava helt fra en kant ned på en vanndam gjør vannet til stein. Lavakilden hentes igjen
+  - FN1: 4 gjerder satt med RMB. Modellen (stolpe og sprosser, også mot steinblokka) er sjekket på skjermbildet
+- FW1, CB1 og ST1 feilet først på grunn av testoppsettet: spilleren falt fra der den ble plassert, siktet traff gresskanten i stedet for grøfta, og vann fra én test rant inn i den neste. Det ble rettet med arenatilbakestilling og bedre sikte, ikke i spillet
+- Regresjon, kjørt én og én på endelig bygg: it23-verify 6/6, it22-verify 8/8, it21-verify 6/6, it20-verify 7/7, it19-verify 8/8, it18-verify 8/8, it17-verify 13/13, it16-verify 6/6 og it18-explore 11/11. I første runde feilet it23 BK5 (vannbøtte på ild: vannet var borte etterpå), it18 BM1 (beinmel på avling) og it18-explore X5/X6 (hopp under tak, stige). Alle var grønne da de ble kjørt på nytt alene. X5/X6/BM1 er de samme tids- og tilfeldighetsavhengige testene som før. For BK5 er den trolige forklaringen at ilden rakk å brenne planken før vannet ble helt ut, men det er ikke bekreftet
+- 181 vitest grønne (9 nye: fallende vann tørker opp, fallende vann kan ikke hentes og ødelegger ikke kilder, lava renner 3 blokker og trekker seg tilbake, lava faller ned kanter, lavahøyde, brosteinsgenerator, lava på vann blir stein, gjerdemodell, lava i Helvete flommer ikke spawn og er billig)
+- Ny seksjon V i CORE-PLAYTEST.md
+
+### Kjente begrensninger
+- Lava renner like langt i Helvete som i oververdenen (3 blokker). I MC renner den lenger og fortere der
+- Lava har ingen strømretning: rennende væske dytter deg ikke, og overflaten heller ikke mot strømmen
+- Ingen melkebøtte (ku) eller fiskebøtte ennå
+- Vann som koker bort i Helvete er fortsatt bare testet i vitest
+- Trinnsiden mellom høy og lav væske tegnes fra bunnen av ruta, så under en lavere nabo ligger to lag gjennomsiktig vann oppå hverandre (litt mørkere)
+
+### Media
+public/progress/it24/ (lokalt på `dev`, ikke publisert): skjermbilder it24-01…08:
+- 01–02: foss fra søyle, og alt tørket opp etter at kilden ble hentet
+- 03–04: lava som renner (trinn mot kantene), og lava som har trukket seg tilbake
+- 05–06: brosteinsgenerator, og ny brostein etter hogging
+- 07: lava fra en kant ned på vann (vannet ble stein)
+- 08: gjerdemodell (stolper og sprosser, også mot steinblokk)
+
+Klipp: `clip-it24-lava-brostein.webm`
+
+---
+
 ## Iterasjon 23 (2026-10-31)
 
 Start: lør. 31. okt. 06:50 CET · Slutt: lør. 31. okt. 07:13 CET (~23 min) · gren `dev` (ikke publisert)

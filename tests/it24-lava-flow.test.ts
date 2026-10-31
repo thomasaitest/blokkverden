@@ -115,3 +115,21 @@ describe('it24 fence model (MC)', async () => {
     expect(fenceBoxes(() => true).length).toBe(9);
   });
 });
+
+describe('it24 lava flow in Helvete', () => {
+  it('lava seas around the Helvete spawn do not flood the spawn spot, and the tick stays cheap', () => {
+    for (const seed of [42, 7, 1234]) {
+      const w = new World(seed);
+      w.switchDimension('helvete');
+      for (let cx = -1; cx <= 1; cx++) for (let cz = -1; cz <= 1; cz++) w.ensureChunk(cx, cz);
+      const sp = w.findHelveteSpawn();
+      const t0 = performance.now();
+      for (let i = 0; i < 20; i++) tickLava(w, { x: sp.x, z: sp.z, radius: 1 });
+      const ms = (performance.now() - t0) / 20;
+      const fx = Math.floor(sp.x), fy = Math.floor(sp.y), fz = Math.floor(sp.z);
+      expect(w.getBlock(fx, fy, fz)).not.toBe(BlockId.Lava);
+      expect(w.getBlock(fx, fy + 1, fz)).not.toBe(BlockId.Lava);
+      expect(ms).toBeLessThan(60);
+    }
+  });
+});

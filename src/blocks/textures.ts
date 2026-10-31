@@ -1,6 +1,6 @@
 const TILE = 16;
 export const COLS = 8;
-export const ROWS = 10;
+export const ROWS = 11;
 export const ATLAS_W = TILE * COLS;
 export const ATLAS_H = TILE * ROWS;
 /** @deprecated use ATLAS_W — kept for icon drawing width */
@@ -410,6 +410,24 @@ export function createAtlasCanvas(): HTMLCanvasElement {
     if (r2 < 1.6) return [30, 25, 20, 255];
     if (r2 < 9) return [210 + (rnd * 40 | 0), 30, 30, 255];
     return null;
+  });
+
+  // it19: 80 fire (ild) — flickering flame tongues, transparent around; 81 flint and steel (fyrstål) icon
+  fillTile(d, 80, (lx, ly, rnd) => {
+    const tongue = Math.abs(Math.sin(lx * 1.3 + 0.7)) * 9 + Math.abs(Math.sin(lx * 0.55)) * 4 + rnd * 2;
+    const h = 15 - ly;
+    if (h > tongue) return [0, 0, 0, 0];
+    const t = h / Math.max(1, tongue);
+    if (t < 0.35) return [255, 235 - (rnd * 30 | 0), 120, 255];
+    if (t < 0.7) return [250, 160 + (rnd * 40 | 0), 30, 255];
+    return [220, 70 + (rnd * 40 | 0), 20, 240];
+  });
+  fillTile(d, 81, (lx, ly, rnd) => {
+    // steel: C-shaped ring upper-left; flint: dark grey chip lower-right
+    const dx = lx - 6, dy = ly - 6, r2 = dx * dx + dy * dy;
+    if (r2 >= 9 && r2 <= 22 && !(dx > 1 && dy > -2)) { const v = 170 + (rnd * 50 | 0); return [v, v, v + 8, 255]; }
+    if (lx >= 9 && lx <= 13 && ly >= 9 && ly <= 13 && lx + ly <= 24) { const v = 55 + (rnd * 30 | 0); return [v, v, v + 4, 255]; }
+    return [0, 0, 0, 0];
   });
 
   ctx.putImageData(img, 0, 0);

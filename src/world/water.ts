@@ -5,7 +5,8 @@ import type { World } from './world';
 /** MC: flowing water breaks these and pops them as items (torch, red dust, plants). */
 export function isWashable(id: number): boolean {
   return id === BlockId.Torch || id === BlockId.RedDust || id === BlockId.Crop
-    || id === BlockId.Sapling || id === BlockId.TallGrass || id === BlockId.Dandelion || id === BlockId.Poppy;
+    || id === BlockId.Sapling || id === BlockId.TallGrass || id === BlockId.Dandelion || id === BlockId.Poppy
+    || id === BlockId.Fire; // MC: water puts fire out
 }
 
 /** Update budget for the 3×3 chunks around the focus (player). */

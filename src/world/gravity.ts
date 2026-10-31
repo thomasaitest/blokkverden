@@ -18,7 +18,7 @@ export function needsSupportBelow(id: number): boolean {
 
 /** Cells a falling block passes through (MC: air, water, lava, fire). */
 function passable(id: number): boolean {
-  return id === BlockId.Air || id === BlockId.Water || id === BlockId.Lava || id === BlockId.TallGrass;
+  return id === BlockId.Air || id === BlockId.Water || id === BlockId.Lava || id === BlockId.TallGrass || id === BlockId.Fire;
 }
 
 export type FallResult = { landedY: number } | { popped: true; atY: number } | null;

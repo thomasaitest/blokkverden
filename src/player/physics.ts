@@ -19,6 +19,8 @@ export interface PlayerState {
   hunger: number;
   fallStartY: number | null;
   inWater: boolean;
+  /** it19: feet/body in lava (MC: slow swimming, burns). */
+  inLava?: boolean;
   air: number; // 0–20
   creative: boolean;
   flying: boolean;
@@ -54,6 +56,9 @@ function collidesAt(world: World, x: number, y: number, z: number, h: number): b
         const id = world.getBlock(bx, by, bz);
         const meta = world.getWaterLevel(bx, by, bz);
         if (collidesBlock(id, bx, by, bz, minXf, minYf, maxXf, maxYf, minZf, maxZf, meta)) return true;
+        // it19: the door's upper half (air above a Door) collides as the same thin panel
+        if (id === BlockId.Air && by > 0 && world.getBlock(bx, by - 1, bz) === BlockId.Door
+          && collidesBlock(BlockId.Door, bx, by - 1, bz, minXf, minYf, maxXf, maxYf, minZf, maxZf, world.getWaterLevel(bx, by - 1, bz))) return true;
       }
     }
   }
@@ -74,7 +79,7 @@ function hasGroundSupport(world: World, x: number, y: number, z: number): boolea
     const bx = Math.floor(sx), by = Math.floor(y - 0.05), bz = Math.floor(sz);
     const id = world.getBlock(bx, by, bz);
     if (id !== BlockId.Air && id !== BlockId.Water && id !== BlockId.Lava && id !== BlockId.Torch
-      && id !== BlockId.Crop && id !== BlockId.RedDust && id !== BlockId.Portal && !isCrossPlant(id)) {
+      && id !== BlockId.Crop && id !== BlockId.RedDust && id !== BlockId.Portal && id !== BlockId.Fire && !isCrossPlant(id)) {
       return true;
     }
   }
@@ -133,6 +138,9 @@ export function movePlayer(
   const feetWater = waterAt(world, p.x, p.y + 0.4, p.z);
   const headWater = waterAt(world, p.x, p.y + EYE_HEIGHT, p.z);
   p.inWater = feetWater || waterAt(world, p.x, p.y + 1.0, p.z);
+  const lavaAt = (yy: number) => world.getBlock(Math.floor(p.x), Math.floor(yy), Math.floor(p.z)) === BlockId.Lava;
+  p.inLava = lavaAt(p.y + 0.4) || lavaAt(p.y + 1.0);
+  const liquid = p.inWater || p.inLava;
   const onLadder = world.getBlock(Math.floor(p.x), Math.floor(p.y), Math.floor(p.z)) === BlockId.Ladder
     || world.getBlock(Math.floor(p.x), Math.floor(p.y + 1), Math.floor(p.z)) === BlockId.Ladder;
 
@@ -168,11 +176,11 @@ export function movePlayer(
     p.onGround = false;
     return { fallDamage: 0 };
   }
-  const speed = p.inWater
+  const speed = p.inLava ? 1.0 : p.inWater
     ? (p.sprinting ? 2.4 : 1.8)
     : p.sneaking ? 1.3 : p.sprinting ? 5.612 : 4.317;
-  const gravity = p.inWater ? 5 : 32;
-  const jumpVel = p.inWater ? 4.2 : 9.0;
+  const gravity = p.inLava ? 4 : p.inWater ? 5 : 32;
+  const jumpVel = p.inLava ? 3.0 : p.inWater ? 4.2 : 9.0;
 
   const sin = Math.sin(p.yaw);
   const cos = Math.cos(p.yaw);
@@ -187,14 +195,14 @@ export function movePlayer(
   p.vx = mx;
   p.vz = mz;
   p.vy -= gravity * dt;
-  if (p.inWater) p.vy *= 0.9;
-  if (jump && (p.onGround || p.inWater)) {
+  if (p.inLava) p.vy *= 0.8; else if (p.inWater) p.vy *= 0.9;
+  if (jump && (p.onGround || liquid)) {
     p.vy = jumpVel;
     p.onGround = false;
-    if (!p.inWater) p.fallStartY = p.y;
+    if (!liquid) p.fallStartY = p.y;
   }
-  if (!p.onGround && p.fallStartY == null && !p.inWater) p.fallStartY = p.y;
-  if (p.inWater) p.fallStartY = null;
+  if (!p.onGround && p.fallStartY == null && !liquid) p.fallStartY = p.y;
+  if (liquid) p.fallStartY = null;
 
   if (headWater) {
     p.air = Math.max(0, p.air - dt * 2.5);

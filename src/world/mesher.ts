@@ -56,7 +56,7 @@ function emptyMesh(): MeshData {
 
 function isFullCube(id: number): boolean {
   if (id === BlockId.Air || id === BlockId.Water || id === BlockId.Lava) return false;
-  if (id === BlockId.Torch || id === BlockId.Crop || id === BlockId.RedDust || isCrossPlant(id)) return false;
+  if (id === BlockId.Torch || id === BlockId.Crop || id === BlockId.RedDust || isCrossPlant(id) || id === BlockId.Fire) return false;
   if (id === BlockId.Ladder || id === BlockId.Sign || id === BlockId.Portal) return false;
   if (id === BlockId.PressurePlate || id === BlockId.Button || id === BlockId.Lever) return false;
   if (id === BlockId.Slab || id === BlockId.Stairs || id === BlockId.Fence || id === BlockId.GlassPane) return false;
@@ -253,7 +253,7 @@ function buildMesh(
         if (id === BlockId.Door || id === BlockId.Lamp) continue;
         const wx = ox + lx;
         const wz = oz + lz;
-        if (isCrossPlant(id)) { emitCross(a, wx, y, wz, def.tiles.side, getLight(wx, y, wz)); continue; }
+        if (isCrossPlant(id) || id === BlockId.Fire) { emitCross(a, wx, y, wz, def.tiles.side, getLight(wx, y, wz)); continue; }
         if (id === BlockId.Crop) {
           // MC crop '#' model: 4 vertical planes, height grows with the stage (was a translucent box)
           const stage = chunk.waterLevel[chunk.index(lx, y, lz)] || 0;

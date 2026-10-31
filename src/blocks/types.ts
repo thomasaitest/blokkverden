@@ -1,3 +1,5 @@
+import { doorPanel } from '../world/doors';
+
 /** Block IDs — original Blokkverden set. */
 export const BlockId = {
   Air: 0,
@@ -31,7 +33,7 @@ export const BlockId = {
   RedDust: 35, Lever: 36, Button: 37, Lamp: 38, PressurePlate: 39,
   Helstein: 40, Sjelegrus: 41, Portal: 42, PortalFrame: 43,
   Lava: 44, Glodstein: 45, Helkvarts: 46, Anvil: 47, Bedrock: 48,
-  Gravel: 49, Sapling: 76, TallGrass: 78, Dandelion: 79, Poppy: 80,
+  Gravel: 49, Sapling: 76, TallGrass: 78, Dandelion: 79, Poppy: 80, Fire: 83,
 } as const;
 
 export type BlockId = (typeof BlockId)[keyof typeof BlockId];
@@ -111,6 +113,8 @@ export const BLOCKS: Record<number, BlockDef> = {
   // it18 (MC): blomster — kryss-planter på gress/jord
   [79]: B(79, 'Løvetann', false, false, true, false, 0.05, { top: 78, bottom: 78, side: 78 }),
   [80]: B(80, 'Valmue', false, false, true, false, 0.05, { top: 79, bottom: 79, side: 79 }),
+  // it19 (MC): ild — ingen kollisjon, slukkes med ett slag, lyser 15
+  [83]: B(83, 'Ild', false, false, true, false, 0.05, { top: 80, bottom: 80, side: 80 }, 15),
 };
 
 /** Cross-shaped plants (MC "X" models): no collision, break instantly, pop when the ground goes. */
@@ -120,7 +124,7 @@ export function isCrossPlant(id: number): boolean {
 /** MC flowers (dandelion, poppy): planted on grass/dirt/farmland. */
 export function isFlower(id: number): boolean { return id === BlockId.Dandelion || id === BlockId.Poppy; }
 /** MC "replaceable" blocks: placing a block into them overwrites them (tall grass). */
-export function isReplaceable(id: number): boolean { return id === BlockId.Air || id === BlockId.Water || id === BlockId.TallGrass; }
+export function isReplaceable(id: number): boolean { return id === BlockId.Air || id === BlockId.Water || id === BlockId.TallGrass || id === BlockId.Fire; }
 
 export function isSolid(id: number): boolean { return BLOCKS[id]?.solid ?? false; }
 export function isOpaque(id: number): boolean { return BLOCKS[id]?.opaque ?? false; }
@@ -139,8 +143,13 @@ export function collidesBlock(
   minX: number, minY: number, maxX: number, maxY: number, minZ: number, maxZ: number,
   meta = 0,
 ): boolean {
-  if (id === 0 || isCrossPlant(id) || id === BlockId.Water || id === BlockId.Lava || id === BlockId.Torch || id === BlockId.Crop || id === BlockId.RedDust || id === BlockId.Ladder || id === BlockId.Sign || id === BlockId.Portal) return false;
+  if (id === 0 || isCrossPlant(id) || id === BlockId.Fire || id === BlockId.Water || id === BlockId.Lava || id === BlockId.Torch || id === BlockId.Crop || id === BlockId.RedDust || id === BlockId.Ladder || id === BlockId.Sign || id === BlockId.Portal) return false;
   if (id === BlockId.PressurePlate || id === BlockId.Button || id === BlockId.Lever) return false;
+  if (id === BlockId.Door) {
+    // it19 (MC): thin 3/16 panel, two blocks tall (closed: along its facing edge; open: against the hinge side)
+    const [x0, z0, x1, z1] = doorPanel(meta);
+    return maxX > bx + x0 && minX < bx + x1 && maxZ > bz + z0 && minZ < bz + z1 && maxY > by && minY < by + 2;
+  }
   if ((id === BlockId.Door || id === BlockId.Gate || id === BlockId.Trapdoor) && (meta & 1)) return false;
   if (id === BlockId.Slab) {
     return maxY > by && minY < by + 0.5 && maxX > bx && minX < bx + 1 && maxZ > bz && minZ < bz + 1;

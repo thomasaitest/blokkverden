@@ -5,6 +5,7 @@ import { Inventory } from './items/inventory';
 import { updateGravityAround, needsSupportBelow } from './world/gravity';
 import { canPlantSapling, growOak, SAPLING_GROW_CHANCE, SAPLING_MIN_LIGHT } from './world/saplings';
 import { LeafDecay, LEAF_PERSISTENT } from './world/leafdecay';
+import { FireSystem, burnTick, createBurnState } from './world/fire';
 import { type ItemStack, ITEMS, breakDuration, dropForBlock, damageTool, armorPoints, ItemId, blockMaterial, miningPenalty } from './items/types';
 import { bindDesktopControls, consumeLook, consumePlace, createInput } from './player/controls';
 import { createPlayer, movePlayer, EYE_HEIGHT, headInSolid } from './player/physics';
@@ -206,6 +207,9 @@ async function runGame(
 
   const doSave = () => saveWorldNamed(worldName, world, player, inv, drops, containers, dayTime, respawn, xp.toJSON(), structuresToJSON(), leafDecay.toJSON());
   const leafDecay = new LeafDecay();
+  // it19 (MC): fire from flint and steel spreads to wood/leaves and burns out; fire/lava set the player burning
+  const fire = new FireSystem();
+  const burn = createBurnState();
   let suffocateAcc = 0;
   // MC: with your head inside a block you see that block's texture (darkened), not through the world
   const inBlockOverlay = document.createElement('div');
@@ -560,6 +564,7 @@ async function runGame(
     }),
     forceSave: () => doSave(),
     leafDecayPending: () => leafDecay.pending.length,
+    fire, burn,
     /** Test setup only: speed up sapling growth (MC bone-meal stand-in). */
     setSaplingChance: (c: number) => { saplingChance = c; },
     openInv: () => { invUi.openPlayer(); input.inventoryOpen = true; },
@@ -971,7 +976,7 @@ async function runGame(
     enterHelvete: () => {
       if (dimension === 'helvete') return { ok: false, reason: 'already' };
       owReturn = { x: player.x, y: player.y, z: player.z };
-      leafDecay.clear(); world.switchDimension('helvete');
+      leafDecay.clear(); fire.clear(); world.switchDimension('helvete');
       dimension = 'helvete';
       const spawn = world.findHelveteSpawn();
       const rx = Math.floor(spawn.x) - 1, ry = Math.floor(spawn.y), rz = Math.floor(spawn.z) + 3;
@@ -989,7 +994,7 @@ async function runGame(
     },
     exitHelvete: () => {
       if (dimension !== 'helvete') return { ok: false, reason: 'not-in-helvete' };
-      leafDecay.clear(); world.switchDimension('overworld');
+      leafDecay.clear(); fire.clear(); world.switchDimension('overworld');
       dimension = 'overworld';
       player.x = owReturn.x; player.y = owReturn.y; player.z = owReturn.z;
       player.vx = player.vy = player.vz = 0;
@@ -1139,6 +1144,15 @@ async function runGame(
         suffocateAcc += dt;
         if (suffocateAcc >= 0.5) { suffocateAcc -= 0.5; hurtPlayer(1, 0, 0, true); }
       } else suffocateAcc = 0;
+      // it19 (MC): fire 1 dmg / 0.5 s, lava 4 dmg / 0.5 s, then burning 1 dmg/s (8 s / 15 s); water puts it out
+      if (!dead) {
+        const fx = Math.floor(player.x), fz = Math.floor(player.z);
+        const inFire = world.getBlock(fx, Math.floor(player.y + 0.1), fz) === BlockId.Fire || world.getBlock(fx, Math.floor(player.y + 1.0), fz) === BlockId.Fire;
+        const bd = player.creative ? 0 : burnTick(burn, inFire, !!player.inLava, player.inWater, dt);
+        if (player.creative) burn.burnTime = 0;
+        if (bd > 0) hurtPlayer(bd, 0, 0, false);
+        if (burn.burnTime > 0 && Math.random() < dt * 12) particles.burst(player.x, player.y + 0.4 + Math.random() * 1.2, player.z, 0xff8a1a, 2, 'sprint');
+      }
       updateInBlockOverlay();
       boats.update(dt, world, player, wishX, wishZ, !!input.forward);
 
@@ -1187,7 +1201,7 @@ async function runGame(
       if (inPortal) {
         if (dimension === 'overworld') {
           owReturn = { x: player.x, y: player.y, z: player.z };
-          leafDecay.clear(); world.switchDimension('helvete');
+          leafDecay.clear(); fire.clear(); world.switchDimension('helvete');
           dimension = 'helvete';
           const spawn = world.findHelveteSpawn();
           // Return portal near spawn (only once if not already lit nearby)
@@ -1203,7 +1217,7 @@ async function runGame(
           markMesh();
           renderer.syncChunks(world, true);
         } else {
-          leafDecay.clear(); world.switchDimension('overworld');
+          leafDecay.clear(); fire.clear(); world.switchDimension('overworld');
           dimension = 'overworld';
           player.x = owReturn.x; player.y = owReturn.y; player.z = owReturn.z;
           player.vx = player.vy = player.vz = 0;
@@ -1483,7 +1497,18 @@ async function runGame(
           (world as unknown as { _signs?: Map<string, string> })._signs ??= new Map();
           (world as unknown as { _signs: Map<string, string> })._signs.set(`${hit.x},${hit.y},${hit.z}`, txt.slice(0, 48));
         } else if (tid === BlockId.PortalFrame || tid === BlockId.Portal) {
-          if (lightPortal(world, hit.x, hit.y, hit.z)) { markMesh(); sound.placeBlock(); }
+          if (lightPortal(world, hit.x, hit.y, hit.z)) {
+            if (held && held.id === ItemId.FlintAndSteel && !player.creative) { inv.setHeld(damageTool(held)); hud.markDirty(); }
+            markMesh(); sound.placeBlock();
+          }
+        } else if (held && held.id === ItemId.FlintAndSteel) {
+          // MC flint and steel: lights fire in the cell in front of the clicked face (uses 1 durability)
+          const px = hit.x + hit.nx, py = hit.y + hit.ny, pz = hit.z + hit.nz;
+          if (fire.ignite(world, px, py, pz)) {
+            if (!player.creative) inv.setHeld(damageTool(held));
+            particles.burst(px + 0.5, py + 0.3, pz + 0.5, 0xffa020, 8, 'sprint');
+            sound.placeBlock(); markMesh(); hud.markDirty();
+          }
         } else if (held && held.id === ItemId.Boat) {
           const px = hit.x + hit.nx, py = hit.y + hit.ny, pz = hit.z + hit.nz;
           boats.place(px + 0.5, py + 0.4, pz + 0.5);
@@ -1573,6 +1598,10 @@ async function runGame(
       }
     }
 
+    for (const fc of fire.update(dt, world)) {
+      particles.burst(fc.x + 0.5, fc.y + 0.5, fc.z + 0.5, fc.burnt != null ? 0x333333 : 0xff9a30, 4, 'break');
+      markMesh();
+    }
     for (const lp of leafDecay.update(dt, world)) {
       const ld = dropForBlock(BlockId.Leaves, null);
       if (ld) drops.spawn(lp.x, lp.y, lp.z, ld);

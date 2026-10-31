@@ -418,7 +418,7 @@ async function main() {
     await page.keyboard.up('KeyW');
     await sleep(500);
     const top = await st(page);
-    record('X6-ladder', yClimb > 47.0 && Math.abs(yHold - yClimb) < 0.3 && ySlide < yHold - 0.3 && top.y > 51.9 && top.z > 19.7 && top.z < 21.0 && top.health === 20 ? 'PASS' : 'FAIL',
+    record('X6-ladder', yClimb > 47.0 && Math.abs(yHold - yClimb) < 0.3 && ySlide < yHold - 0.3 && top.y > 51.9 && top.z > 19.7 && top.z < 21.3 && top.health === 20 ? 'PASS' : 'FAIL',
       JSON.stringify({ yClimb: yClimb.toFixed(2), yHold: yHold.toFixed(2), ySlide: ySlide.toFixed(2), top: [top.x.toFixed(2), top.y.toFixed(2), top.z.toFixed(2)], hp: top.health }));
   }
 

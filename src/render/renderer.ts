@@ -606,19 +606,19 @@ export class GameRenderer {
       const g = new THREE.Group();
       // 2-block tall panel flush with floor (no sky gap at threshold)
       const panel = new THREE.Mesh(
-        new THREE.BoxGeometry(0.98, 1.98, 0.12),
+        new THREE.BoxGeometry(0.98, 1.98, 0.1875),
         new THREE.MeshLambertMaterial({ color: 0x8b5a2b, side: THREE.DoubleSide }),
       );
-      panel.position.set(0.49, 0.99, 0.06);
+      panel.position.set(0.49, 0.99, 0.094);
       const knob = new THREE.Mesh(
         new THREE.BoxGeometry(0.1, 0.1, 0.1),
         new THREE.MeshLambertMaterial({ color: 0xc9a227 }),
       );
-      knob.position.set(0.82, 1.0, 0.14);
+      knob.position.set(0.82, 1.0, 0.22);
       const boardMat = new THREE.MeshLambertMaterial({ color: 0x6b4220 });
       for (const by of [0.4, 1.0, 1.55]) {
-        const board = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.08, 0.14), boardMat);
-        board.position.set(0.49, by, 0.07);
+        const board = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.08, 0.2), boardMat);
+        board.position.set(0.49, by, 0.094);
         g.add(board);
       }
       // Threshold sill closes the floor gap
@@ -645,6 +645,8 @@ export class GameRenderer {
       outer.position.set(d.x + 0.5, d.y, d.z + 0.5);
       outer.rotation.y = (d.facing ?? 0) * Math.PI / 2;
       g.rotation.y = d.open ? -Math.PI / 2 : 0;
+      // it19: open panel lies inside the block against the hinge side (matches its thin collision box)
+      g.position.x = d.open ? -0.5 + 0.1875 : -0.5;
     }
   }
 

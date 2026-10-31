@@ -26,6 +26,10 @@ export const RECIPES: Recipe[] = [
   { w: 2, h: 2, pattern: [ItemId.String, ItemId.String, ItemId.String, ItemId.String], result: stack(ItemId.WoolItem, 1) },
   // MC: 1 bone → 3 bone meal
   { w: 1, h: 1, pattern: [ItemId.Bone], result: stack(ItemId.BoneMeal, 3) },
+  // MC: flint and steel (shapeless iron ingot + flint)
+  ...([[2, 1, [ItemId.IronIngot, ItemId.Flint]], [2, 1, [ItemId.Flint, ItemId.IronIngot]], [1, 2, [ItemId.IronIngot, ItemId.Flint]], [1, 2, [ItemId.Flint, ItemId.IronIngot]],
+    [2, 2, [ItemId.IronIngot, 0, 0, ItemId.Flint]], [2, 2, [ItemId.Flint, 0, 0, ItemId.IronIngot]], [2, 2, [0, ItemId.IronIngot, ItemId.Flint, 0]], [2, 2, [0, ItemId.Flint, ItemId.IronIngot, 0]]] as [number, number, number[]][])
+    .map(([w, h, pattern]) => ({ w, h, pattern, result: stack(ItemId.FlintAndSteel, 1, 64) })),
   // arrow
   { w: 1, h: 3, pattern: [ItemId.Flint, ItemId.Stick, ItemId.Feather], result: stack(ItemId.Arrow, 4) },
   // iron tools

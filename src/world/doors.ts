@@ -27,3 +27,22 @@ export function canPlaceDoor(w: Access, x: number, y: number, z: number, isSolid
   return isReplaceable(w.getBlock(x, y, z)) && isReplaceable(w.getBlock(x, y + 1, z)) && w.getBlock(x, y + 1, z) !== BlockId.Water
     && isSolidFn(w.getBlock(x, y - 1, z));
 }
+
+/** MC door panel thickness (3/16 block). */
+export const DOOR_THICKNESS = 3 / 16;
+
+/**
+ * it19 (MC): a door collides only as a thin panel. Returns [x0, z0, x1, z1] inside the block (0..1).
+ * Closed facing 0: along the block's −Z edge; open: swung against the hinge (−X) side. Other facings rotate
+ * about the block centre (same as the renderer).
+ */
+export function doorPanel(meta: number): [number, number, number, number] {
+  const t = DOOR_THICKNESS;
+  let r: [number, number, number, number] = doorOpen(meta) ? [0, 0, t, 1] : [0, 0, 1, t];
+  for (let i = 0; i < doorFacing(meta); i++) {
+    // rotate +90° about the centre: (x, z) → (z, 1 − x)
+    const [x0, z0, x1, z1] = r;
+    r = [Math.min(z0, z1), Math.min(1 - x0, 1 - x1), Math.max(z0, z1), Math.max(1 - x0, 1 - x1)];
+  }
+  return r;
+}

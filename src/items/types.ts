@@ -17,7 +17,7 @@ export const ItemId = {
   DiamondHelmet: 128, DiamondChest: 129, DiamondLegs: 130, DiamondBoots: 131,
   Seeds: 63, Wheat: 64, Bread: 65, Boat: 66, FishingRod: 67, MapItem: 68, RawFish: 69, CookedFish: 70, Bone: 71, CookedMeat: 72, String: 73, Gunpowder: 74, RottenFlesh: 75,
   WoodHoe: 116, IronHoe: 117, EnchantTable: 24, Door: 26, Trapdoor: 27, Fence: 28, Gate: 29, Stairs: 30, Slab: 31, GlassPane: 32, Ladder: 33, Sign: 34, RedDust: 35, Lever: 36, Button: 37, Lamp: 38, PressurePlate: 39, Helstein: 40, Sjelegrus: 41, PortalFrame: 43,
-  Gravel: 49, Sapling: 76, Flint: 77, Dandelion: 79, Poppy: 80, BoneMeal: 81,
+  Gravel: 49, Sapling: 76, Flint: 77, Dandelion: 79, Poppy: 80, BoneMeal: 81, FlintAndSteel: 82,
 } as const;
 
 export type ItemId = (typeof ItemId)[keyof typeof ItemId];
@@ -141,6 +141,8 @@ export const ITEMS: Record<number, ItemDef> = {
   [79]: blk(79, 'Løvetann', 78, 79),
   [80]: blk(80, 'Valmue', 79, 80),
   [81]: { id: 81, name: 'Beinmel', stackable: true, maxStack: 64, iconTile: 77 },
+  // it19 (MC): fyrstål — tenner ild og helvetesportaler, 64 bruk
+  [82]: tool(82, 'Fyrstål', 'none', undefined, 64, 1, 1, 81),
 };
 
 export function blockMaterial(blockId: number): BlockMaterial {
@@ -195,6 +197,7 @@ export function miningPenalty(onGround: boolean, eyesInWater: boolean): number {
 export function dropForBlock(blockId: number, held: ItemStack | null): ItemStack | null {
   if (blockId === 0 || blockId === 10) return null;
   if (blockId === 48) return null;
+  if (blockId === 83) return null; // fire drops nothing
   if (!canHarvest(blockId, held)) return null;
   if (blockId === 3) return stack(4, 1);
   if (blockId === 15) return stack(51, 1);

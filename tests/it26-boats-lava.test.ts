@@ -127,3 +127,31 @@ describe('it26 boat hull (oriented)', () => {
     expect(s.x).toBeGreaterThan(8.5);
   });
 });
+
+import { tickLava } from '../src/world/lava';
+import { LAVA_BUCKET } from '../src/items/bucket';
+describe('it26 buckets into flowing liquid (MC)', () => {
+  it('a water bucket can be emptied into flowing lava (replaces it with a water source), not into a lava source', () => {
+    const w = flat();
+    pour(w, LAVA_BUCKET, 5, 21, 5, false);
+    for (let i = 0; i < 6; i++) tickLava(w, F);
+    expect(w.getBlock(6, 21, 5)).toBe(BlockId.Lava);
+    expect(w.getWaterLevel(6, 21, 5)).not.toBe(0);
+    expect(pour(w, WATER_BUCKET, 6, 21, 5, false)).toBe('placed');
+    expect(w.getBlock(6, 21, 5)).toBe(BlockId.Water);
+    expect(w.getWaterLevel(6, 21, 5)).toBe(7);
+    expect(pour(w, WATER_BUCKET, 5, 21, 5, false)).toBeNull(); // the source itself
+    for (let i = 0; i < 4; i++) tickWater(w, 400, undefined, F);
+    expect(w.getBlock(5, 21, 5)).toBe(BlockId.PortalFrame);
+  });
+
+  it('a lava bucket poured into flowing lava makes a new source; not into a water source', () => {
+    const w = flat();
+    pour(w, LAVA_BUCKET, 5, 21, 5, false);
+    for (let i = 0; i < 6; i++) tickLava(w, F);
+    expect(pour(w, LAVA_BUCKET, 7, 21, 5, false)).toBe('placed');
+    expect(w.getWaterLevel(7, 21, 5)).toBe(0);
+    const v = flat(); v.setWater(3, 21, 3, 7);
+    expect(pour(v, LAVA_BUCKET, 3, 21, 3, false)).toBeNull();
+  });
+});

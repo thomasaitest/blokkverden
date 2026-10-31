@@ -446,6 +446,31 @@ async function main() {
       JSON.stringify({ after2, after3, dropped, got, stays, cre, creDrops }));
   }
 
+  // BW1 — a water bucket (real RMB) emptied onto flowing lava replaces it; the lava source next to it turns to obsidian (MC)
+  if (run('BW1')) {
+    await resetArena();
+    await heal();
+    await clearBoats();
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.world.setBlock(8, 46, 8, 44); bv.world.setMeta(8, 46, 8, 0); bv.forceRemeshAround?.(); });
+    await page.evaluate(() => { (window as any).__bv.teleport(14.5, 46.0, 8.5); });
+    await simSleep(5.0);
+    const before = [await gb(9, 46, 8), await gm(9, 46, 8)];
+    await setHeld(page, 88);
+    await aim(page, 13.5, 46.05, 8.5, 9.5, 45.95, 8.5);
+    await sleep(200);
+    await hold(page, 80, 'right'); await sleep(300);
+    const h = await held(), placed = [await gb(9, 46, 8), await gm(9, 46, 8)];
+    let obs = 0;
+    for (let i = 0; i < 20 && obs !== 43; i++) { await sleep(300); obs = await gb(8, 46, 8); }
+    await sleep(600);
+    const cob = await gb(10, 46, 8);
+    await page.evaluate(() => { (window as any).__bv.teleport(12.5, 48.5, 11.5); (window as any).__bv.lookAt(8.5, 46.3, 8.5); });
+    await sleep(800);
+    await shot(page, 'it26-06-vann-pa-rennende-lava.png');
+    record('BW1-water-onto-flowing-lava', before[0] === 44 && before[1] !== 0 && h?.id === 87 && placed[0] === 10 && obs === 43 && cob === 4 ? 'PASS' : 'FAIL',
+      JSON.stringify({ before, h, placed, obs, cob }));
+  }
+
   // LH1 — Helvete lava: the cell next to the source (strength 7) is drawn lower than the source (was full height)
   if (run('LH1')) {
     await heal();

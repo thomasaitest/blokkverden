@@ -35,7 +35,11 @@ export function fluidRaycast(world: World, ox: number, oy: number, oz: number, d
 export function pourable(world: World, x: number, y: number, z: number, fluid: number): boolean {
   const id = world.getBlock(x, y, z);
   if (id === BlockId.Air || id === BlockId.Fire) return true;
-  if (id === BlockId.Water) return fluid === BlockId.Water;
+  // it26 (MC): any bucket can be emptied into flowing (non-source) water or lava, replacing it with a source.
+  // Before, a water bucket did nothing on flowing lava (e.g. lava that had run into the hole you were filling).
+  const meta = world.getWaterLevel(x, y, z);
+  if (id === BlockId.Water) return fluid === BlockId.Water || (meta !== 0 && meta !== 7);
+  if (id === BlockId.Lava) return meta !== 0;
   return isWashable(id) && !isSolid(id) && id !== BlockId.Torch && id !== BlockId.RedDust;
 }
 
@@ -56,12 +60,14 @@ export function pour(world: World, bucketId: number, x: number, y: number, z: nu
   if (fluid < 0 || !pourable(world, x, y, z, fluid)) return null;
   if (fluid === BlockId.Water && inHelvete) return 'boiled';
   const old = world.getBlock(x, y, z);
-  if (old !== BlockId.Air && old !== BlockId.Water) onReplace?.(old);
+  if (old !== BlockId.Air && old !== BlockId.Water && old !== BlockId.Lava) onReplace?.(old);
   if (fluid === BlockId.Water) {
     if (old !== BlockId.Water) world.setBlock(x, y, z, BlockId.Air);
     world.setWater(x, y, z, 7);
   } else {
+    if (old !== BlockId.Lava) world.setBlock(x, y, z, BlockId.Air);
     world.setBlock(x, y, z, BlockId.Lava);
+    world.setMeta(x, y, z, 0); // a source, also when poured into flowing lava
   }
   return 'placed';
 }

@@ -226,6 +226,31 @@ function emitPlane(a: Arrays, wx: number, y: number, wz: number, x0: number, z0:
   }
 }
 
+/** it20 (MC): a torch is a thin stick (2/16 wide, 12/16 tall incl. flame), not a see-through cube that showed
+ * the torch picture on every face (looked like two torches from above). Sides use the middle 2 px of the tile. */
+function emitTorch(a: Arrays, wx: number, y: number, wz: number, tile: number, light: number): void {
+  const uv = tileUV(tile);
+  const col = Math.min(1.5, lightCurve(light & 15) * 0.95);
+  const bcol = Math.min(1.5, lightCurve(light >> 4) * 0.95);
+  const lo = 7 / 16, hi = 9 / 16, h = 12 / 16;
+  const du = uv.u1 - uv.u0, dv = uv.v1 - uv.v0;
+  const su0 = uv.u0 + du * lo, su1 = uv.u0 + du * hi, vTop = uv.v0 + dv * (4 / 16), vBot = uv.v1;
+  const quad = (p: number[][], u: number[]) => {
+    for (const c of p) { a.positions.push(wx + c[0], y + c[1], wz + c[2]); a.normals.push(0, 1, 0); a.colors.push(col, bcol, col, 1); }
+    a.uvs.push(...u);
+    const vb = a.vBase;
+    a.indices.push(vb, vb + 1, vb + 2, vb, vb + 2, vb + 3);
+    a.vBase += 4;
+  };
+  const side = [su0, vBot, su1, vBot, su1, vTop, su0, vTop];
+  quad([[lo, 0, hi], [hi, 0, hi], [hi, h, hi], [lo, h, hi]], side); // +z
+  quad([[hi, 0, lo], [lo, 0, lo], [lo, h, lo], [hi, h, lo]], side); // -z
+  quad([[hi, 0, hi], [hi, 0, lo], [hi, h, lo], [hi, h, hi]], side); // +x
+  quad([[lo, 0, lo], [lo, 0, hi], [lo, h, hi], [lo, h, lo]], side); // -x
+  const fv0 = uv.v0 + dv * (5 / 16), fv1 = uv.v0 + dv * (7 / 16);
+  quad([[lo, h, hi], [hi, h, hi], [hi, h, lo], [lo, h, lo]], [su0, fv1, su1, fv1, su1, fv0, su0, fv0]); // top (flame)
+}
+
 /** MC crop model: '#' of four planes at 1/4 and 3/4. */
 function emitHash(a: Arrays, wx: number, y: number, wz: number, tile: number, light: number, h: number): void {
   const col = Math.min(1.5, lightCurve(light & 15) * 0.95);
@@ -263,6 +288,7 @@ function buildMesh(
         const wx = ox + lx;
         const wz = oz + lz;
         if (isCrossPlant(id) || id === BlockId.Fire) { emitCross(a, wx, y, wz, def.tiles.side, getLight(wx, y, wz)); continue; }
+        if (id === BlockId.Torch) { emitTorch(a, wx, y, wz, def.tiles.side, getLight(wx, y, wz)); continue; }
         if (id === BlockId.Crop) {
           // MC crop '#' model: 4 vertical planes, height grows with the stage (was a translucent box)
           const stage = chunk.waterLevel[chunk.index(lx, y, lz)] || 0;

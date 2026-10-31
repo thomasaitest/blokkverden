@@ -19,6 +19,7 @@ export function selectionBox(id: number, meta: number, level = 0): Box6 {
     case BlockId.Sapling: return [2 * p, 0, 2 * p, 14 * p, 12 * p, 14 * p];
     case BlockId.Dandelion: case BlockId.Poppy: return [5 * p, 0, 5 * p, 11 * p, 10 * p, 11 * p];
     case BlockId.Crop: return [0, 0, 0, 1, Math.min(1, 0.4 + level * 0.085), 1];
+    case BlockId.Torch: return [6 * p, 0, 6 * p, 10 * p, 12 * p, 10 * p];
     case BlockId.Fire: return [0, 0, 0, 1, p, 1];
     default: return [0, 0, 0, 1, 1, 1];
   }

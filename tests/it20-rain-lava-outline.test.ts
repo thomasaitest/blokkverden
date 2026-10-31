@@ -98,3 +98,22 @@ describe('it20 selection outline shape (MC)', () => {
     expect(selectionBox(BlockId.Stone, 0)).toEqual([0, 0, 0, 1, 1, 1]);
   });
 });
+
+import { meshChunk } from '../src/world/mesher';
+import { Chunk } from '../src/world/chunk';
+describe('it20 torch model (MC thin stick)', () => {
+  it('a torch is one thin 2/16 stick, 12/16 tall (5 quads), not a cube with the picture on every face', () => {
+    const c = new Chunk(0, 0); c.generated = true;
+    c.set(3, 5, 3, BlockId.Torch);
+    const get = (x: number, y: number, z: number) => (x === 3 && y === 5 && z === 3 ? BlockId.Torch : BlockId.Air);
+    const m = meshChunk(c, get, () => 15).transparent;
+    const pos = m.positions;
+    expect(pos.length / 3).toBe(20);
+    for (let i = 0; i < pos.length; i += 3) {
+      expect(pos[i] - 3).toBeGreaterThanOrEqual(7 / 16 - 1e-6); expect(pos[i] - 3).toBeLessThanOrEqual(9 / 16 + 1e-6);
+      expect(pos[i + 1] - 5).toBeLessThanOrEqual(12 / 16 + 1e-6);
+    }
+    const ob = selectionBox(BlockId.Torch, 0);
+    expect(ob[3] - ob[0]).toBeLessThan(0.3);
+  });
+});

@@ -1224,7 +1224,7 @@ async function runGame(
         if (wid === BlockId.Crop) harvestCrop(world, wx, wy, wz, drops);
         else { const wd = dropForBlock(wid, null); if (wd) drops.spawn(wx, wy, wz, wd); }
         markMesh();
-      });
+      }, { x: player.x, z: player.z, radius: 4 });
     }
     cropAcc += dt;
     if (cropAcc > 1.2) {

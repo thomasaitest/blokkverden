@@ -4,7 +4,7 @@ Acceptance checklist for a **playable** Minecraft-like survival base.
 Expected behaviour = Java/Bedrock survival unless noted.
 **Status legend:** PASS | FAIL | PARTIAL | UNTESTED
 
-Last run: 2026-10-30 22:43–22:50 CET · it15 (55 PASS / 0 FAIL, I3/I4 now real clicks) + scripts/it14-verify.ts (L) + scripts/it15-verify.ts (section M, 6/6)
+Last run: 2026-10-31 02:08–02:13 CET · it18 core (56 PASS / 0 FAIL) + scripts/it18-verify.ts + scripts/it18-explore.ts (section P)
 
 ## A. World & spawn
 | # | Check | Minecraft-expected | Status | Notes |
@@ -157,6 +157,21 @@ Last run: 2026-10-30 22:43–22:50 CET · it15 (55 PASS / 0 FAIL, I3/I4 now real
 | O8 | Leaf decay saved | Chop a tree, save & quit at once, reload → the leaves still decay | PASS | L3 + vitest |
 | O10 | Arrow recipe | Flint + stick + feather (vertical) → 4 arrows (was cobble) | PASS | core F12 + vitest |
 | O9 | Jump tap | A quick Space tap (even shorter than a frame / just before landing) jumps | PASS | J 5/5, core B2 |
+
+## P. Bone meal, flowers, ladders, doors (it18, `scripts/it18-verify.ts` + `scripts/it18-explore.ts`, real input)
+| # | Check | Minecraft-expected | Status | Notes |
+|---|--------|-------------------|--------|-------|
+| P1 | Bone meal recipe | 1 bone → 3 bone meal (2×2 grid) | PASS | BM0 + vitest |
+| P2 | Bone meal on crop | RMB: +2–5 growth stages, one used; ripe crop: nothing used | PASS | BM1 + vitest |
+| P3 | Bone meal on sapling | RMB: 45 % chance to grow the oak at once; used up every time | PASS | BM2 + vitest |
+| P4 | Bone meal on grass | RMB on a grass block: tall grass (some flowers) spreads within 3 blocks | PASS | BM3 + vitest |
+| P5 | Flowers | Dandelions/poppies generate on grass; X-model, no collision, break instantly, drop themselves; plant only on grass/dirt | PASS | FL1, FL2, X3 + vitest |
+| P6 | Water washes | Flowing water breaks torches, red dust, crops, saplings, tall grass, flowers into items | PASS | W1 + vitest |
+| P7 | Break particles | Particles take the block's texture colour (was always brown) | PASS | PC1 screenshot + vitest |
+| P8 | Ladders | W into a ladder climbs (no Space needed, ~2.35 b/s); Shift holds; idle slides down ≤ 3 b/s; climb out on top; no fall damage | PASS | X6 + vitest (was: Space only, Shift dropped you fast) |
+| P9 | Doors (2 tall) | Placing needs 2 free cells + floor; upper half targetable (RMB opens/closes, also with a block in hand) and can't be built into; faces the placer; pops when the floor goes | PASS | X7 + vitest (was: upper half was air — clicks went through, blocks could be placed into the door) |
+| P10 | Mining penalties | ×5 slower with eyes under water, ×5 while airborne | PASS | X11 + vitest |
+| P11 | Movement basics | Pillar-jump (Space+RMB down), sneak-bridging, dig straight down, mine the ceiling and jump, water landing (no fall damage), Q drop + pickup, sleep at night | PASS | X1, X2, X4, X5, X8, X9, X10 |
 
 ## Method rules
 1. **Real input:** synthesized keyboard/mouse via pointer lock. `__bv` may set up a scenario only — never perform the action under test.

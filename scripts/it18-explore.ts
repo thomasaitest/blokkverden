@@ -392,6 +392,7 @@ async function main() {
   if (run('X6')) {
     await page.evaluate(() => {
       const bv = (window as any).__bv;
+      for (let x = 2; x <= 8; x++) for (let z = 16; z <= 22; z++) { for (let y = 40; y <= 44; y++) bv.world.setBlock(x, y, z, 3); bv.world.setBlock(x, 45, z, 1); }
       for (let x = 2; x <= 8; x++) for (let y = 46; y <= 51; y++) bv.world.setBlock(x, y, 20, 3);
       for (let y = 46; y <= 51; y++) bv.world.setBlock(5, y, 19, 33);
       bv.teleport(5.5, 46.0, 18.2); bv.look(Math.PI, 0); bv.forceRemeshAround?.();
@@ -474,14 +475,14 @@ async function main() {
   if (run('X8')) {
     await page.evaluate(() => {
       const bv = (window as any).__bv;
-      for (let x = 14; x <= 18; x++) for (let z = 14; z <= 18; z++) { bv.world.setBlock(x, 45, z, 3); bv.world.setBlock(x, 44, z, 3); }
-      for (let x = 15; x <= 17; x++) for (let z = 15; z <= 17; z++) { bv.world.setBlock(x, 45, z, 0); bv.world.setBlock(x, 44, z, 0); bv.world.setWater(x, 45, z, 7); bv.world.setWater(x, 44, z, 7); }
+      for (let x = 14; x <= 18; x++) for (let z = 14; z <= 18; z++) for (let y = 40; y <= 45; y++) bv.world.setBlock(x, y, z, 3);
+      for (let x = 15; x <= 17; x++) for (let z = 15; z <= 17; z++) for (let y = 43; y <= 45; y++) { bv.world.setBlock(x, y, z, 0); bv.world.setWater(x, y, z, 7); }
       bv.forceRemeshAround?.();
       bv.player.health = 20; bv.teleport(16.5, 66, 16.5);
     });
     await sleep(3500);
     const p = await st(page);
-    record('X8-water-landing', p.health === 20 && p.y < 46.5 ? 'PASS' : 'FAIL', `hp=${p.health} y=${p.y.toFixed(2)}`);
+    record('X8-water-landing', p.health === 20 && p.y < 46.5 && p.y > 42.9 ? 'PASS' : 'FAIL', `hp=${p.health} y=${p.y.toFixed(2)}`);
     await page.evaluate(() => (window as any).__bv.teleport(8.5, 46, 8.5));
   }
 

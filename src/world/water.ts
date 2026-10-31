@@ -20,6 +20,7 @@ export function tickWater(
 ): number {
   let n = 0;
   const updates: { x: number; y: number; z: number; level: number }[] = [];
+  const recede: { x: number; y: number; z: number; level: number }[] = [];
   // Never flow into chunks that aren't generated (it18: water at the edge of the loaded area kept
   // generating new chunks forever and ate the whole update budget, so water near you never moved).
   const loaded = (x: number, z: number) => world.hasChunkAt(x, z);
@@ -65,6 +66,17 @@ export function tickWater(
             }
           }
 
+          // it23 (MC): flowing water (level < 7) dries up when nothing feeds it any more — no water above and no
+          // neighbour with a higher level (e.g. you scooped the source back up with a bucket)
+          if (level < 7) {
+            let fed = y + 1 < CHUNK_HEIGHT && world.getBlock(wx, y + 1, wz) === BlockId.Water;
+            for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+              if (fed) break;
+              if (world.getBlock(wx + dx, y, wz + dz) === BlockId.Water && (world.getWaterLevel(wx + dx, y, wz + dz) || 7) > level) fed = true;
+            }
+            if (!fed) { recede.push({ x: wx, y, z: wz, level: level - 1 }); n++; continue; }
+          }
+
           if (level <= 1) continue;
           // Spread horizontally
           for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
@@ -90,6 +102,11 @@ export function tickWater(
     }
   }
 
+  for (const r of recede) {
+    if (world.getBlock(r.x, r.y, r.z) !== BlockId.Water) continue;
+    world.setBlock(r.x, r.y, r.z, BlockId.Air);
+    if (r.level >= 1) world.setWater(r.x, r.y, r.z, r.level);
+  }
   for (const u of updates) {
     const cur = world.getBlock(u.x, u.y, u.z);
     if (isWashable(cur)) {
@@ -98,5 +115,5 @@ export function tickWater(
     }
     world.setWater(u.x, u.y, u.z, u.level);
   }
-  return updates.length;
+  return updates.length + recede.length;
 }

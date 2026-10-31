@@ -17,7 +17,7 @@ export const ItemId = {
   DiamondHelmet: 128, DiamondChest: 129, DiamondLegs: 130, DiamondBoots: 131,
   Seeds: 63, Wheat: 64, Bread: 65, Boat: 66, FishingRod: 67, MapItem: 68, RawFish: 69, CookedFish: 70, Bone: 71, CookedMeat: 72, String: 73, Gunpowder: 74, RottenFlesh: 75,
   WoodHoe: 116, IronHoe: 117, EnchantTable: 24, Door: 26, Trapdoor: 27, Fence: 28, Gate: 29, Stairs: 30, Slab: 31, GlassPane: 32, Ladder: 33, Sign: 34, RedDust: 35, Lever: 36, Button: 37, Lamp: 38, PressurePlate: 39, Helstein: 40, Sjelegrus: 41, PortalFrame: 43,
-  Gravel: 49, Sapling: 76, Flint: 77, Dandelion: 79, Poppy: 80, BoneMeal: 81, FlintAndSteel: 82, TallGrass: 78, Shears: 86,
+  Gravel: 49, Sapling: 76, Flint: 77, Dandelion: 79, Poppy: 80, BoneMeal: 81, FlintAndSteel: 82, TallGrass: 78, Shears: 86, Bucket: 87, WaterBucket: 88, LavaBucket: 89,
 } as const;
 
 export type ItemId = (typeof ItemId)[keyof typeof ItemId];
@@ -147,6 +147,10 @@ export const ITEMS: Record<number, ItemDef> = {
   [86]: tool(86, 'Saks', 'shears', undefined, 238, 1, 1, 84),
   // it22: høyt gress som ting (fra saks) — kan settes på gress
   [78]: blk(78, 'Høyt gress', 76, 78),
+  // it23 (MC): bøtter — tom bøtte (stables til 16) henter vann/lava; full bøtte heller det ut igjen
+  [87]: { id: 87, name: 'Bøtte', stackable: true, maxStack: 16, iconTile: 28 },
+  [88]: { id: 88, name: 'Vannbøtte', stackable: false, maxStack: 1, iconTile: 28 },
+  [89]: { id: 89, name: 'Lavabøtte', stackable: false, maxStack: 1, iconTile: 28, fuel: 20000 },
 };
 
 export function blockMaterial(blockId: number): BlockMaterial {

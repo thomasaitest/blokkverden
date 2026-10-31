@@ -147,6 +147,43 @@ const P = {
     '.D..D...........',
     '..DD............',
   ],
+  // it23: buckets — iron pail; W/w = liquid inside (water or lava colours)
+  bucket: [
+    '................',
+    '................',
+    '................',
+    '..hHHHHHHHHHHh..',
+    '.hHDDDDDDDDDDHh.',
+    '.hHDDDDDDDDDDHh.',
+    '..hHDDDDDDDDHh..',
+    '..hHHDDDDDDHHh..',
+    '...hHHHHHHHHh...',
+    '...hHHHHHHHHh...',
+    '....hHHHHHHh....',
+    '....hhHHHHhh....',
+    '.....hhhhhh.....',
+    '................',
+    '................',
+    '................',
+  ],
+  bucketFull: [
+    '................',
+    '................',
+    '................',
+    '..hHHHHHHHHHHh..',
+    '.hHwwwwwwwwwwHh.',
+    '.hHWWWWWWWWWWHh.',
+    '..hHWWWWWWWWHh..',
+    '..hHHWWWWWWHHh..',
+    '...hHHHHHHHHh...',
+    '...hHHHHHHHHh...',
+    '....hHHHHHHh....',
+    '....hhHHHHhh....',
+    '.....hhhhhh.....',
+    '................',
+    '................',
+    '................',
+  ],
   bow: [
     '................',
     '.....SSs......D.',
@@ -294,7 +331,7 @@ const P = {
 } as const;
 
 /** Pattern + colours for an item, or null when the atlas tile should be used. */
-export function itemPattern(itemId: number): { rows: readonly string[]; head: [RGB, RGB] } | null {
+export function itemPattern(itemId: number): { rows: readonly string[]; head: [RGB, RGB]; liquid?: [RGB, RGB] } | null {
   const def = ITEMS[itemId];
   if (!def) return null;
   if (def.tool && def.tool !== 'none' && def.tool !== 'bow' && def.tier) {
@@ -302,6 +339,9 @@ export function itemPattern(itemId: number): { rows: readonly string[]; head: [R
   }
   if (def.tool === 'bow') return { rows: P.bow, head: TIER.iron };
   if (def.tool === 'shears') return { rows: P.shears, head: TIER.iron };
+  if (itemId === 87) return { rows: P.bucket, head: TIER.iron };
+  if (itemId === 88) return { rows: P.bucketFull, head: TIER.iron, liquid: [[52, 96, 220], [92, 140, 240]] };
+  if (itemId === 89) return { rows: P.bucketFull, head: TIER.iron, liquid: [[236, 110, 20], [255, 190, 60]] };
   if (itemId === 61) return { rows: P.arrow, head: TIER.stone };
   if (itemId === 73) return { rows: P.string, head: TIER.string };
   if (itemId === 74) return { rows: P.gunpowder, head: TIER.gunpowder };
@@ -333,6 +373,8 @@ export function proceduralIcon(itemId: number): HTMLCanvasElement | null {
     else if (ch === 's') col = STICK[1];
     else if (ch === 'D') col = [52, 40, 30];
     else if (ch === 'F') col = [236, 236, 236];
+    else if (ch === 'W') col = pat.liquid?.[0] ?? [52, 40, 30];
+    else if (ch === 'w') col = pat.liquid?.[1] ?? [52, 40, 30];
     if (!col) continue;
     const i = (y * 16 + x) * 4;
     img.data[i] = col[0]; img.data[i + 1] = col[1]; img.data[i + 2] = col[2]; img.data[i + 3] = 255;

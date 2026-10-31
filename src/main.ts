@@ -25,6 +25,7 @@ import { ContainerStore } from './world/containers';
 import { World, setViewRadius, VIEW_RADIUS } from './world/world';
 import { CHUNK_HEIGHT, CHUNK_SIZE } from './world/chunk';
 import { tickWater } from './world/water';
+import { BUCKET, WATER_BUCKET, LAVA_BUCKET, fluidRaycast, scoop, pour, pourable } from './items/bucket';
 import { applyBoneMeal, boneMealTarget } from './world/bonemeal';
 import { canPlaceDoor, doorFacingFromYaw, DOOR_FACING_SHIFT, doorFacing } from './world/doors';
 import { SoundBus } from './audio/sound';
@@ -194,6 +195,8 @@ async function runGame(
   let breakTarget: string | null = null;
   let lastSave = 0;
   let frames = 0, fps = 0, fpsT = performance.now();
+  // it23 (test only): game time actually simulated (dt is capped at 0.05 s per frame) vs. wall time
+  let simT = 0, wallT = 0;
   let hungerAcc = 0, waterAcc = 0, cropAcc = 0, starveAcc = 0;
   let jumpTapAge = 0;
   let eatTimer = 0, eatSoundAcc = 0;
@@ -619,7 +622,7 @@ async function runGame(
   const api = {
     player, world, input, hud, inv, drops, containers, mobs, sound, xp, projectiles, boats, renderer,
     getState: () => ({
-      x: player.x, y: player.y, z: player.z, fps,
+      x: player.x, y: player.y, z: player.z, fps, simT, wallT,
       chunks: world.chunks.size, meshes: world.meshes.size,
       health: player.health, hunger: player.hunger, dayTime,
       mobs: mobs.mobs.length, dead, view: VIEW_RADIUS,
@@ -1135,6 +1138,7 @@ async function runGame(
     if (!gameActive()) return;
     requestAnimationFrame(loop);
     let dt = Math.min(0.05, (now - prev) / 1000);
+    wallT += (now - prev) / 1000; simT += dt;
     prev = now;
     frames++;
     if (now - fpsT >= 500) { fps = (frames * 1000) / (now - fpsT); frames = 0; fpsT = now; }
@@ -1532,16 +1536,58 @@ async function runGame(
           if (!useable) ateThisClick = true;
         }
       }
+      // it23 (MC): buckets — scoop a water source / lava with an empty bucket, pour a full one in front of the clicked face
+      let bucketUsed = false;
+      {
+        const bh = inv.held();
+        if (!ateThisClick && bh && (bh.id === BUCKET || bh.id === WATER_BUCKET || bh.id === LAVA_BUCKET)) {
+          const t0 = hit ? world.getBlock(hit.x, hit.y, hit.z) : BlockId.Air;
+          const opens = t0 === BlockId.CraftingTable || t0 === BlockId.Chest || t0 === BlockId.Furnace || t0 === BlockId.Bed
+            || t0 === BlockId.Door || t0 === BlockId.Gate || t0 === BlockId.Trapdoor || t0 === BlockId.Lever || t0 === BlockId.Button || t0 === BlockId.EnchantTable;
+          if (!opens) {
+            const cp = Math.cos(player.pitch);
+            if (bh.id === BUCKET) {
+              const f = fluidRaycast(world, player.x, player.y + EYE_HEIGHT, player.z, -Math.sin(player.yaw) * cp, Math.sin(player.pitch), -Math.cos(player.yaw) * cp, 5);
+              if (f && (!hit || f.dist <= hit.dist + 1e-3)) {
+                const filled = scoop(world, f);
+                if (filled != null) {
+                  bucketUsed = true;
+                  if (!player.creative) {
+                    if (bh.count <= 1) inv.setHeld({ id: filled, count: 1 });
+                    else { bh.count -= 1; if (inv.add({ id: filled, count: 1 }) > 0) drops.spawn(player.x, player.y + 1, player.z, { id: filled, count: 1 }); }
+                  }
+                  sound.placeBlock(); markMesh(); hud.markDirty();
+                }
+              }
+            } else if (hit) {
+              const onPlant = t0 !== BlockId.Air && pourable(world, hit.x, hit.y, hit.z, bh.id === WATER_BUCKET ? BlockId.Water : BlockId.Lava);
+              const px = onPlant ? hit.x : hit.x + hit.nx, py = onPlant ? hit.y : hit.y + hit.ny, pz = onPlant ? hit.z : hit.z + hit.nz;
+              const r = pour(world, bh.id, px, py, pz, world.dimension === 'helvete', (old) => {
+                if (old === BlockId.Fire) return;
+                if (old === BlockId.DoubleGrass && world.getBlock(px, py + 1, pz) === BlockId.DoubleGrassTop) world.setBlock(px, py + 1, pz, BlockId.Air);
+                const d = dropForBlock(old, null); if (d) drops.spawn(px, py, pz, d);
+              });
+              if (r) {
+                bucketUsed = true;
+                if (!player.creative) inv.setHeld({ id: BUCKET, count: 1 });
+                if (r === 'boiled') { sound.fizz(); particles.burst(px + 0.5, py + 0.5, pz + 0.5, 0xdddddd, 10, 'break'); }
+                else sound.placeBlock();
+                markMesh(); hud.markDirty();
+              }
+            }
+          }
+        }
+      }
       // it22 (MC): right-click a sheep with shears → 1–3 wool, the sheep is shorn
       const shearsHeld = inv.held();
-      const sheep = !ateThisClick && shearsHeld && ITEMS[shearsHeld.id]?.tool === 'shears'
+      const sheep = !ateThisClick && !bucketUsed && shearsHeld && ITEMS[shearsHeld.id]?.tool === 'shears'
         ? mobs.pickAt(player.x, player.y + EYE_HEIGHT, player.z, 3.2, player.yaw, player.pitch) : null;
       if (sheep && sheep.kind === 'sau' && !sheep.sheared) {
         if (mobs.shear(sheep, drops) > 0) {
           if (!player.creative) inv.setHeld(damageTool(shearsHeld));
           sound.shear(); hud.markDirty();
         }
-      } else if (!hit || ateThisClick) { /* eaten or nothing to interact with */ }
+      } else if (!hit || ateThisClick || bucketUsed) { /* eaten, bucket used, or nothing to interact with */ }
       else {
       const tid = world.getBlock(hit.x, hit.y, hit.z);
       if (tid === BlockId.CraftingTable) { invUi.openTable(); input.inventoryOpen = true; }

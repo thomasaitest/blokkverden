@@ -33,6 +33,8 @@ export const RECIPES: Recipe[] = [
   // it22 (MC): shears = two iron ingots diagonally (either diagonal)
   { w: 2, h: 2, pattern: [0, ItemId.IronIngot, ItemId.IronIngot, 0], result: stack(ItemId.Shears, 1, 238) },
   { w: 2, h: 2, pattern: [ItemId.IronIngot, 0, 0, ItemId.IronIngot], result: stack(ItemId.Shears, 1, 238) },
+  // it23 (MC): bucket = three iron ingots in a V
+  { w: 3, h: 2, pattern: [ItemId.IronIngot, 0, ItemId.IronIngot, 0, ItemId.IronIngot, 0], result: stack(ItemId.Bucket, 1) },
   // arrow
   { w: 1, h: 3, pattern: [ItemId.Flint, ItemId.Stick, ItemId.Feather], result: stack(ItemId.Arrow, 4) },
   // iron tools

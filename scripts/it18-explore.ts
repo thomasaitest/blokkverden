@@ -358,9 +358,16 @@ async function main() {
   if (run('X3')) {
     await page.evaluate(() => { const bv = (window as any).__bv; for (let z = 6; z <= 10; z++) bv.world.setBlock(12, 46, z, z % 3 === 0 ? 79 : z % 3 === 1 ? 80 : 78); bv.teleport(12.5, 46.0, 12.5); bv.look(0, 0); bv.forceRemeshAround?.(); });
     await sleep(300);
+    // it23: judge by simulated game time, not wall time — headless Chromium sometimes drops below 20 fps and the game
+    // caps dt at 0.05 s, so 1.5 s of wall time can be < 1.4 s of game time (z stopped at 6.5–6.7 on the it22 build).
+    const t0 = await page.evaluate(() => { const s = (window as any).__bv.getState(); return { sim: s.simT ?? 0, wall: s.wallT ?? 0, z: s.z }; });
     await walk(page, 'KeyW', 1500);
+    const t1 = await page.evaluate(() => { const s = (window as any).__bv.getState(); return { sim: s.simT ?? 0, wall: s.wallT ?? 0 }; });
     const p = await st(page);
-    record('X3-walk-through-plants', p.z < 6.5 ? 'PASS' : 'FAIL', `z=${p.z.toFixed(2)}`);
+    const sim = t1.sim - t0.sim, wall = t1.wall - t0.wall, dist = t0.z - p.z;
+    const ratio = sim > 0 ? dist / (4.317 * sim) : 0; // ≤1 (+ key latency); plants must not slow you
+    record('X3-walk-through-plants', p.z < 7.0 && ratio > 0.9 ? 'PASS' : 'FAIL',
+      `z=${p.z.toFixed(2)} dist=${dist.toFixed(2)} sim=${sim.toFixed(2)}s wall=${wall.toFixed(2)}s speed=${(ratio * 4.317).toFixed(2)}b/s (${(ratio * 100).toFixed(0)}% of 4.317)`);
   }
 
   // X4 — dig straight down 3 with a shovel (hold LMB looking down), you drop each time; no stuck

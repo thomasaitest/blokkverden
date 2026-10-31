@@ -60,8 +60,12 @@ export function tickFurnace(f: FurnaceState, dt: number): void {
         if (fv > 0 && f.fuel) {
           f.burnLeft = fv;
           f.burnMax = fv;
-          f.fuel.count -= 1;
-          if (f.fuel.count <= 0) f.fuel = null;
+          // it23 (MC): a lava bucket burns 1000 s and leaves the empty bucket in the fuel slot
+          if (f.fuel.id === 89) f.fuel = { id: 87, count: 1 };
+          else {
+            f.fuel.count -= 1;
+            if (f.fuel.count <= 0) f.fuel = null;
+          }
         }
       }
       if (f.burnLeft > 0) {

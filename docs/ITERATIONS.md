@@ -2,6 +2,58 @@
 
 Original voxel-sandkasse. Ingen Mojang-assets.
 
+## Iterasjon 26 (2026-10-31)
+
+Start: lør. 31. okt. 09:53 CET · Slutt: lør. 31. okt. 10:40 CET (~47 min) · gren `dev` (ikke publisert)
+
+### Fokus
+Baseline først (core 56/56 med ekte tastatur/mus i Chromium). Deretter feiljakt i væskene fra it23–it25, med båter i vann (som aldri hadde fått strøm eller kollisjon) og bøtter mot rennende væske. `__bv` bare til oppsett.
+
+### Fikset
+1. Båten seilte sidelengs. Skroget var langt på tvers av kjøreretningen. Nå peker baugen dit båten kjører. En båt du setter ut, peker samme vei som du ser, som i MC (før pekte den alltid samme vei)
+2. Båter kunne kjøre rett gjennom vegger og inn på land, fordi de ikke hadde kollisjon. Nå stopper baugen ved veggen (skroget sjekkes som en rettvinklet boks langs kjøreretningen). En båt som står på skrå i en trang åpning, kan fortsatt komme seg løs, men aldri gjennom en vegg
+3. En vannbøtte på rennende lava gjorde ingenting. Det skjedde for eksempel når lava hadde rent inn i hullet du ville fylle, og det var dette som gjorde it23 BK3 tilfeldig. Nå kan alle bøtter tømmes i rennende vann eller lava, som i MC, og blir da en ny kilde. Lavakilden ved siden av blir obsidian, og rennende lava blir brostein. Kilder av den andre væsken kan fortsatt ikke byttes ut
+4. Lava i Helvete rett ved kilden (styrke 7) ble tegnet i full høyde, som kilden. Nå er den 7/8 høy, og trinnet synes (kjent begrensning fra it25)
+5. En båt som lå på fallende vann, fløt over toppen av blokka (8/7). Nå er høyden maks 1
+6. Et klikk på en båt brøt også blokka bak eller under den (i kreativ forsvant bakken) eller rett etter et slag (nedkjøling). Nå teller klikket bare på båten
+7. Testen it24 CB1 var tilfeldig: jernhakka hogger brosteinen på 0,4 s, og generatoren rakk å lage ny brostein mens knappen var holdt i 900 ms. Testen godtar nå at det ble hogget 2
+
+### Nye funksjoner (2)
+- Båter driver med strømmen: en tom båt følger rennende vann (ca. 1,4 blokker/s), og når du ror, legges strømmen til. På stille vann (bare kilder) ligger båten i ro
+- Knuse båter: 3 raske slag med venstre museknapp knuser båten, og den slipper båten som en ting som kan plukkes opp. Slagene teller mindre hvis du venter mellom dem. I kreativ knuses den med ett slag, uten at noe slippes. Du kan ikke slå båten du sitter i. Egen lyd og flisepartikler
+
+### Playtest
+- Core: **56 PASS / 0 FAIL / 0 PARTIAL** på endelig bygg. H2 trenger fortsatt ett nytt forsøk, som før. Baseline på it25-bygget: **56/56** (også her med ett nytt forsøk på H2)
+- it26-verify: **5/5 PASS** (`scripts/it26-verify.ts`):
+  - BD1: vann i en kanal, båt satt ut med ekte høyreklikk. Båten driver 2,6 blokker på 2 s spilltid og holder seg i midten
+  - BC1: setter ut båten og går om bord med ekte høyreklikk, og ror med W mot en vegg ved x=12. Båten stopper med baugen ved x≈11,2 og står stille. Sjekket på skjermbildet 02b at baugen peker mot veggen
+  - BB1: etter 2 slag (ekte venstreklikk) står båten, etter 3 er den knust og båten er sluppet og plukket opp. 2 slag, så 4 s pause og 1 slag: båten står. Kreativ: 1 slag, ingen ting sluppet, bakken urørt
+  - BW1: helte vann med ekte høyreklikk på rennende lava ved siden av en lavakilde. Vannet blir liggende, kilden blir obsidian og den rennende lavaen blir brostein
+  - LH1: lava i Helvete med nivåene 0/7/6 og trinn synlige på skjermbildet (ingen skade)
+- Første kjøringer av it26-verify feilet på grunn av testoppsettet: vannbøtta traff toppen av kanalveggen, siktet nådde ikke fram, spilleren sto i lavaen, og forventningen i BW1 var feil (vann på rennende lava gir brostein, ikke obsidian). To ekte feil ble funnet underveis og er rettet: skadeverdien på båten forsvant for fort mellom slag, og et klikk på en båt brøt blokka bak eller under den (Fikset 6)
+- Regresjon, kjørt én og én på endelig bygg eller bygget rett før: it25-verify 8/8, it24-verify 5/5 (CB1 tilfeldig i første runde, grønn alene med rettet test), it23-verify 6/6 (BK3 grønn), it22-verify 8/8, it21-verify 6/6 (LD1, stigeklatring, feilet én gang i rekka, grønn alene), it18-verify 8/8, it10-verify allOk (båttur «Sjøbein»). it9-verify starter ikke lenger (gammelt skript, uendret)
+- 198 vitest grønne (10 nye: båt driver med strømmen og ligger i ro på stille vann, ror mot vegg og stopper, båt på fallende vann, baugen stopper ved veggen og en båt som sitter fast kommer ikke gjennom, 3 slag og nedtelling mellom slag, plukking innen rekkevidde, vann på rennende lava gir obsidian, lava i rennende lava gir kilde, lavahøyde 7). Testen av lavahøyde i it24 er oppdatert
+- Ny seksjon X i CORE-PLAYTEST.md
+
+### Kjente begrensninger
+- Båtens kollisjon er en boks langs kjøreretningen. Den hindrer ikke båten i å svinge inn i en vegg, men flytter den heller ikke gjennom veggen
+- Båter tar ikke skade av noe annet enn slag, og de blir ikke vist med vippebevegelse når du slår
+- Strømmen dytter fortsatt bare vannrett, så fosser trekker deg ikke ned
+- Vann på en lavakilde (ikke rennende) gjør fortsatt ingenting direkte. Vannet må helles ved siden av
+
+### Media
+public/progress/it26/ (lokalt på `dev`, ikke publisert): skjermbilder it26-01…06:
+- 01: båt som driver i kanalen
+- 02: inne i båten mot veggen
+- 02b: båten stoppet ved veggen, med baugen først
+- 03–04: båt før slag og etter at den er knust (ting sluppet)
+- 05: lavatrinn i Helvete
+- 06: vann på rennende lava (brostein og obsidian)
+
+Klipp: `clip-it26-bat-strom-knus.webm`
+
+---
+
 ## Iterasjon 25 (2026-10-31)
 
 Start: lør. 31. okt. 08:48 CET · Slutt: lør. 31. okt. 09:23 CET (~35 min) · gren `dev` (ikke publisert)

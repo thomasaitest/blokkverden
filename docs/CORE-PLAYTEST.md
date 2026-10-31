@@ -248,6 +248,15 @@ Last run: 2026-10-31 02:26–02:35 CET · it18 core (56 PASS / 0 FAIL) + scripts
 | W5 | Milk bucket | RMB a cow with an empty bucket → milk bucket (from a stack: the milk goes to the inventory); pigs give nothing; hold RMB 1.6 s to drink → effects (Sult) removed, empty bucket back; can't be poured | PASS | MK1, MK2 + vitest |
 | W6 | Step side | The side of a higher liquid cell is drawn only above the lower neighbour's surface (no double transparent layer) | PASS (visual) | WS1 screenshot it25-08 |
 
+## X. Boats in currents, boat collision/breaking, buckets into flowing liquid (it26, `scripts/it26-verify.ts`, real input)
+| # | Check | Minecraft-expected | Status | Notes |
+|---|--------|-------------------|--------|-------|
+| X1 | Boat drifts | An empty boat placed (RMB) in flowing water drifts with the current; on still source water it stays put | PASS | BD1 (2.6 blocks in 2 s) + vitest |
+| X2 | Boat collision | A rowed boat (W) stops with its bow at a wall instead of sailing through it; hull long along the heading; a placed boat faces the way you look | PASS | BC1 (stops at x≈11.2 for a wall at x=12) + screenshot it26-02b + vitest |
+| X3 | Breaking boats | 3 quick LMB punches break a boat and drop the boat item (pick-up works); hits wear off after a pause; creative: one punch, no drop; the punch doesn't also mine the block behind | PASS | BB1 + vitest |
+| X4 | Bucket into flowing liquid | A water bucket can be emptied onto flowing lava (replaces it; lava source next to it → obsidian, flowing lava → cobblestone); a lava bucket into flowing lava makes a source; not into sources of the other liquid | PASS | BW1 + vitest |
+| X5 | Helvete lava step | Lava next to a Helvete source (strength 7) is drawn 7/8 high, lower than the source (was full height) | PASS (visual) | LH1 + screenshot it26-05 + vitest |
+
 ## Method rules
 1. **Real input:** synthesized keyboard/mouse via pointer lock. `__bv` may set up a scenario only — never perform the action under test.
 2. Log every bug and every deviation from Minecraft.

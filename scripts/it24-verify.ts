@@ -426,6 +426,8 @@ async function main() {
     await sleep(200);
     const tgt = await page.evaluate(() => (window as any).__bv.targetHit());
     await hold(page, 900, 'left'); await sleep(300);
+    // it26: an iron pickaxe mines cobblestone in ~0.4 s and the generator can refill within the 900 ms hold, so a
+    // cobble at cx right after can be a new one (then ≥2 were mined)
     const mined = await gb(cx, 45, 14);
     await sleep(1500);
     const got = (await countItem(page, 4)) + (await dropIds()).filter((d: number) => d === 4).length;
@@ -435,7 +437,7 @@ async function main() {
     await sleep(400);
     await shot(page, 'it24-06-brostein-igjen.png');
     const obs = r.includes(43) || again.includes(43);
-    record('CB1-cobble-generator', lava === 44 && water === 10 && cx >= 3 && cx <= 9 && mined !== 4 && got >= 1 && again.includes(4) && !obs && r[0] === 44 ? 'PASS' : 'FAIL',
+    record('CB1-cobble-generator', lava === 44 && water === 10 && cx >= 3 && cx <= 9 && (mined !== 4 || got >= 2) && got >= 1 && again.includes(4) && !obs && r[0] === 44 ? 'PASS' : 'FAIL',
       JSON.stringify({ lava, water, r, cx, tgt, mined, got, again }));
   }
 

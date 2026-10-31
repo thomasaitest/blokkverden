@@ -1125,6 +1125,21 @@ async function runGame(
   renderer.canvas.addEventListener('mousedown', (e) => {
     if (e.button !== 0 || invUi.isOpen() || dead || paused) return;
     if (!input.pointerLocked) return;
+    // it26 (MC): punching a boat (not the one you sit in) breaks it after 3 quick hits and drops the boat item.
+    // Checked before the melee cooldown: a click on a boat during the cooldown used to mine the block behind it.
+    const bp = boats.pickAt(player.x, player.y + EYE_HEIGHT, player.z, 3.2, player.yaw, player.pitch);
+    const bh = bp ? raycast(world, player) : null;
+    if (bp && (!bh || (bh.dist ?? 99) > bp.t)) {
+      const b = bp.boat;
+      boatSwing = true;
+      sound.swing(); sound.mobHit();
+      particles.burst(b.x, b.y + 0.3, b.z, 0x8a6a3a, 6, 'sprint');
+      if (boats.hit(b, player.creative)) {
+        if (!player.creative) drops.spawn(Math.floor(b.x), Math.floor(b.y + 0.3), Math.floor(b.z), { id: ItemId.Boat, count: 1 });
+        sound.breakBlock();
+      }
+      return;
+    }
     if (attackCool <= 0) {
       attackCool = 0.35;
       const held = inv.held();
@@ -1132,20 +1147,6 @@ async function runGame(
       const atk = ITEMS[held?.id ?? -1]?.attack ?? 1;
       const crit = !player.onGround && player.vy < -0.05 ? 1.5 : 1;
       sound.swing();
-      // it26 (MC): punching a boat (not the one you sit in) breaks it after 3 quick hits and drops the boat item
-      const bp = boats.pickAt(player.x, player.y + EYE_HEIGHT, player.z, 3.2, player.yaw, player.pitch);
-      const bh = bp ? raycast(world, player) : null;
-      if (bp && (!bh || (bh.dist ?? 99) > bp.t)) {
-        const b = bp.boat;
-        boatSwing = true;
-        sound.mobHit();
-        particles.burst(b.x, b.y + 0.3, b.z, 0x8a6a3a, 6, 'sprint');
-        if (boats.hit(b, player.creative)) {
-          if (!player.creative) drops.spawn(Math.floor(b.x), Math.floor(b.y + 0.3), Math.floor(b.z), { id: ItemId.Boat, count: 1 });
-          sound.breakBlock();
-        }
-        return;
-      }
       const hit = mobs.hitAt(player.x, player.y + EYE_HEIGHT, player.z, 3.2, player.yaw, player.pitch, atk * crit, sound);
       if (hit) achieve.grant('first_kill');
       if (hit && held && ITEMS[held.id]?.tool === 'sword' && !player.creative) inv.setHeld(damageTool(held));

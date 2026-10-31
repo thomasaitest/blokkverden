@@ -1,10 +1,40 @@
 {
-  "when": "2026-10-31T03:03:03.421Z",
+  "when": "2026-10-31T03:16:07.833Z",
   "results": [
+    {
+      "id": "R1-rain-puts-out-fire",
+      "status": "PASS",
+      "notes": "{\"litRoof\":83,\"litOpen\":83,\"openGoneAfter\":1.2,\"roofAtThatTime\":83,\"dryStill\":83}"
+    },
+    {
+      "id": "LV1-lava-lights-wood",
+      "status": "PASS",
+      "notes": "{\"firstFire\":1,\"maxFires\":2,\"planksLeft\":14}"
+    },
     {
       "id": "MF1-pig-burns-cooked-meat",
       "status": "PASS",
-      "notes": "{\"lit\":83,\"hp0\":9,\"burningSeen\":true,\"dead\":true,\"diedAfter\":4.2,\"ids\":[72]}"
+      "notes": "{\"lit\":83,\"hp0\":9,\"burningSeen\":true,\"dead\":true,\"diedAfter\":5.5,\"ids\":[72]}"
+    },
+    {
+      "id": "ML1-zombie-dies-in-lava",
+      "status": "PASS",
+      "notes": "{\"dead\":true,\"after\":1.6}"
+    },
+    {
+      "id": "OL1-shaped-outline",
+      "status": "PASS",
+      "notes": "{\"door\":26,\"bDoor\":[0,0,0,1,2,0.1875],\"bPoppy\":[0.3125,0,0.3125,0.6875,0.625,0.6875],\"bStone\":[0,0,0,1,1,1]}"
+    },
+    {
+      "id": "RW1-rain-darkens-sky",
+      "status": "PASS",
+      "notes": "{\"clear\":{\"sky\":217,\"ground\":139},\"rain\":{\"sky\":180,\"ground\":119},\"back\":{\"sky\":217,\"ground\":139}}"
+    },
+    {
+      "id": "BL1-torch-light-crosses-chunk-border",
+      "status": "PASS",
+      "notes": "{\"torch\":12,\"across\":10,\"across2\":8}"
     }
   ],
   "bugs": []

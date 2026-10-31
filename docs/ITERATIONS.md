@@ -2,6 +2,44 @@
 
 Original voxel-sandkasse. Ingen Mojang-assets.
 
+## Iterasjon 20 (2026-10-31)
+
+Start: lør. 31. okt. 03:55 CET · Slutt: lør. 31. okt. 04:31 CET (~36 min) · gren `dev` (ikke publisert)
+
+### Fokus
+Baseline først (core 56/56 med ekte tastatur/mus i Chromium), deretter åpne punkter fra it19-listen: lys over chunk-grenser, merkeboks for dør, og ild som ikke reagerte på regn, lava eller mobber. `__bv` bare til oppsett.
+
+### Fikset
+1. Blokklys stoppet ved chunk-grenser. En fakkel noen blokker fra kanten lyste ikke inn i nabochunken (heller ikke diagonalt). Nå tar hver chunk med lys fra ekte lyskilder i alle 8 nabochunker. Siden lyset hentes fra selve kildene og ikke fra lagrede lysverdier, blir det ikke «spøkelseslys» når fakkelen fjernes (testet i begge rekkefølger). Relys tar ca. 15 ms mot 12 ms før
+2. Merkeboksen (den svarte rammen) var alltid en hel kube. Nå følger den formen på blokka som i MC: dør = tynt panel som er 2 høyt, helle = halv, blomster, gress, spirer og avlinger = mindre bokser
+3. Regn var små prikker, og himmelen var like blå og lys. Nå faller regnet som streker, himmelen blir grå og himmellyset dempes (~35 %, torden ~50 %), og overgangen tar ca. 3 s
+4. Mobber gikk like fort i lava som på land. Nå går de mye saktere i lava (×0,3), som i MC
+
+### Nye funksjoner (3)
+- Regn slukker ild: ild under åpen himmel slukkes i løpet av ~1–2 s med hvesing og røyk. Ild under tak og evig ild på helstein brenner videre
+- Lava tenner på ting: lava setter fyr på brennbare blokker i nærheten (tre, planker, løv osv.) over og ved siden av seg, gjennom luft men ikke gjennom stein
+- Mobber brenner: i ild får de 1 skade per 0,5 s, i lava 4 skade per 0,5 s. Etterpå brenner de videre (8/15 s, glød), og vann slukker dem. Dyr som dør mens de brenner, gir stekt kjøtt
+
+### Playtest
+- Core: **56 PASS / 0 FAIL / 0 PARTIAL** (`scripts/core-playtest.ts`, endelig bygg; H2 trenger fortsatt ett nytt forsøk i headless, som før)
+- it20-verify: **7/7 PASS** (`scripts/it20-verify.ts`: R1 regn slukker ild tent med fyrstål (tak-ild brenner videre), LV1 lava tenner treverk, MF1 gris i inngjerding, ild tent med høyreklikk → dør → stekt kjøtt, ML1 zombie i lava dør, OL1 dør- og blomsterramme, RW1 regn gjør himmelen mørkere, BL1 fakkel 3 blokker fra chunk-grensen lyser på andre siden)
+- Regresjon: it19-verify 8/8, it18-verify 8/8, it18-explore 11/11, it17-verify 13/13, it16-verify 6/6 (alle kjørt én og én på endelig bygg). it19-verify er justert: været settes til klart før ild-testene, siden regn nå slukker ild. NL1 fjerner rester av ild og portal først, fordi lyset deres nå (riktig) når over chunk-grensen og lyste opp ruta før fakkelen ble satt
+- 136 vitest grønne (nye: regn/ild, lava tenner, mob-brenning, rammeform, lys over chunk-grenser i begge rekkefølger og uten spøkelseslys)
+- Ny seksjon R i CORE-PLAYTEST.md
+
+### Kjente begrensninger
+- Regnstreker faller også inne under tak (bare grafikk, ild under tak slukkes ikke), og det er ingen regnlyd på taket eller pytter
+- Mobber går fortsatt rett inn i ild og lava (de unngår dem ikke når de finner vei)
+- Merkeboksen rundt stige og fakkel er fortsatt en hel blokk
+- Sand og grus faller fortsatt umiddelbart, og det finnes ikke dobbelt høyt gress
+- I BL1-skjermbildet står det noe som ligner en fakkel nr. 2 like ved den plasserte fakkelen (trolig en fakkel som ligger som ting; ikke reprodusert hver gang). Bør undersøkes
+- Parallellkjøring av flere Chrome-tester gir tidsfeil (FS3, L1, D1, X11). Sluttkjøringene gjøres derfor én og én
+
+### Media
+public/progress/it20/ (lokalt på `dev`, ikke publisert): skjermbilder it20-01…11 (ild i regn, slukket i regn mens tak-ilden brenner, lava tenner en vegg, gris brenner/stekt kjøtt, zombie i lava, dør- og blomsterramme, fakkel ved chunk-grensen, klart vs regn), klipp `clip-it20-regn-lava-mobber.webm`
+
+---
+
 ## Iterasjon 19 (2026-10-31)
 
 Start: lør. 31. okt. 02:53 CET · Slutt: lør. 31. okt. 03:32 CET (~39 min) · gren `dev` (ikke publisert)

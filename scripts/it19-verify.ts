@@ -323,6 +323,7 @@ async function main() {
 
   // FS1 — RMB on the grass with flint and steel → fire on top (lit, light), 1 durability used; burns out on its own
   if (run('FS1')) {
+    await page.evaluate(() => (window as any).__bv.setWeather('clear', 0)); // it20: rain now puts out fire — keep the weather dry here
     await fsSlot();
     await page.evaluate(() => (window as any).__bv.setDay(0.85)); // night: see the light
     await aim(page, 8.5, 46.05, 11.5, 8.5, 45.95, 8.5);
@@ -344,6 +345,7 @@ async function main() {
 
   // FS2 — fire next to a planks hut spreads and burns it away
   if (run('FS2')) {
+    await page.evaluate(() => (window as any).__bv.setWeather('clear', 0)); // it20: rain now puts out fire — keep the weather dry here
     await page.evaluate(() => {
       const bv = (window as any).__bv;
       for (let x = 1; x <= 5; x++) for (let z = 14; z <= 18; z++) for (let y = 46; y <= 48; y++) {
@@ -375,6 +377,7 @@ async function main() {
 
   // FS3 — walk (W) through fire: damage + keep burning after; walk on into water → put out
   if (run('FS3')) {
+    await page.evaluate(() => (window as any).__bv.setWeather('clear', 0)); // it20: rain now puts out fire — keep the weather dry here
     await heal();
     await page.evaluate(() => {
       const bv = (window as any).__bv;
@@ -401,6 +404,7 @@ async function main() {
 
   // FS4 — portal frame lit with flint and steel (RMB on the frame's bottom row), 1 durability used
   if (run('FS4')) {
+    await page.evaluate(() => (window as any).__bv.setWeather('clear', 0)); // it20: rain now puts out fire — keep the weather dry here
     await page.evaluate(() => {
       const bv = (window as any).__bv;
       for (let w = 0; w < 4; w++) for (let h = 0; h < 5; h++) {
@@ -423,6 +427,7 @@ async function main() {
 
   // L1 — lava: walking in is slow and burns (4 dmg / 0.5 s), you keep burning after getting out
   if (run('L1')) {
+    await page.evaluate(() => (window as any).__bv.setWeather('clear', 0)); // it20: rain now puts out fire — keep the weather dry here
     await heal();
     await page.evaluate(() => {
       const bv = (window as any).__bv;
@@ -491,7 +496,7 @@ async function main() {
 
   // NL1 — night: a torch placed with RMB lights up the ground around it (block light is not dimmed at night)
   if (run('NL1')) {
-    await page.evaluate(() => { const bv = (window as any).__bv; bv.setDay(0.85); for (let x = 15; x <= 18; x++) for (let z = 4; z <= 9; z++) for (let y = 46; y <= 48; y++) bv.world.setBlock(x, y, z, 0); bv.forceRemeshAround?.(); });
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.setDay(0.85); bv.setWeather('clear', 0); /* it20: portal glow from FS4 now crosses the chunk border (x=16) and lit this patch before the torch */ for (let x = 10; x <= 22; x++) for (let z = 8; z <= 20; z++) for (let y = 44; y <= 52; y++) if (bv.world.getBlock(x, y, z) === 42) bv.world.setBlock(x, y, z, 0); for (let x = 0; x <= 24; x++) for (let z = -4; z <= 22; z++) for (let y = 44; y <= 52; y++) if (bv.world.getBlock(x, y, z) === 83) bv.world.setBlock(x, y, z, 0); /* leftover FS2 fire at x=12 now lights across the border too */ for (let x = 15; x <= 18; x++) for (let z = 4; z <= 9; z++) for (let y = 46; y <= 48; y++) bv.world.setBlock(x, y, z, 0); bv.forceRemeshAround?.(); });
     await setHeld(page, 12);
     await aim(page, 16.5, 46.05, 9.5, 16.5, 46.0, 6.5);
     await sleep(1200);
@@ -507,6 +512,7 @@ async function main() {
         return { near: m(W * 0.35 | 0, H * 0.55 | 0, W * 0.3 | 0, H * 0.15 | 0), far: m(0, H * 0.5 | 0, W * 0.1 | 0, H * 0.1 | 0) };
       }, buf.toString('base64'));
     };
+    if (process.env.BV_DEBUG) console.log('NL1 probe', JSON.stringify(await page.evaluate(() => { const bv = (window as any).__bv; const em: string[] = []; for (let x = 0; x <= 32; x++) for (let z = -10; z <= 22; z++) for (let y = 40; y <= 55; y++) { const id = bv.world.getBlock(x, y, z); if ([12, 44, 45, 83, 42, 38].includes(id)) em.push(`${id}@${x},${y},${z}`); } return { bl: bv.world.getBlockLight(16, 46, 6), bl2: bv.world.getBlockLight(16, 46, 8), em: em.slice(0, 40) }; })));
     const before = await lum('it19-09a-foer-fakkel.png');
     await hold(page, 80, 'right'); await sleep(1500);
     const torch = await gb(16, 46, 6);

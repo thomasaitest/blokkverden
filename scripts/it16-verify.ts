@@ -351,7 +351,7 @@ async function main() {
     await aim(page, 8.5, 46.05, 4.5, 11.0, 49.5, 4.5);
     await sleep(400);
     await hold(page, 80, 'right');
-    await sleep(400);
+    await sleep(1400); // it21: sand now falls as a visible entity (~0.7 s for 3 blocks) instead of teleporting
     const v = { at49: await gb(10, 49, 4), at46: await gb(10, 46, 4), left: await countItem(page, 8) };
     await aim(page, 7.0, 46.05, 2.0, 10.5, 46.5, 4.5);
     await sleep(500);
@@ -372,7 +372,7 @@ async function main() {
     await page.evaluate(() => (window as any).__bv.look((window as any).__bv.player.yaw, 1.5));
     await sleep(300);
     for (let t = 0; t < 10 && (await gb(15, 48, 15)) === 2; t++) await hold(page, 300);
-    await sleep(200);
+    await sleep(1000); // it21: let the falling sand land (visible fall)
     const buried = { feet: await gb(15, 46, 15), head: await gb(15, 47, 15), above: await gb(15, 48, 15) };
     await sleep(1600);
     await shot(page, 'it16-08-begravd-i-sand.png');

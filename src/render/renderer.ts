@@ -452,11 +452,16 @@ export class GameRenderer {
   rainTop: ((x: number, z: number) => number) | null = null;
   private rainTopCache = new Map<number, number>();
   private rainTopFrame = 0;
+  private lastWeatherMs = 0;
 
   syncWeather(kind: WeatherKind, intensity: number, cam: THREE.Vector3, flash: number): void {
     this.weatherKind = kind;
     const wet = (kind === 'rain' || kind === 'thunder') && intensity >= 0.05 && this.dimensionVisual !== 'helvete';
-    this.rainLevel = Math.max(0, Math.min(1, this.rainLevel + (wet ? 0.006 : -0.006)));
+    // it21: time-based (was +0.006 per frame → ~8 s instead of ~3 s at low frame rates)
+    const nowMs = performance.now();
+    const wdt = Math.min(0.25, Math.max(0, (nowMs - (this.lastWeatherMs || nowMs)) / 1000));
+    this.lastWeatherMs = nowMs;
+    this.rainLevel = Math.max(0, Math.min(1, this.rainLevel + (wet ? 1 : -1) * wdt / 2.8));
     // it20 (MC): rain falls as streaks, not tiny dots
     if (wet) {
       if (!this.rainLines) {
@@ -475,8 +480,8 @@ export class GameRenderer {
       this.rainLines.visible = true;
       this.rainLines.position.set(cam.x, cam.y, cam.z);
       const rp = this.rainLines.geometry.attributes.position as THREE.BufferAttribute;
-      const fall = 14 * 0.016 * (0.6 + intensity * 0.6);
-      if (++this.rainTopFrame >= 12) { this.rainTopFrame = 0; this.rainTopCache.clear(); }
+      const fall = 14 * Math.max(0.008, wdt) * (0.6 + intensity * 0.6);
+      if (++this.rainTopFrame >= 20) { this.rainTopFrame = 0; this.rainTopCache.clear(); }
       for (let i = 0; i < rp.count; i += 2) {
         let y = rp.getY(i) - fall;
         if (y < -5) y += 30;

@@ -376,7 +376,9 @@ async function main() {
     console.log('FB2 dbg', JSON.stringify({ tgt2, sel, saw2, inv: await countItem(page, 49) }));
     const torch = await gb(14, 46, 9), gravAt = await gb(14, 47, 9);
     const ids = await dropIds();
-    record('FB2-placed-sand-falls-gravel-on-torch-pops', saw && landed === 8 && stillUp === 0 && torch === 12 && gravAt === 0 && ids.includes(49) ? 'PASS' : 'FAIL',
+    const dropPos = await page.evaluate(() => (window as any).__bv.drops.drops.map((d: any) => [d.stack.id, +d.x.toFixed(1), +d.y.toFixed(1), +d.z.toFixed(1)]));
+    console.log('FB2 drops', JSON.stringify(dropPos));
+    record('FB2-placed-sand-falls-gravel-on-torch-pops', saw && landed === 8 && stillUp === 0 && torch === 12 && gravAt === 0 && ids.filter((i: number) => i === 49).length === 1 && !ids.includes(77) ? 'PASS' : 'FAIL',
       JSON.stringify({ saw, landed, stillUp, torch, gravAt, ids }));
     await page.evaluate(() => { const bv = (window as any).__bv; for (const [x, y, z] of [[12, 50, 4], [12, 46, 5], [14, 46, 9], [14, 50, 8], [12, 48, 7], [14, 48, 11]]) bv.world.setBlock(x, y, z, 0); });
   }

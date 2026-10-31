@@ -114,7 +114,8 @@ async function runGame(
   const inv = new Inventory();
   const drops = new DropSystem();
   const falling = new FallingBlocks(); // it21: sand/gravel fall as moving blocks
-  const fallPop = (gx: number, gy: number, gz: number, gid: number) => { const gd = dropForBlock(gid, null); if (gd) drops.spawn(gx, gy, gz, gd); };
+  // MC: a falling block that can't land drops itself (gravel never turns into flint here)
+  const fallPop = (gx: number, gy: number, gz: number, gid: number) => { drops.spawn(gx, gy, gz, { id: gid, count: 1 }); };
   let orphanAcc = 0;
   const containers = new ContainerStore();
   const sound = new SoundBus();

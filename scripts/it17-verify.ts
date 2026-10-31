@@ -471,7 +471,7 @@ async function main() {
         await aim(page, 17.5, 46.05, z + 0.5, 19.0, 46.5, z + 0.5);
         await sleep(60);
         await hold(page, 250);
-        await sleep(120);
+        await sleep(550); // it21: the gravel above falls as a visible entity (~0.35 s per block) before it lands
         if ((await gb(19, 46, z)) !== 49 || k >= 0) dug++;
       }
     }

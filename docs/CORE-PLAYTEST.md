@@ -196,6 +196,15 @@ Last run: 2026-10-31 02:26–02:35 CET · it18 core (56 PASS / 0 FAIL) + scripts
 | R6 | Torch model | A torch is a thin stick with a flame (one torch from every angle) | PASS | BL1 screenshot + vitest (was: see-through cube with the torch picture on each face, looked like two torches) |
 | R5 | Light across chunk borders | A torch a few blocks from a chunk border lights the ground on the other side (also diagonal chunks); removing it leaves no ghost light | PASS | BL1 + vitest (was: block light stopped at the chunk border) |
 
+## S. Falling blocks, ladders, rain under roofs, mob hazard avoidance, double tall grass (it21, `scripts/it21-verify.ts`, real input)
+| # | Check | Minecraft-expected | Status | Notes |
+|---|--------|-------------------|--------|-------|
+| S1 | Falling sand/gravel | Unsupported sand/gravel falls as a moving block you can see (≈16 b/s², MC drag), a column falls together and stacks in order; landing on a torch breaks it into an item | PASS | FB1 (LMB under a column), FB2 (RMB placed sand, gravel on a torch) + vitest (was: teleported to the ground instantly) |
+| S2 | Ladder | Ladder only hangs on the side of a solid block, flat against that wall; thin outline; clicking beside it hits the wall behind; climbing (W) still works | PASS | LD1 + vitest (was: see-through full cube, full-block outline, could be placed on top of the ground) |
+| S3 | Rain under roofs | No rain streaks below a roof/leaves — they stop on the top surface; in the open they reach the ground | PASS | RN1 (counts streak segments) + screenshot |
+| S4 | Mobs avoid fire/lava | Animals fenced in by fire and a zombie behind a lava moat never step into fire/lava (they turn away or stop) | PASS | MA1 (30 s) + control build without the fix: FAIL (mobs walked in and burned) |
+| S5 | Double tall grass | Bone meal (RMB) on tall grass grows 2-tall grass; one 2-tall outline; LMB on either half removes both, only the lower half drops seeds; also generated in plains | PASS | DG1 + vitest |
+
 ## Method rules
 1. **Real input:** synthesized keyboard/mouse via pointer lock. `__bv` may set up a scenario only — never perform the action under test.
 2. Log every bug and every deviation from Minecraft.

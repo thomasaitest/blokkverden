@@ -334,6 +334,7 @@ export class MobSystem {
       }
       const sitStop = m.kind === 'ulv' && m.tamed && m.sitting;
       const speed = sitStop ? 0 : def.speed * (m.fuse > 0 ? 0.35 : 1) * (feetWater(world, m.x, m.y, m.z) ? 0.4 : 1)
+        * (world.getBlock(Math.floor(m.x), Math.floor(m.y + 0.1), Math.floor(m.z)) === BlockId.Lava ? 0.3 : 1) // it20 (MC): lava is thick
         * ((m.kind === 'ulv' && m.tamed && distP > 8) ? 1.35 : 1);
       if (m.knockBack && m.knockBack > 0) {
         // Preserve hurt impulse; damp so it settles.

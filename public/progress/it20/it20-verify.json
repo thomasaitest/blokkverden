@@ -1,0 +1,11 @@
+{
+  "when": "2026-10-31T03:03:03.421Z",
+  "results": [
+    {
+      "id": "MF1-pig-burns-cooked-meat",
+      "status": "PASS",
+      "notes": "{\"lit\":83,\"hp0\":9,\"burningSeen\":true,\"dead\":true,\"diedAfter\":4.2,\"ids\":[72]}"
+    }
+  ],
+  "bugs": []
+}

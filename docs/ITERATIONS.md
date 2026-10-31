@@ -32,7 +32,7 @@ Baseline først (core 56/56 med ekte tastatur/mus i Chromium), deretter åpne pu
 - Mobber går fortsatt rett inn i ild og lava (de unngår dem ikke når de finner vei)
 - Merkeboksen rundt stige og fakkel er fortsatt en hel blokk
 - Sand og grus faller fortsatt umiddelbart, og det finnes ikke dobbelt høyt gress
-- I BL1-skjermbildet står det noe som ligner en fakkel nr. 2 like ved den plasserte fakkelen (trolig en fakkel som ligger som ting; ikke reprodusert hver gang). Bør undersøkes
+- Fakler tegnes som en gjennomsiktig hel kube med fakkel-teksturen på hver side. Sett ovenfra/skrått ser det derfor ut som to fakler (for- og baksida), se it20-10. I MC er fakkelen en tynn pinne. Bør fikses neste runde (mesher + test)
 - Parallellkjøring av flere Chrome-tester gir tidsfeil (FS3, L1, D1, X11). Sluttkjøringene gjøres derfor én og én
 
 ### Media

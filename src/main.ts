@@ -140,6 +140,7 @@ async function runGame(
     }
   };
   const onVacated = (x: number, y: number, z: number) => popUnsupported(x, y, z);
+  const isRaining = () => (weather.kind === 'rain' || weather.kind === 'thunder') && weather.intensity > 0 && world.dimension !== 'helvete';
   const containers = new ContainerStore();
   const sound = new SoundBus();
   sound.setVolume(settings.volume);
@@ -329,6 +330,7 @@ async function runGame(
   };
   // MC explosions: containers spill, chunks remesh, smoke puff
   mobs.takeContainer = (x, y, z) => { const c = containers.contentsAt(x, y, z); containers.removeAt(x, y, z); return c; };
+  mobs.rainingAt = (x, y, z) => isRaining() && openToSky(world, x, y, z);
   mobs.onBlast = (x, y, z, blocks) => {
     particles.burst(x, y, z, 0x555555, 40, 'break');
     // MC: sand over the crater falls; blasted trees shed their leaves
@@ -1217,7 +1219,9 @@ async function runGame(
       if (!dead) {
         const fx = Math.floor(player.x), fz = Math.floor(player.z);
         const inFire = world.getBlock(fx, Math.floor(player.y + 0.1), fz) === BlockId.Fire || world.getBlock(fx, Math.floor(player.y + 1.0), fz) === BlockId.Fire;
-        const bd = player.creative ? 0 : burnTick(burn, inFire, !!player.inLava, player.inWater, dt);
+        // it22 (MC): rain puts out a burning player standing under open sky (like water)
+        const rainOut = !inFire && !player.inLava && burn.burnTime > 0 && isRaining() && openToSky(world, fx, Math.floor(player.y + 1.0), fz);
+        const bd = player.creative ? 0 : burnTick(burn, inFire, !!player.inLava, player.inWater || rainOut, dt);
         if (player.creative) burn.burnTime = 0;
         if (bd > 0) hurtPlayer(bd, 0, 0, false);
         updateFireOverlay(burn.burnTime > 0 || inFire || !!player.inLava);
@@ -1682,11 +1686,17 @@ async function runGame(
     fireAdoptAcc += dt;
     if (fireAdoptAcc > 2) { fireAdoptAcc = 0; fire.adoptAround(world, player.x, player.y, player.z); } // e.g. fire saved in a world
     // it20 (MC): rain puts out fire under open sky; lava sets fire to flammable blocks nearby
-    const raining = (weather.kind === 'rain' || weather.kind === 'thunder') && weather.intensity > 0 && world.dimension !== 'helvete';
+    const raining = isRaining();
     const rainedOn = raining ? (x: number, y: number, z: number) => openToSky(world, x, y, z) : undefined;
     for (const fc of fire.update(dt, world, Math.random, rainedOn)) {
       particles.burst(fc.x + 0.5, fc.y + 0.5, fc.z + 0.5, fc.rained ? 0xcccccc : fc.burnt != null ? 0x333333 : 0xff9a30, fc.rained ? 6 : 4, 'break');
       if (fc.rained) sound.fizz();
+      // it22 (MC): a burnt block lets go of what it held: sand above falls, torches/ladders pop, leaves start to decay
+      if (fc.burnt != null) {
+        if (fc.burnt === BlockId.Log || fc.burnt === BlockId.Leaves) leafDecay.onRemoved(world, fc.x, fc.y, fc.z);
+        falling.updateAround(world, fc.x, fc.y, fc.z, onVacated);
+        popUnsupported(fc.x, fc.y, fc.z);
+      }
       markMesh();
     }
     lavaAcc += dt;

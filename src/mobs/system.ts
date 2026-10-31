@@ -101,6 +101,8 @@ export class MobSystem {
   takeContainer?: (x: number, y: number, z: number) => ItemStack[];
   /** Called after an explosion changed blocks (remesh, particles). */
   onBlast?: (x: number, y: number, z: number, blocks: Blasted[]) => void;
+  /** it22 (MC): true when rain falls on (x,y,z) — rain puts out burning mobs. */
+  rainingAt?: (x: number, y: number, z: number) => boolean;
 
   clear(): void { this.mobs = []; }
 
@@ -273,7 +275,8 @@ export class MobSystem {
         const feet = world.getBlock(bx, Math.floor(m.y + 0.1), bz), mid = world.getBlock(bx, Math.floor(m.y + m.height * 0.6), bz);
         const inFire = feet === BlockId.Fire || mid === BlockId.Fire;
         const inLava = feet === BlockId.Lava || mid === BlockId.Lava;
-        const inWater = feet === BlockId.Water || mid === BlockId.Water;
+        const inWater = feet === BlockId.Water || mid === BlockId.Water
+          || (!inFire && !inLava && !!m.burn && m.burn.burnTime > 0 && !!this.rainingAt?.(bx, Math.floor(m.y + m.height * 0.6), bz));
         if (inFire || inLava || (m.burn && m.burn.burnTime > 0)) {
           m.burn ??= createBurnState();
           const dmg = burnTick(m.burn, inFire, inLava, inWater, dt);

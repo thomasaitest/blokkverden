@@ -443,6 +443,71 @@ async function main() {
     await page.evaluate(() => { const bv = (window as any).__bv; for (let x = 0; x <= 10; x++) for (let z = 0; z <= 10; z++) for (let y = 46; y <= 48; y++) bv.world.setBlock(x, y, z, 0); });
   }
 
+  // RB1 — rain puts out burning: player burning under a roof keeps burning; walks out (real W) into the rain → out. Same for pigs.
+  if (run('RB1')) {
+    await heal();
+    await page.evaluate(() => {
+      const bv = (window as any).__bv;
+      for (let x = 1; x <= 9; x++) for (let z = 12; z <= 20; z++) bv.world.setBlock(x, 50, z, 3); // roof
+      bv.forceRemeshAround?.();
+      bv.mobs.clear();
+      bv.mobs.spawn('gris', 5.5, 46.02, 17.5); bv.mobs.spawn('gris', 14.5, 46.02, 17.5);
+      for (const m of bv.mobs.mobs) { m.burn = { burnTime: 8, hotAcc: 0, burnAcc: 0 }; m.burning = true; m.hp = 100; }
+      bv.setWeather('rain', 1);
+    });
+    await setHeld(page, 0);
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.teleport(5.5, 46.05, 14.5); bv.look(0, 0); bv.burn.burnTime = 8; bv.player.health = 20; });
+    await sleep(1500);
+    const under = await page.evaluate(() => (window as any).__bv.burn.burnTime);
+    const pigs1 = await page.evaluate(() => (window as any).__bv.mobInfo().map((m: any) => +m.burnTime.toFixed(1)));
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.lookAt(5.5, 46.8, 4.5); });
+    await shot(page, 'it22-07-brenner-under-tak.png');
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.look(0, 0); bv.burn.burnTime = Math.max(bv.burn.burnTime, 6); });
+    await walk(page, 'KeyW', 1100);
+    await sleep(400);
+    const out = await page.evaluate(() => { const bv = (window as any).__bv; return { bt: bv.burn.burnTime, z: bv.player.z }; });
+    const pigs2 = await page.evaluate(() => (window as any).__bv.mobInfo().map((m: any) => ({ x: +m.x.toFixed(1), z: +m.z.toFixed(1), bt: +m.burnTime.toFixed(1) })));
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.lookAt(5.5, 47, 17.5); });
+    await sleep(300);
+    await shot(page, 'it22-08-regn-slukker.png');
+    console.log('RB1 at shot', JSON.stringify(await page.evaluate(() => (window as any).__bv.mobInfo())));
+    const roofPig = pigs2.find((p: any) => p.x > 1 && p.x < 10 && p.z > 12 && p.z < 21);
+    const skyPig = pigs2.find((p: any) => p.x > 11);
+    record('RB1-rain-puts-out-burning', under > 5 && out.z < 11.5 && out.bt === 0 && pigs1[1] === 0 && !!roofPig && roofPig.bt > 3 && !!skyPig && skyPig.bt === 0 ? 'PASS' : 'FAIL',
+      JSON.stringify({ under, out, pigs1, pigs2 }));
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.mobs.clear(); bv.setWeather('clear', 0); bv.burn.burnTime = 0; for (let x = 1; x <= 9; x++) for (let z = 12; z <= 20; z++) bv.world.setBlock(x, 50, z, 0); });
+    await sleep(300);
+  }
+
+  // FB3 — fire (real flint and steel RMB) burns a plank that holds sand with a torch on top → the sand falls, the torch pops
+  if (run('FB3')) {
+    await heal(); await clearDrops();
+    await page.evaluate(() => {
+      const bv = (window as any).__bv;
+      for (const [x, y, z] of [[16, 46, 16], [16, 47, 16], [16, 48, 16]]) bv.world.setBlock(x, y, z, 0);
+      bv.world.setBlock(16, 46, 16, 6); bv.world.setBlock(16, 47, 16, 8); bv.world.setBlock(16, 48, 16, 12);
+      bv.forceRemeshAround?.();
+    });
+    await setHeld(page, 82);
+    let burnt = false, tries = 0;
+    for (; tries < 4 && !burnt; tries++) {
+      await aim(page, 18.6, 46.05, 16.5, 17.5, 45.9, 16.5); // grass top right next to the plank
+      await sleep(250);
+      await hold(page, 80, 'right');
+      for (let i = 0; i < 40; i++) { await sleep(250); if ((await gb(16, 46, 16)) !== 6) { burnt = true; break; } }
+    }
+    let saw = false;
+    for (let i = 0; i < 40; i++) { const n = await page.evaluate(() => (window as any).__bv.falling().length); if (n) saw = true; else if (saw) break; await sleep(30); }
+    await sleep(500);
+    const col = [await gb(16, 46, 16), await gb(16, 47, 16), await gb(16, 48, 16)];
+    const ids = await dropIds();
+    await aim(page, 19.5, 47.2, 19.5, 16.5, 46.5, 16.5);
+    await sleep(300);
+    await shot(page, 'it22-09-brent-planke-sand.png');
+    record('FB3-burnt-support-drops-sand-pops-torch', burnt && col[0] === 8 && col[1] === 0 && col[2] === 0 && ids.includes(12) ? 'PASS' : 'FAIL', JSON.stringify({ burnt, tries, saw, col, ids }));
+    await page.evaluate(() => { const bv = (window as any).__bv; for (let x = 14; x <= 19; x++) for (let z = 14; z <= 19; z++) for (let y = 46; y <= 49; y++) bv.world.setBlock(x, y, z, 0); });
+  }
+
   const sum = { PASS: 0, FAIL: 0, PARTIAL: 0, UNTESTED: 0 } as Record<Status, number>;
   for (const r of results) sum[r.status]++;
   console.log('\n=== SUMMARY ===', sum);

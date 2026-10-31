@@ -69,7 +69,7 @@ export function burnsInSun(world: World, m: { x: number; y: number; z: number; h
   if (world.getBlock(bx, Math.floor(m.y), bz) === BlockId.Water || world.getBlock(bx, head, bz) === BlockId.Water) return false;
   for (let y = head + 1; y < CHUNK_HEIGHT; y++) {
     const id = world.getBlock(bx, y, bz);
-    if (id !== BlockId.Air && id !== BlockId.Torch && id !== BlockId.TallGrass && id !== BlockId.Sapling) return false;
+    if (id !== BlockId.Air && id !== BlockId.Torch && id !== BlockId.TallGrass && id !== BlockId.Sapling && id !== BlockId.Dandelion && id !== BlockId.Poppy) return false;
   }
   return true;
 }

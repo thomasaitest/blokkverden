@@ -31,7 +31,7 @@ export const BlockId = {
   RedDust: 35, Lever: 36, Button: 37, Lamp: 38, PressurePlate: 39,
   Helstein: 40, Sjelegrus: 41, Portal: 42, PortalFrame: 43,
   Lava: 44, Glodstein: 45, Helkvarts: 46, Anvil: 47, Bedrock: 48,
-  Gravel: 49, Sapling: 76, TallGrass: 78,
+  Gravel: 49, Sapling: 76, TallGrass: 78, Dandelion: 79, Poppy: 80,
 } as const;
 
 export type BlockId = (typeof BlockId)[keyof typeof BlockId];
@@ -108,10 +108,17 @@ export const BLOCKS: Record<number, BlockDef> = {
   [49]: B(49, 'Grus', true, true, false, false, 0.6, { top: 73, bottom: 73, side: 73 }),
   [76]: B(76, 'Spire', false, false, true, false, 0.05, { top: 75, bottom: 75, side: 75 }),
   [78]: B(78, 'Høyt gress', false, false, true, false, 0.05, { top: 76, bottom: 76, side: 76 }),
+  // it18 (MC): blomster — kryss-planter på gress/jord
+  [79]: B(79, 'Løvetann', false, false, true, false, 0.05, { top: 78, bottom: 78, side: 78 }),
+  [80]: B(80, 'Valmue', false, false, true, false, 0.05, { top: 79, bottom: 79, side: 79 }),
 };
 
 /** Cross-shaped plants (MC "X" models): no collision, break instantly, pop when the ground goes. */
-export function isCrossPlant(id: number): boolean { return id === BlockId.Sapling || id === BlockId.TallGrass; }
+export function isCrossPlant(id: number): boolean {
+  return id === BlockId.Sapling || id === BlockId.TallGrass || id === BlockId.Dandelion || id === BlockId.Poppy;
+}
+/** MC flowers (dandelion, poppy): planted on grass/dirt/farmland. */
+export function isFlower(id: number): boolean { return id === BlockId.Dandelion || id === BlockId.Poppy; }
 /** MC "replaceable" blocks: placing a block into them overwrites them (tall grass). */
 export function isReplaceable(id: number): boolean { return id === BlockId.Air || id === BlockId.Water || id === BlockId.TallGrass; }
 

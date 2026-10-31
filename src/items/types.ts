@@ -17,7 +17,7 @@ export const ItemId = {
   DiamondHelmet: 128, DiamondChest: 129, DiamondLegs: 130, DiamondBoots: 131,
   Seeds: 63, Wheat: 64, Bread: 65, Boat: 66, FishingRod: 67, MapItem: 68, RawFish: 69, CookedFish: 70, Bone: 71, CookedMeat: 72, String: 73, Gunpowder: 74, RottenFlesh: 75,
   WoodHoe: 116, IronHoe: 117, EnchantTable: 24, Door: 26, Trapdoor: 27, Fence: 28, Gate: 29, Stairs: 30, Slab: 31, GlassPane: 32, Ladder: 33, Sign: 34, RedDust: 35, Lever: 36, Button: 37, Lamp: 38, PressurePlate: 39, Helstein: 40, Sjelegrus: 41, PortalFrame: 43,
-  Gravel: 49, Sapling: 76, Flint: 77,
+  Gravel: 49, Sapling: 76, Flint: 77, Dandelion: 79, Poppy: 80, BoneMeal: 81,
 } as const;
 
 export type ItemId = (typeof ItemId)[keyof typeof ItemId];
@@ -138,6 +138,9 @@ export const ITEMS: Record<number, ItemDef> = {
   [49]: blk(49, 'Grus', 73, 49),
   [76]: blk(76, 'Spire', 75, 76, { fuel: 50 }), // MC: ⅓ of planks' burn time
   [77]: { id: 77, name: 'Flint', stackable: true, maxStack: 64, iconTile: 74 },
+  [79]: blk(79, 'Løvetann', 78, 79),
+  [80]: blk(80, 'Valmue', 79, 80),
+  [81]: { id: 81, name: 'Beinmel', stackable: true, maxStack: 64, iconTile: 77 },
 };
 
 export function blockMaterial(blockId: number): BlockMaterial {
@@ -145,7 +148,7 @@ export function blockMaterial(blockId: number): BlockMaterial {
     case 1: case 2: case 8: case 19: case 22: case 49: return 'ground';
     case 5: case 6: case 11: case 13: case 20: case 21: return 'wood';
     case 3: case 4: case 14: case 15: case 16: case 17: case 18: case 46: case 47: return 'stone';
-    case 7: case 76: case 78: return 'plant';
+    case 7: case 76: case 78: case 79: case 80: return 'plant';
     case 9: case 12: return 'glass';
     default: return 'other';
   }

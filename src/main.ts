@@ -1,6 +1,6 @@
 import './style.css';
-import { BlockId, isSolid, BLOCKS, isReplaceable } from './blocks/types';
-import { createAtlasCanvas, tileUV, ATLAS_W, ATLAS_H } from './blocks/textures';
+import { BlockId, isSolid, BLOCKS, isReplaceable, isFlower } from './blocks/types';
+import { createAtlasCanvas, tileUV, ATLAS_W, ATLAS_H, averageTileColor } from './blocks/textures';
 import { Inventory } from './items/inventory';
 import { updateGravityAround, needsSupportBelow } from './world/gravity';
 import { canPlantSapling, growOak, SAPLING_GROW_CHANCE, SAPLING_MIN_LIGHT } from './world/saplings';
@@ -20,6 +20,7 @@ import { ContainerStore } from './world/containers';
 import { World, setViewRadius, VIEW_RADIUS } from './world/world';
 import { CHUNK_HEIGHT, CHUNK_SIZE } from './world/chunk';
 import { tickWater } from './world/water';
+import { applyBoneMeal, boneMealTarget } from './world/bonemeal';
 import { SoundBus } from './audio/sound';
 import { MobSystem } from './mobs/system';
 import { XpSystem } from './world/xp';
@@ -231,6 +232,24 @@ async function runGame(
     inBlockOverlay.style.backgroundImage = `url(${url})`;
     inBlockOverlay.style.display = 'block';
   };
+  // MC: break particles take the colour of the broken block's texture (was always brown)
+  const particleColors = new Map<number, number>();
+  let particleAtlasData: Uint8ClampedArray | null = null;
+  const blockParticleColor = (id: number): number => {
+    let c = particleColors.get(id);
+    if (c === undefined) {
+      try {
+        if (!particleAtlasData) {
+          const a = renderer.getAtlas();
+          particleAtlasData = a.getContext('2d')!.getImageData(0, 0, a.width, a.height).data;
+        }
+        c = averageTileColor(particleAtlasData, ATLAS_W, BLOCKS[id]?.tiles.side ?? 0);
+      } catch { c = 0x8b6914; }
+      particleColors.set(id, c);
+    }
+    return c;
+  };
+  (window as unknown as { __bvParticleColor?: (id: number) => number }).__bvParticleColor = blockParticleColor;
   const markMesh = () => { meshesDirty = true; renderer.markChunksDirty(); };
   let saplingChance = SAPLING_GROW_CHANCE;
   /** Scan chunks near the player for saplings; each grows with saplingChance per tick. */
@@ -1196,7 +1215,15 @@ async function runGame(
 
     world.updateAround(player.x, player.z);
     waterAcc += dt;
-    if (waterAcc > 0.8) { waterAcc = 0; tickWater(world, 20); }
+    if (waterAcc > 0.8) {
+      waterAcc = 0;
+      // MC: flowing water washes away torches, red dust and plants as items
+      tickWater(world, 20, (wx, wy, wz, wid) => {
+        if (wid === BlockId.Crop) harvestCrop(world, wx, wy, wz, drops);
+        else { const wd = dropForBlock(wid, null); if (wd) drops.spawn(wx, wy, wz, wd); }
+        markMesh();
+      });
+    }
     cropAcc += dt;
     if (cropAcc > 1.2) {
       cropAcc = 0;
@@ -1358,7 +1385,7 @@ async function runGame(
             }
             if (!player.creative) inv.setHeld(damageTool(inv.held()));
             sound.breakBlock();
-            particles.burst(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5, 0x8b6914, 14, 'break');
+            particles.burst(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5, blockParticleColor(id), 14, 'break');
             achieve.grant('first_block');
             markMesh();
             hud.markDirty();
@@ -1423,7 +1450,14 @@ async function runGame(
         if (api.enchantHeld()) sound.placeBlock();
       } else {
         const held = inv.held();
-        if (held && ITEMS[held.id]?.tool === 'hoe') {
+        if (held && held.id === ItemId.BoneMeal && boneMealTarget(world, hit.x, hit.y, hit.z)) {
+          // MC bone meal: grows crops 2–5 stages, saplings 45 %, grass block → tall grass/flowers around
+          if (applyBoneMeal(world, hit.x, hit.y, hit.z, Math.random, CHUNK_HEIGHT - 1)) {
+            if (!player.creative) { held.count -= 1; if (held.count <= 0) inv.setHeld(null); }
+            particles.burst(hit.x + 0.5, hit.y + 1.1, hit.z + 0.5, 0x55dd44, 10, 'sprint');
+            sound.placeBlock(); markMesh(); hud.markDirty();
+          }
+        } else if (held && ITEMS[held.id]?.tool === 'hoe') {
           if (hoeDirt(world, hit.x, hit.y, hit.z)) {
             inv.setHeld(damageTool(held)); sound.placeBlock(); markMesh(); hud.markDirty();
           }
@@ -1508,7 +1542,7 @@ async function runGame(
               );
               // MC: plants / torches need a supporting block; saplings only on grass/dirt/farmland
               const below = world.getBlock(px, py - 1, pz);
-              const supportOk = placeId === BlockId.Sapling ? canPlantSapling(below)
+              const supportOk = placeId === BlockId.Sapling || isFlower(placeId ?? 0) ? canPlantSapling(below)
                 : placeId === BlockId.TallGrass ? below === BlockId.Grass
                 : true;
               if (placeId != null && isReplaceable(dest) && !intersectsPlayer && supportOk) {
@@ -1533,7 +1567,7 @@ async function runGame(
     for (const lp of leafDecay.update(dt, world)) {
       const ld = dropForBlock(BlockId.Leaves, null);
       if (ld) drops.spawn(lp.x, lp.y, lp.z, ld);
-      particles.burst(lp.x + 0.5, lp.y + 0.5, lp.z + 0.5, 0x3f7f2f, 6, 'break');
+      particles.burst(lp.x + 0.5, lp.y + 0.5, lp.z + 0.5, blockParticleColor(BlockId.Leaves), 6, 'break');
       markMesh();
     }
 

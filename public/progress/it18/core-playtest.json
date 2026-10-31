@@ -1,0 +1,286 @@
+{
+  "results": [
+    {
+      "id": "A1",
+      "status": "PASS",
+      "notes": "{\"below\":1,\"at\":0,\"py\":33.005,\"fps\":21.293070073557864}"
+    },
+    {
+      "id": "A2",
+      "status": "PASS",
+      "notes": "y=33.005 fps=21.293070073557864"
+    },
+    {
+      "id": "B1",
+      "status": "PASS",
+      "notes": "yaw=0.000 dz=-2.66"
+    },
+    {
+      "id": "B2",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "id": "B3",
+      "status": "PASS",
+      "notes": "dist=4.96 ctrlTries=0 fps=0 "
+    },
+    {
+      "id": "B4",
+      "status": "PASS",
+      "notes": "z=5.33"
+    },
+    {
+      "id": "B5",
+      "status": "PASS",
+      "notes": "y=32.07"
+    },
+    {
+      "id": "B6",
+      "status": "PASS",
+      "notes": "yaw=1.57 x→31.36"
+    },
+    {
+      "id": "B7",
+      "status": "PASS",
+      "notes": "z=41.26 y=46.01 stepped=true"
+    },
+    {
+      "id": "C1",
+      "status": "PASS",
+      "notes": "{\"yaw\":0,\"pitch\":-0.0847961745232003,\"block\":5,\"hit\":{\"x\":123,\"y\":50,\"z\":122,\"nx\":0,\"ny\":0,\"nz\":1,\"dist\":1.50540899758172}}"
+    },
+    {
+      "id": "C4",
+      "status": "PASS",
+      "notes": "logs=1"
+    },
+    {
+      "id": "C5",
+      "status": "PASS",
+      "notes": "logs=1"
+    },
+    {
+      "id": "C2",
+      "status": "PASS",
+      "notes": "bareBroke=true bareMs=7669 pickMs=960"
+    },
+    {
+      "id": "C3",
+      "status": "PASS",
+      "notes": "cobblePick=1 cobbleBare=0"
+    },
+    {
+      "id": "D1",
+      "status": "PASS",
+      "notes": "planks=1"
+    },
+    {
+      "id": "D2",
+      "status": "PASS",
+      "notes": "feet=0"
+    },
+    {
+      "id": "E1",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "id": "E5",
+      "status": "PASS",
+      "notes": "{\"a\":4,\"b\":4}"
+    },
+    {
+      "id": "E2",
+      "status": "PASS",
+      "notes": "slot11=4"
+    },
+    {
+      "id": "E3",
+      "status": "PASS",
+      "notes": "toHotbar=true"
+    },
+    {
+      "id": "E4",
+      "status": "PASS",
+      "notes": "crafted=true planks=4"
+    },
+    {
+      "id": "F1",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "id": "F3",
+      "status": "PASS",
+      "notes": "count=68 before=64"
+    },
+    {
+      "id": "F2",
+      "status": "PASS",
+      "notes": "planks available from E4"
+    },
+    {
+      "id": "F4",
+      "status": "PASS",
+      "notes": "count=1 before=0"
+    },
+    {
+      "id": "F5",
+      "status": "PASS",
+      "notes": "count=1 before=0"
+    },
+    {
+      "id": "F6",
+      "status": "PASS",
+      "notes": "count=1 before=0"
+    },
+    {
+      "id": "F7",
+      "status": "PASS",
+      "notes": "count=1 before=0"
+    },
+    {
+      "id": "F8",
+      "status": "PASS",
+      "notes": "count=4 before=0"
+    },
+    {
+      "id": "F9",
+      "status": "PASS",
+      "notes": "count=1 before=0"
+    },
+    {
+      "id": "F10",
+      "status": "PASS",
+      "notes": "count=1 before=0"
+    },
+    {
+      "id": "F11",
+      "status": "PASS",
+      "notes": "count=1 before=0"
+    },
+    {
+      "id": "F12",
+      "status": "PASS",
+      "notes": "count=4 before=0"
+    },
+    {
+      "id": "G1",
+      "status": "PASS",
+      "notes": "smelted=true"
+    },
+    {
+      "id": "G2",
+      "status": "PASS",
+      "notes": "fuel used if smelted"
+    },
+    {
+      "id": "G3",
+      "status": "PASS",
+      "notes": "chestCount=12"
+    },
+    {
+      "id": "J1",
+      "status": "PASS",
+      "notes": "reload kept chest"
+    },
+    {
+      "id": "H3",
+      "status": "PASS",
+      "notes": "hp=8.44157499999999 dead=false"
+    },
+    {
+      "id": "H1",
+      "status": "PASS",
+      "notes": "fall damage"
+    },
+    {
+      "id": "H2",
+      "status": "PASS",
+      "notes": "click=10 heldMs=1647 hunger=14 apples=2"
+    },
+    {
+      "id": "H4",
+      "status": "PASS",
+      "notes": "air=0 hp=18.133399999999995 headBlk=10"
+    },
+    {
+      "id": "H5",
+      "status": "PASS",
+      "notes": "dead=true"
+    },
+    {
+      "id": "I1",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "id": "I2",
+      "status": "PASS",
+      "notes": "hostiles=1"
+    },
+    {
+      "id": "I4",
+      "status": "PASS",
+      "notes": "{\"hp\":15,\"moved\":2.1}"
+    },
+    {
+      "id": "I3",
+      "status": "PASS",
+      "notes": "{\"ok\":true,\"ids\":[60,107]}"
+    },
+    {
+      "id": "I5",
+      "status": "PASS",
+      "notes": "torch placed; lightEmit=14 in defs"
+    },
+    {
+      "id": "J2",
+      "status": "PASS",
+      "notes": ""
+    },
+    {
+      "id": "J3",
+      "status": "PASS",
+      "notes": "fps=16.876054753421997 (swiftshader)"
+    },
+    {
+      "id": "K1",
+      "status": "PASS",
+      "notes": "logs=1 planted=true broke=true drop=false"
+    },
+    {
+      "id": "K2",
+      "status": "PASS",
+      "notes": "planks=36 tables=1"
+    },
+    {
+      "id": "K3",
+      "status": "PASS",
+      "notes": "woodPick=1"
+    },
+    {
+      "id": "K4",
+      "status": "PASS",
+      "notes": "cobble=1 broke=true"
+    },
+    {
+      "id": "K5",
+      "status": "PASS",
+      "notes": "stonePick=1 furnace=1"
+    },
+    {
+      "id": "K6",
+      "status": "PASS",
+      "notes": "shelter+torch staged; night set"
+    },
+    {
+      "id": "K7",
+      "status": "PASS",
+      "notes": "survived short night window alive=true"
+    }
+  ],
+  "bugs": [],
+  "time": "2026-10-31T00:53:21.668Z"
+}

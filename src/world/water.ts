@@ -2,8 +2,14 @@ import { BlockId } from '../blocks/types';
 import { CHUNK_HEIGHT, CHUNK_SIZE, chunkKey } from './chunk';
 import type { World } from './world';
 
-/** Tick flowing water with a budget. */
-export function tickWater(world: World, budget = 80): number {
+/** MC: flowing water breaks these and pops them as items (torch, red dust, plants). */
+export function isWashable(id: number): boolean {
+  return id === BlockId.Torch || id === BlockId.RedDust || id === BlockId.Crop
+    || id === BlockId.Sapling || id === BlockId.TallGrass || id === BlockId.Dandelion || id === BlockId.Poppy;
+}
+
+/** Tick flowing water with a budget. onWash is called for each washable block water flows into (before it is replaced). */
+export function tickWater(world: World, budget = 80, onWash?: (x: number, y: number, z: number, id: number) => void): number {
   let n = 0;
   const updates: { x: number; y: number; z: number; level: number }[] = [];
 
@@ -22,7 +28,7 @@ export function tickWater(world: World, budget = 80): number {
           // Fall down
           if (y > 0) {
             const below = world.getBlock(wx, y - 1, wz);
-            if (below === BlockId.Air) {
+            if (below === BlockId.Air || isWashable(below)) {
               updates.push({ x: wx, y: y - 1, z: wz, level: 7 });
               n++;
               continue;
@@ -42,7 +48,7 @@ export function tickWater(world: World, budget = 80): number {
             const nx = wx + dx;
             const nz = wz + dz;
             const nb = world.getBlock(nx, y, nz);
-            if (nb === BlockId.Air) {
+            if (nb === BlockId.Air || isWashable(nb)) {
               updates.push({ x: nx, y, z: nz, level: level - 1 });
               n++;
             } else if (nb === BlockId.Water) {
@@ -59,6 +65,11 @@ export function tickWater(world: World, budget = 80): number {
   }
 
   for (const u of updates) {
+    const cur = world.getBlock(u.x, u.y, u.z);
+    if (isWashable(cur)) {
+      onWash?.(u.x, u.y, u.z, cur);
+      if (world.getBlock(u.x, u.y, u.z) !== BlockId.Air) world.setBlock(u.x, u.y, u.z, BlockId.Air);
+    }
     world.setWater(u.x, u.y, u.z, u.level);
   }
   return updates.length;

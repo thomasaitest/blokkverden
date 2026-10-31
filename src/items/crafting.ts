@@ -24,6 +24,8 @@ export const RECIPES: Recipe[] = [
   // bow
   { w: 3, h: 3, pattern: [0, ItemId.Stick, ItemId.String, ItemId.Stick, 0, ItemId.String, 0, ItemId.Stick, ItemId.String], result: stack(ItemId.Bow, 1, 200) },
   { w: 2, h: 2, pattern: [ItemId.String, ItemId.String, ItemId.String, ItemId.String], result: stack(ItemId.WoolItem, 1) },
+  // MC: 1 bone → 3 bone meal
+  { w: 1, h: 1, pattern: [ItemId.Bone], result: stack(ItemId.BoneMeal, 3) },
   // arrow
   { w: 1, h: 3, pattern: [ItemId.Flint, ItemId.Stick, ItemId.Feather], result: stack(ItemId.Arrow, 4) },
   // iron tools

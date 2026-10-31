@@ -8,7 +8,8 @@ export function canPlantSapling(ground: number): boolean {
 
 /** Blocks a growing tree may overwrite (MC: air, leaves, plants). */
 function treeReplaceable(id: number): boolean {
-  return id === BlockId.Air || id === BlockId.Leaves || id === BlockId.TallGrass || id === BlockId.Sapling;
+  return id === BlockId.Air || id === BlockId.Leaves || id === BlockId.TallGrass || id === BlockId.Sapling
+    || id === BlockId.Dandelion || id === BlockId.Poppy;
 }
 
 /**

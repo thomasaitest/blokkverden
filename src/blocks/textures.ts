@@ -384,6 +384,34 @@ export function createAtlasCanvas(): HTMLCanvasElement {
     return [0, 0, 0, 0];
   });
 
+  // 77 bone meal (beinmel) item — small pile of white powder
+  fillTile(d, 77, (lx, ly, rnd) => {
+    const dx = lx - 7.5, dy = ly - 10;
+    if (dx * dx * 0.6 + dy * dy * 1.6 < 22 && ly > 5) { const v = 225 + (rnd * 30 | 0); return [v, v, v - 8, 255]; }
+    if (rnd > 0.93 && ly > 3 && ly < 14 && lx > 2 && lx < 13) return [240, 240, 232, 255];
+    return [0, 0, 0, 0];
+  });
+  // 78 dandelion (løvetann) / 79 poppy (valmue): green stem + leaves, flower head
+  const flower = (tile: number, head: (lx: number, ly: number, rnd: number) => [number, number, number, number] | null) =>
+    fillTile(d, tile, (lx, ly, rnd) => {
+      const h = head(lx, ly, rnd);
+      if (h) return h;
+      if (ly >= 7 && (lx === 7 || lx === 8)) return [50, 120 + (rnd * 30 | 0), 35, 255];
+      if ((ly === 11 && lx >= 4 && lx <= 6) || (ly === 12 && lx >= 9 && lx <= 11) || (ly === 10 && lx === 5) || (ly === 11 && lx === 10)) return [60, 140, 40, 255];
+      return [0, 0, 0, 0];
+    });
+  flower(78, (lx, ly, rnd) => {
+    const dx = lx - 7.5, dy = ly - 4.5;
+    if (dx * dx + dy * dy < 7.5) return [245, 205 + (rnd * 40 | 0), 30, 255];
+    return null;
+  });
+  flower(79, (lx, ly, rnd) => {
+    const dx = lx - 7.5, dy = ly - 4.5, r2 = dx * dx + dy * dy;
+    if (r2 < 1.6) return [30, 25, 20, 255];
+    if (r2 < 9) return [210 + (rnd * 40 | 0), 30, 30, 255];
+    return null;
+  });
+
   ctx.putImageData(img, 0, 0);
   return canvas;
 }
@@ -394,4 +422,20 @@ export function tileUV(tile: number): { u0: number; v0: number; u1: number; v1: 
   const u0 = col / COLS;
   const v0 = row / ROWS;
   return { u0, v0, u1: u0 + 1 / COLS, v1: v0 + 1 / ROWS };
+}
+
+/** Average colour (0xRRGGBB) of the visible pixels of one atlas tile — MC break particles use the block's texture. */
+export function averageTileColor(data: ArrayLike<number>, atlasW: number, tile: number): number {
+  const tx = (tile % COLS) * TILE;
+  const ty = Math.floor(tile / COLS) * TILE;
+  let r = 0, g = 0, b = 0, n = 0;
+  for (let ly = 0; ly < TILE; ly++) {
+    for (let lx = 0; lx < TILE; lx++) {
+      const i = ((ty + ly) * atlasW + tx + lx) * 4;
+      if ((data[i + 3] ?? 0) < 128) continue;
+      r += data[i]; g += data[i + 1]; b += data[i + 2]; n++;
+    }
+  }
+  if (!n) return 0x808080;
+  return (Math.round(r / n) << 16) | (Math.round(g / n) << 8) | Math.round(b / n);
 }

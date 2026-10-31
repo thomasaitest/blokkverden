@@ -114,6 +114,9 @@ export function placeTreesForChunk(chunk: Chunk, noise: SeededNoise, setAbs: Set
         const gd = biome === 'snow' ? 0 : biome === 'forest' ? 0.08 : 0.14;
         if (g < gd && chunk.get(lx, surface, lz) === BlockId.Grass && surface + 1 < CHUNK_HEIGHT && chunk.get(lx, surface + 1, lz) === BlockId.Air) {
           chunk.set(lx, surface + 1, lz, BlockId.TallGrass);
+        } else if (biome !== 'snow' && g > 0.985 && chunk.get(lx, surface, lz) === BlockId.Grass && surface + 1 < CHUNK_HEIGHT && chunk.get(lx, surface + 1, lz) === BlockId.Air) {
+          // MC: scattered dandelions and poppies on grass (plains/forest)
+          chunk.set(lx, surface + 1, lz, noise.hash2(wx - 31, wz + 59) < 0.5 ? BlockId.Dandelion : BlockId.Poppy);
         }
         continue;
       }

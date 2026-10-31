@@ -4,7 +4,7 @@ Acceptance checklist for a **playable** Minecraft-like survival base.
 Expected behaviour = Java/Bedrock survival unless noted.
 **Status legend:** PASS | FAIL | PARTIAL | UNTESTED
 
-Last run: 2026-10-31 02:08–02:13 CET · it18 core (56 PASS / 0 FAIL) + scripts/it18-verify.ts + scripts/it18-explore.ts (section P)
+Last run: 2026-10-31 02:26–02:35 CET · it18 core (56 PASS / 0 FAIL) + scripts/it18-verify.ts + scripts/it18-explore.ts (section P)
 
 ## A. World & spawn
 | # | Check | Minecraft-expected | Status | Notes |

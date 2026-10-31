@@ -4,7 +4,7 @@ Original voxel-sandkasse. Ingen Mojang-assets.
 
 ## Iterasjon 18 (2026-10-31)
 
-Start: lør. 31. okt. 01:50 CET · Slutt: lør. 31. okt. END CET (~MIN min) · gren `dev` (ikke publisert)
+Start: lør. 31. okt. 01:50 CET · Slutt: lør. 31. okt. 02:36 CET (~46 min) · gren `dev` (ikke publisert)
 
 ### Fokus
 Feiljakt med ekte tastatur/mus i Chromium (nytt `scripts/it18-explore.ts`: tårnhopp, sniking langs kant/brobygging, stiger, dører, vannlanding, Q-slipp, søvn, graving under vann). Så tre små MC-ting rundt planter: beinmel, blomster, vann som vasker bort planter. `__bv` bare til oppsett.

@@ -1,10 +1,10 @@
 {
-  "when": "2026-10-31T01:25:06.921Z",
+  "when": "2026-10-31T01:28:36.588Z",
   "results": [
     {
       "id": "FL1-flowers-generated",
       "status": "PASS",
-      "notes": "{\"best\":{\"x\":8,\"y\":31,\"z\":-1,\"d\":4.242640687119286,\"id\":79},\"n\":59,\"badGround\":0}"
+      "notes": "{\"best\":{\"x\":7,\"y\":32,\"z\":12,\"d\":4,\"id\":79},\"n\":39,\"badGround\":0}"
     },
     {
       "id": "BM0-craft-bonemeal",
@@ -14,17 +14,17 @@
     {
       "id": "BM1-bonemeal-crop",
       "status": "PASS",
-      "notes": "{\"s0\":0,\"s1\":5,\"left1\":9,\"s2\":7,\"left2\":8,\"left3\":8}"
+      "notes": "{\"s0\":0,\"s1\":2,\"left1\":9,\"s2\":7,\"left2\":7,\"left3\":7}"
     },
     {
       "id": "BM2-bonemeal-sapling",
       "status": "PASS",
-      "notes": "uses=1 grown=true left=19"
+      "notes": "uses=2 grown=true left=18"
     },
     {
       "id": "BM3-bonemeal-grass",
       "status": "PASS",
-      "notes": "before=0 after=21 left=4"
+      "notes": "before=0 after=17 left=4"
     },
     {
       "id": "FL2-place-break-flower",
@@ -34,7 +34,7 @@
     {
       "id": "W1-water-washes-plants",
       "status": "PASS",
-      "notes": "t=2s cells=10,10,10 drops=12,79"
+      "notes": "t=1s cells=10,10,10 drops=12,79"
     },
     {
       "id": "PC1-particle-colours",

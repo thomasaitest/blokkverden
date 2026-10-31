@@ -1,0 +1,19 @@
+{
+  "when": "2026-10-31T00:00:57.310Z",
+  "results": [
+    {
+      "id": "G1-gravel-falls",
+      "status": "PASS",
+      "notes": "col46..49=49,49,49,0"
+    },
+    {
+      "id": "G2-gravel-drops",
+      "status": "PASS",
+      "notes": "broken=30 gravel=28 flint=2 (10 % flint expected)"
+    }
+  ],
+  "bugs": [],
+  "marks": {
+    "G1": 8.655
+  }
+}

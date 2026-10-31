@@ -4,7 +4,7 @@ Original voxel-sandkasse. Ingen Mojang-assets.
 
 ## Iterasjon 23 (2026-10-31)
 
-Start: lør. 31. okt. 06:50 CET · Slutt: lør. 31. okt. __END__ CET (~__MIN__ min) · gren `dev` (ikke publisert)
+Start: lør. 31. okt. 06:50 CET · Slutt: lør. 31. okt. 07:13 CET (~23 min) · gren `dev` (ikke publisert)
 
 ### Fokus
 Baseline først (core 56/56 med ekte tastatur/mus i Chromium). Deretter det åpne punktet fra it22: it18-explore X3 (gå gjennom planter) var ustabil. Til slutt bøtter, som var et stort hull mot MC: vann og lava kunne ikke flyttes. `__bv` bare til oppsett.
@@ -19,14 +19,15 @@ Baseline først (core 56/56 med ekte tastatur/mus i Chromium). Deretter det åpn
 
 ### Playtest
 - Core: **56 PASS / 0 FAIL / 0 PARTIAL** på endelig bygg (`scripts/core-playtest.ts`), kjørt både som baseline og på endelig bygg. H2 trenger fortsatt ett nytt forsøk, som før
-- it23-verify: **5/5 PASS** (endelig bygg) (`scripts/it23-verify.ts`):
+- it23-verify: **6/6 PASS** (endelig bygg) (`scripts/it23-verify.ts`):
   - BK1: bøtte laget på arbeidsbenk (RMB på benken og UI-klikk)
   - BK2: henter vann fra en 1×1-dam, heller ut (25–41 ruter vann), henter kilden igjen, og alt vannet tørker opp (0 igjen)
   - BK3: henter lava, heller den i et hull, heller vann ved siden av, og lavaen blir obsidian
   - BK4: lavabøtte som brensel via ovns-UI (burnMax 20000, tom bøtte igjen)
   - BK5: vannbøtte på en brennende planke slukker ilden
+  - BK6: henter vann med 3 tomme bøtter i hånda: 2 igjen i hånda, vannbøtta havner i inventaret
 - BK3 feilet første gang fordi testen siktet på kanten av gresset i stedet for ned i hullet (feil i testen). Den gikk grønt etter at siktet ble flyttet
-- Regresjon, kjørt én og én på endelig bygg: __REG__
+- Regresjon, kjørt én og én på endelig bygg: it22-verify 8/8, it21-verify 6/6, it20-verify 7/7, it19-verify 8/8, it18-verify 8/8, it17-verify 13/13, it16-verify 6/6 og it18-explore 11/11
 - X3: 5 av 5 grønne med ny måling (4,32 b/s, spilltid 1,30–1,48 s for 1,5 s veggtid)
 - 172 vitest grønne (9 nye: bøtteoppskrift, henting av kilde/rennende vann/lava, helling og erstatning av planter/ild, Helvete, svømming i hellet vann, lavabøtte i ovn, vann som tørker opp, stabil kilde, vann + lava → obsidian)
 - Ny seksjon U i CORE-PLAYTEST.md
@@ -39,12 +40,13 @@ Baseline først (core 56/56 med ekte tastatur/mus i Chromium). Deretter det åpn
 - Gjerder tegnes fortsatt som en hel blokk (fra it22)
 
 ### Media
-public/progress/it23/ (lokalt på `dev`, ikke publisert): skjermbilder it23-01…08:
+public/progress/it23/ (lokalt på `dev`, ikke publisert): skjermbilder it23-01…09:
 - 01: bøtte laget på arbeidsbenk
 - 02–04: dam før, vann helt ut, vann hentet og tørket opp
 - 05–06: lava helt ut, lava blitt obsidian
 - 07: lavabøtte i ovn
 - 08: ild slukket med vannbøtte
+- 09: bøtter i stabel (2 tomme og 1 vannbøtte)
 
 Klipp: `clip-it23-botter-vann-lava.webm`
 

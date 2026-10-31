@@ -225,6 +225,7 @@ Last run: 2026-10-31 02:26–02:35 CET · it18 core (56 PASS / 0 FAIL) + scripts
 | U4 | Lava bucket + obsidian | Scoop lava → lava bucket; pour it; water touching lava (beside or above) turns it into obsidian (portalramme) with a fizz | PASS | BK3 + vitest |
 | U5 | Lava bucket fuel | In the furnace fuel slot a lava bucket burns 1000 s (20000 ticks) and the empty bucket stays in the slot | PASS | BK4 (furnace UI) + vitest |
 | U6 | Water puts out fire | Pouring water on a burning block puts the fire out | PASS | BK5 |
+| U8 | Bucket stack | Scooping with a stack of empty buckets leaves the rest in your hand; the filled bucket goes to the inventory | PASS | BK6 |
 | U7 | Water in Helvete | Water poured in Helvete boils away (the bucket still empties) | PASS (vitest) | not tested in the browser |
 
 ## Method rules

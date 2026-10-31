@@ -453,6 +453,21 @@ async function main() {
     await page.evaluate(() => { const bv = (window as any).__bv; bv.world.setBlock(3, 46, 6, 0); bv.world.setBlock(3, 47, 6, 0); });
   }
 
+  // BK6 — scooping with a stack of empty buckets keeps the rest in your hand and puts the water bucket in the inventory
+  if (run('BK6')) {
+    await heal();
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.world.setBlock(6, 45, 10, 0); bv.world.setWater(6, 45, 10, 7); bv.forceRemeshAround?.(); });
+    await setHeld(page, 87);
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.inv.slots[0].count = 3; bv.hud.refreshHotbar(); });
+    await aim(page, 6.5, 46.05, 12.2, 6.5, 45.5, 10.5);
+    await sleep(300);
+    await hold(page, 80, 'right'); await sleep(400);
+    const h = await held(), wb = await countItem(page, 88), cell = await gb(6, 45, 10);
+    await shot(page, 'it23-09-botter-i-stabel.png');
+    record('BK6-bucket-stack', h?.id === 87 && h.count === 2 && wb === 1 && cell === 0 ? 'PASS' : 'FAIL', JSON.stringify({ h, wb, cell }));
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.world.setBlock(6, 45, 10, 1); });
+  }
+
   const sum = { PASS: 0, FAIL: 0, PARTIAL: 0, UNTESTED: 0 } as Record<Status, number>;
   for (const r of results) sum[r.status]++;
   console.log('\n=== SUMMARY ===', sum);

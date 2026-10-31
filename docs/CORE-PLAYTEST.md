@@ -186,6 +186,15 @@ Last run: 2026-10-31 02:26–02:35 CET · it18 core (56 PASS / 0 FAIL) + scripts
 | Q8 | Light at night | Torch/fire/lava/glowstone light is not dimmed at night (only sky light is) | PASS | NL1 screenshots + vitest (was: one combined light value, so a torch at night lit nothing outdoors) |
 | Q9 | Textures | Every block face shows its own texture tile (also on big flat surfaces) | PASS | NL1/FS2/D1 screenshots + vitest (was: greedy-merged faces stretched ONE tile over up to 16×16 blocks) |
 
+## R. Rain and fire, lava ignition, burning mobs, outline shape, chunk-border light (it20, `scripts/it20-verify.ts`, real input)
+| # | Check | Minecraft-expected | Status | Notes |
+|---|--------|-------------------|--------|-------|
+| R1 | Rain puts out fire | Fire under open sky goes out within ~1–2 s when it rains; fire under a roof and eternal fire on helstein keep burning | PASS | R1 + vitest |
+| R2 | Lava lights things | Lava sets fire to flammable blocks near/above it (wooden wall next to a lava pool catches fire); lava among stone never makes fire | PASS | LV1 + vitest |
+| R3 | Mobs burn | Mobs in fire/lava take damage (fire 1 / 0.5 s, lava 4 / 0.5 s), keep burning afterwards (glow), water puts them out; lava slows them; animals that die burning drop cooked meat | PASS | MF1 (pig, fire lit by RMB), ML1 (zombie in lava) + vitest |
+| R4 | Outline shape | Selection outline follows the block: door = thin 2-tall panel, slab = half, flowers/grass/saplings/crops = smaller boxes | PASS | OL1 screenshots + vitest (was: always a full cube) |
+| R5 | Light across chunk borders | A torch a few blocks from a chunk border lights the ground on the other side (also diagonal chunks); removing it leaves no ghost light | PASS | BL1 + vitest (was: block light stopped at the chunk border) |
+
 ## Method rules
 1. **Real input:** synthesized keyboard/mouse via pointer lock. `__bv` may set up a scenario only — never perform the action under test.
 2. Log every bug and every deviation from Minecraft.

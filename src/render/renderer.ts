@@ -224,11 +224,17 @@ export class GameRenderer {
     // face shading top 1.0 / N-S 0.85 / E-W 0.75 / bottom 0.55). Three's Lambert divides by π, so scale
     // by π to get the full texture colour at noon. Before: sun-direction-heavy lighting left the world at
     // ~55 % brightness at noon with sides at ~30 % (muddy sand, near-black grass sides).
-    this.sun.intensity = Math.PI * 0.15 * day;
-    this.ambient.intensity = Math.PI * (0.1 + 0.8 * day);
+    // it20 (MC): rain/thunder darken the sky light and turn the sky grey
+    const dim = 1 - this.rainLevel * (this.weatherKind === 'thunder' ? 0.5 : 0.35);
+    this.sun.intensity = Math.PI * 0.15 * day * dim;
+    this.ambient.intensity = Math.PI * (0.1 + 0.8 * day) * dim;
     if (day > 0.2) this.skyColor.setRGB(0.53, 0.71, 0.88);
     else if (day > 0) this.skyColor.setRGB(0.85, 0.45 + day, 0.35);
     else this.skyColor.setRGB(0.04, 0.05, 0.1);
+    if (this.rainLevel > 0) {
+      const g = (this.skyColor.r * 0.3 + this.skyColor.g * 0.59 + this.skyColor.b * 0.11) * 0.62;
+      this.skyColor.lerp(new THREE.Color(g, g, g * 1.08), this.rainLevel * 0.9);
+    }
     this.renderer.setClearColor(this.skyColor);
     (this.scene.fog as THREE.Fog).color.copy(this.skyColor);
     this.hemi.intensity = 0.12 + day * 0.1;
@@ -420,8 +426,43 @@ export class GameRenderer {
     });
   }
 
+  /** it20: 0..1, eases towards 1 while it rains/thunders (≈3 s), used to darken the sky. */
+  rainLevel = 0;
+  private rainLines: THREE.LineSegments | null = null;
+
   syncWeather(kind: WeatherKind, intensity: number, cam: THREE.Vector3, flash: number): void {
     this.weatherKind = kind;
+    const wet = (kind === 'rain' || kind === 'thunder') && intensity >= 0.05 && this.dimensionVisual !== 'helvete';
+    this.rainLevel = Math.max(0, Math.min(1, this.rainLevel + (wet ? 0.006 : -0.006)));
+    // it20 (MC): rain falls as streaks, not tiny dots
+    if (wet) {
+      if (!this.rainLines) {
+        const n = 1400;
+        const pos = new Float32Array(n * 6);
+        for (let i = 0; i < n; i++) {
+          const x = (Math.random() - 0.5) * 36, y = Math.random() * 30 - 5, z = (Math.random() - 0.5) * 36;
+          pos.set([x, y, z, x + 0.03, y + 0.7, z], i * 6);
+        }
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+        this.rainLines = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0x6f86b8, transparent: true, opacity: 0.75, fog: false }));
+        this.rainLines.frustumCulled = false;
+        this.scene.add(this.rainLines);
+      }
+      this.rainLines.visible = true;
+      this.rainLines.position.set(cam.x, cam.y, cam.z);
+      const rp = this.rainLines.geometry.attributes.position as THREE.BufferAttribute;
+      const fall = 14 * 0.016 * (0.6 + intensity * 0.6);
+      for (let i = 0; i < rp.count; i += 2) {
+        let y = rp.getY(i) - fall;
+        if (y < -5) y += 30;
+        rp.setY(i, y); rp.setY(i + 1, y + 0.7);
+      }
+      rp.needsUpdate = true;
+      if (this.weatherPoints) this.weatherPoints.visible = false;
+      if (flash > 0.05) this.renderer.setClearColor(new THREE.Color(0.9, 0.9, 1.0));
+      return;
+    } else if (this.rainLines) this.rainLines.visible = false;
     if (flash > 0.05 && this.dimensionVisual !== 'helvete') {
       this.renderer.setClearColor(new THREE.Color(0.9, 0.9, 1.0));
     }

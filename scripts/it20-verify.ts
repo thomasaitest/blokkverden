@@ -454,6 +454,52 @@ async function main() {
       JSON.stringify({ door, bDoor, bPoppy, bStone }));
   }
 
+  // RW1 — rain darkens the sky and falls as streaks (MC); clear weather brings the light back
+  if (run('RW1')) {
+    const lum = async (name: string) => {
+      const buf = await page.screenshot({ type: 'png' });
+      if (name) { fs.mkdirSync(OUT, { recursive: true }); fs.writeFileSync(path.join(OUT, name), buf); }
+      return page.evaluate(async (b64) => {
+        const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode();
+        const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+        const g = c.getContext('2d')!; g.drawImage(img, 0, 0);
+        const m = (x0: number, y0: number, w: number, h: number) => { const d = g.getImageData(x0, y0, w, h).data; let s = 0; for (let i = 0; i < d.length; i += 4) s += d[i] + d[i + 1] + d[i + 2]; return s / (d.length / 4) / 3; };
+        const W = img.width, H = img.height;
+        return { sky: Math.round(m(0, 0, W, H * 0.25 | 0)), ground: Math.round(m(0, H * 0.6 | 0, W, H * 0.2 | 0)) };
+      }, buf.toString('base64'));
+    };
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.setDay(0.5); bv.setWeather('clear', 0); bv.teleport(4.5, 46.05, 12.5); bv.look(0, 0.15); });
+    await sleep(4500);
+    const clear = await lum('it20-11a-klart.png');
+    await page.evaluate(() => (window as any).__bv.setWeather('rain', 1));
+    await sleep(4500);
+    const rain = await lum('it20-11-regn.png');
+    await page.evaluate(() => (window as any).__bv.setWeather('clear', 0));
+    await sleep(4500);
+    const back = await lum('');
+    record('RW1-rain-darkens-sky', rain.sky < clear.sky * 0.85 && rain.ground < clear.ground * 0.9 && back.sky > rain.sky * 1.1 ? 'PASS' : 'FAIL', JSON.stringify({ clear, rain, back }));
+  }
+
+  // BL1 — night: a torch placed (RMB) 3 blocks before the chunk border (x=16) lights the ground on the other side
+  if (run('BL1')) {
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.setDay(0.85); bv.mobs.clear(); for (let x = 8; x <= 22; x++) for (let z = 9; z <= 14; z++) { bv.world.setBlock(x, 45, z, 1); for (let y = 46; y <= 49; y++) bv.world.setBlock(x, y, z, 0); } bv.forceRemeshAround?.(); });
+    await setHeld(page, 12);
+    await aim(page, 13.5, 46.05, 14.5, 13.5, 46.0, 11.5);
+    await sleep(800);
+    await hold(page, 80, 'right'); await sleep(1500);
+    const torch = await gb(13, 46, 11);
+    const torches = await page.evaluate(() => { const bv = (window as any).__bv; const out: string[] = []; for (let x = 4; x <= 24; x++) for (let z = 4; z <= 20; z++) for (let y = 44; y <= 50; y++) if (bv.world.getBlock(x, y, z) === 12) out.push(`${x},${y},${z}`); return { out, drops: bv.drops.drops.map((d: any) => [d.stack.id, Math.round(d.x), Math.round(d.y), Math.round(d.z)]), p: [bv.player.x, bv.player.y, bv.player.z] }; });
+    console.log('BL1 torches', JSON.stringify(torches));
+    let across = 0;
+    for (let i = 0; i < 10 && across === 0; i++) { across = await page.evaluate(() => (window as any).__bv.world.getBlockLight(17, 46, 11)); if (!across) await sleep(500); }
+    const across2 = await page.evaluate(() => (window as any).__bv.world.getBlockLight(19, 46, 11));
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.player.creative = true; bv.player.flying = true; bv.teleport(15.5, 52, 18.5); bv.lookAt(15.5, 45.5, 11.5); });
+    await sleep(2500);
+    await shot(page, 'it20-10-fakkel-chunkgrense.png');
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.player.flying = false; bv.player.creative = false; bv.teleport(13.5, 46.05, 14.5); bv.setDay(0.5); });
+    record('BL1-torch-light-crosses-chunk-border', torch === 12 && across === 10 && across2 === 8 ? 'PASS' : 'FAIL', JSON.stringify({ torch, across, across2 }));
+  }
+
   const report = { when: new Date().toISOString(), results, bugs };
   fs.writeFileSync(path.join(OUT, 'it20-verify.json'), JSON.stringify(report, null, 2));
   const summary: Record<string, number> = { PASS: 0, FAIL: 0, PARTIAL: 0 };

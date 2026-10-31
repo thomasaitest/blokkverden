@@ -199,6 +199,34 @@ function emitCross(a: Arrays, wx: number, y: number, wz: number, tile: number, l
   }
 }
 
+/** Double-sided vertical quad from (x0,z0) to (x1,z1), height h (plants). */
+function emitPlane(a: Arrays, wx: number, y: number, wz: number, x0: number, z0: number, x1: number, z1: number, h: number, tile: number, col: number): void {
+  const uv = tileUV(tile);
+  for (const side of [1, -1]) {
+    const p = side === 1
+      ? [[x0, 0, z0], [x1, 0, z1], [x1, h, z1], [x0, h, z0]]
+      : [[x1, 0, z1], [x0, 0, z0], [x0, h, z0], [x1, h, z1]];
+    for (const c of p) {
+      a.positions.push(wx + c[0], y + c[1], wz + c[2]);
+      a.normals.push(0, 1, 0);
+      a.colors.push(col, col, col, 1);
+    }
+    a.uvs.push(uv.u0, uv.v1, uv.u1, uv.v1, uv.u1, uv.v0, uv.u0, uv.v0);
+    const vb = a.vBase;
+    a.indices.push(vb, vb + 1, vb + 2, vb, vb + 2, vb + 3);
+    a.vBase += 4;
+  }
+}
+
+/** MC crop model: '#' of four planes at 1/4 and 3/4. */
+function emitHash(a: Arrays, wx: number, y: number, wz: number, tile: number, light: number, h: number): void {
+  const col = Math.min(1.5, lightCurve(light) * 0.95);
+  for (const t of [0.25, 0.75]) {
+    emitPlane(a, wx, y, wz, t, 0, t, 1, h, tile, col);
+    emitPlane(a, wx, y, wz, 0, t, 1, t, h, tile, col);
+  }
+}
+
 /** Greedy mesh opaque full cubes; naive mesh for specials/transparent. */
 function buildMesh(
   chunk: Chunk,
@@ -226,6 +254,12 @@ function buildMesh(
         const wx = ox + lx;
         const wz = oz + lz;
         if (isCrossPlant(id)) { emitCross(a, wx, y, wz, def.tiles.side, getLight(wx, y, wz)); continue; }
+        if (id === BlockId.Crop) {
+          // MC crop '#' model: 4 vertical planes, height grows with the stage (was a translucent box)
+          const stage = chunk.waterLevel[chunk.index(lx, y, lz)] || 0;
+          emitHash(a, wx, y, wz, stage >= 7 ? 38 : 37, getLight(wx, y, wz), 0.3 + stage * 0.1);
+          continue;
+        }
         const wLevel = id === BlockId.Water || id === BlockId.Lava || id === BlockId.Crop
           ? (chunk.waterLevel[chunk.index(lx, y, lz)] || (id === BlockId.Crop ? 0 : 7)) : 7;
         let hTop = id === BlockId.Water || id === BlockId.Lava ? Math.max(0.125, wLevel / 7)

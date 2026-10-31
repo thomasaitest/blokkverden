@@ -157,15 +157,19 @@ export function createAtlasCanvas(): HTMLCanvasElement {
     return ly < 3 ? [v + 20, v - 10, 20, 255] : [v, v * 0.7, 25, 255];
   });
   // 37 crop young
+  // it17: several stalks across the tile (drawn on MC-style '#' planes)
   fillTile(d, 37, (lx, ly) => {
-    if (ly > 10 && Math.abs(lx - 8) < 2) return [40, 120, 30, 255];
-    if (ly > 6 && Math.abs(lx - 8) < 1) return [50, 140, 40, 255];
+    const top = 3 + ((lx * 7) % 5);
+    if (lx % 3 === 1 && ly >= top) return [45 + (ly * 3) % 20, 125 + (lx * 5) % 30, 35, 255];
+    if (lx % 3 === 2 && ly >= top + 3 && ly % 4 === 0) return [70, 150, 45, 255];
     return [0, 0, 0, 0];
   });
   // 38 crop ripe
   fillTile(d, 38, (lx, ly) => {
-    if (ly > 4 && Math.abs(lx - 8) < 3) return [200, 180, 40, 255];
-    if (ly > 10 && Math.abs(lx - 8) < 2) return [80, 140, 30, 255];
+    const top = 1 + ((lx * 7) % 4);
+    if (lx % 3 === 1 && ly >= top && ly < top + 6) return [205 + (ly * 7) % 30, 175 + (lx * 3) % 25, 55, 255]; // ear
+    if (lx % 3 === 1 && ly >= top + 6) return [150, 140, 55, 255]; // stalk
+    if (lx % 3 === 2 && ly >= top + 1 && ly < top + 5 && ly % 2 === 0) return [215, 190, 70, 255]; // awns
     return [0, 0, 0, 0];
   });
   // 39 enchant table

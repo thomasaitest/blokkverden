@@ -136,7 +136,7 @@ export const ITEMS: Record<number, ItemDef> = {
   [116]: tool(116, 'Trekrafse', 'hoe', 'wood', 60, 1, 1, 44),
   [117]: tool(117, 'Jernkrafse', 'hoe', 'iron', 250, 1, 1, 44),
   [49]: blk(49, 'Grus', 73, 49),
-  [76]: blk(76, 'Spire', 75, 76, { fuel: 100 }),
+  [76]: blk(76, 'Spire', 75, 76, { fuel: 50 }), // MC: ⅓ of planks' burn time
   [77]: { id: 77, name: 'Flint', stackable: true, maxStack: 64, iconTile: 74 },
 };
 

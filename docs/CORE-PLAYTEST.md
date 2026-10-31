@@ -144,6 +144,19 @@ Last run: 2026-10-30 22:43–22:50 CET · it15 (55 PASS / 0 FAIL, I3/I4 now real
 | N8 | Dark caves | Light 0 is near-black; torch-lit areas stay bright | PASS | X6 screenshot + vitest light curve |
 | N6 | Daylight | Noon: blocks show full texture colour, sides shaded only by MC face shading (not ~half-dark); night stays dark | PASS | it16-00a/00c screenshots |
 
+## O. Plants, gravel, targeting (it17, `scripts/it17-verify.ts`, real input)
+| # | Check | Minecraft-expected | Status | Notes |
+|---|--------|-------------------|--------|-------|
+| O1 | Tall grass | Tufts generate on grass (plains/forest, not snow/desert); X-shaped, no collision; LMB breaks instantly; 12.5 % seeds | PASS | N0, P1 + vitest |
+| O2 | Replaceable | RMB with a block aimed at tall grass places into that cell (not on top) | PASS | P2 |
+| O3 | Grass block drop | Breaking a grass block always gives dirt (was: 12 % seeds *instead* of dirt) | PASS | vitest |
+| O4 | Targeting small blocks | Torches, crops, plants, ladders, red dust can be aimed at and broken with LMB (was: ray went through them since it1 — torches couldn't be removed) | PASS | P3, P4a |
+| O5 | Pop off | Breaking the block under a crop/sapling/tall grass/torch pops it as an item (crop: wheat+seeds if ripe) | PASS | P4b |
+| O6 | Gravel | Falls like sand; 10 % flint, else gravel; generated in stone blobs and ocean floors | PASS | G1, G2 + vitest |
+| O7 | Sapling | Leaves drop a sapling 5 %; RMB plants only on grass/dirt/farmland; no collision; grows into an oak (needs light ≥ 9 and room; grass under it turns to dirt) | PASS | S1–S3 + vitest |
+| O8 | Leaf decay saved | Chop a tree, save & quit at once, reload → the leaves still decay | PASS | L3 + vitest |
+| O9 | Jump tap | A quick Space tap (even shorter than a frame / just before landing) jumps | PASS | J 5/5, core B2 |
+
 ## Method rules
 1. **Real input:** synthesized keyboard/mouse via pointer lock. `__bv` may set up a scenario only — never perform the action under test.
 2. Log every bug and every deviation from Minecraft.

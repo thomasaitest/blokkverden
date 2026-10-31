@@ -1,14 +1,19 @@
 {
-  "when": "2026-10-31T00:05:09.429Z",
+  "when": "2026-10-31T00:13:33.026Z",
   "results": [
     {
-      "id": "L3-leaf-decay-after-reload",
+      "id": "P4a-harvest-crop-LMB",
       "status": "PASS",
-      "notes": "logGone=true pendingBeforeQuit=9 leavesAfterLoad=9 end=0"
+      "notes": "crop=0 drops=64,63"
+    },
+    {
+      "id": "P4b-crop-pops",
+      "status": "PASS",
+      "notes": "{\"farmland\":0,\"crop\":0,\"drops\":[2,64,63],\"tgt\":[6,46,16],\"tgt2\":[6,46,16]}"
     }
   ],
   "bugs": [],
   "marks": {
-    "L3": 8.886
+    "P4": 8.773
   }
 }

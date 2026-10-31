@@ -415,6 +415,7 @@ async function main() {
     await page.evaluate(() => {
       const bv = (window as any).__bv;
       bv.world.setBlock(4, 45, 16, 22); bv.world.setBlock(4, 46, 16, 23); bv.world.setMeta(4, 46, 16, 7);
+      for (let s = 0; s < 4; s++) { bv.world.setBlock(2 - s, 45, 16, 22); bv.world.setBlock(2 - s, 46, 16, 23); bv.world.setMeta(2 - s, 46, 16, s * 2); }
       // raised farmland (side exposed) with a ripe crop on it
       bv.world.setBlock(6, 46, 16, 22); bv.world.setBlock(6, 47, 16, 23); bv.world.setMeta(6, 47, 16, 7);
       bv.forceRemeshAround?.();

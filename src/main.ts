@@ -602,7 +602,7 @@ async function runGame(
     forceSave: () => doSave(),
     /** it21: falling sand/gravel entities (x, y, z, vy, id) */
     falling: () => falling.list.map((f) => ({ x: f.x, y: f.y, z: f.z, vy: f.vy, id: f.id })),
-    mobsList: () => mobs.mobs.map((m) => ({ kind: m.kind, x: m.x, y: m.y, z: m.z, hp: m.hp })),
+
     leafDecayPending: () => leafDecay.pending.length,
     fire, burn,
     /** Test setup only: speed up sapling growth (MC bone-meal stand-in). */

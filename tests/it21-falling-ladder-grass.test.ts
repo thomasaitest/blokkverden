@@ -141,3 +141,22 @@ describe('it21 mobs avoid fire and lava (MC pathfinding)', () => {
     expect(hazardAhead(w, 0.5, 1, 0.5, 0, 1)).toBe(true);
   });
 });
+
+import { raycast } from '../src/player/raycast';
+describe('it21 shaped raycast (MC)', () => {
+  it('a ray that passes beside a ladder panel hits the wall behind it; a ray at the panel hits the ladder', () => {
+    const w = new FakeWorld();
+    w.setBlock(0, 5, 2, BlockId.Stone); w.setBlock(0, 6, 2, BlockId.Stone);
+    w.setBlock(0, 5, 1, BlockId.Ladder); w.setMeta(0, 5, 1, 4); // wall on +Z
+    // looking along +Z (yaw = π), slightly down, from below the ladder's upper part: passes through the ladder cell → panel at z 1.8125..2
+    const p: any = { x: 0.5, y: 5 - 1.62 + 0.5, z: -1.5, yaw: Math.PI, pitch: 0 };
+    const h = raycast(w as any, p);
+    expect(h).toMatchObject({ x: 0, y: 5, z: 1, nz: -1 });
+    expect(h!.dist).toBeGreaterThan(3.2);
+    // a downward ray that enters the ladder cell from the top and leaves through the bottom before reaching the panel
+    w.setBlock(0, 4, 1, BlockId.Stone);
+    const p2: any = { x: 0.5, y: 7 - 1.62, z: 0.7, yaw: Math.PI, pitch: -1.2 };
+    const h2 = raycast(w as any, p2);
+    expect(h2).toMatchObject({ x: 0, y: 4, z: 1, ny: 1 });
+  });
+});

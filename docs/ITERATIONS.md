@@ -2,6 +2,63 @@
 
 Original voxel-sandkasse. Ingen Mojang-assets.
 
+## Iterasjon 22 (2026-10-31)
+
+Start: lør. 31. okt. 05:48 CET · Slutt: lør. 31. okt. 06:20 CET (~32 min) · gren `dev` (ikke publisert)
+
+### Fokus
+Baseline først (core 56/56 med ekte tastatur/mus i Chromium), deretter feiljakt i det som kom i it16–it21: stiger, fallende sand, ild, regn, dobbelt gress og gjerder/dører. `__bv` bare til oppsett.
+
+### Fikset
+1. Stiger ble hengende i lufta når du hogde bort blokka de hang på. Nå faller stigen av som en ting, som i MC. Stiger på andre veggblokker blir hengende
+2. En fakkel (eller plante) oppå en sandsøyle ble hengende i lufta når søyla falt. Nå faller den av som en ting. Det samme skjer når blokka under blir sprengt eller brent
+3. Når ild brant opp en blokk, ble det som sto på den eller hang på den, stående igjen: sand falt ikke, fakler og stiger hang i lufta, og løv begynte ikke å visne. Nå skjer alt dette som når du hogger blokka
+4. Sand som falt ned på dobbelt høyt gress, ble til en ting i stedet for å lande. Nå faller den gjennom begge halvdelene og fjerner gresset
+5. Regn slukket ikke en spiller eller mobb som brant. Nå slukker regnet deg med en gang under åpen himmel, men under tak brenner du videre (som i MC)
+6. Gjerder var bare 1 blokk høye for mobber, så de gikk rett opp på dem og ut av innhegningen. Spilleren kom også over et gjerde ved å hoppe og så «steppe opp» i lufta. Nå er gjerder og lukkede grinder 1,5 høye, som i MC: ingen kommer over. En åpen grind slipper mobber gjennom
+7. Landing: søket etter bakken hadde byttet om øvre og nedre grense. Derfor ble du stående og sveve opptil ~0,3 blokker over bakken i én bildeoppdatering ved lav bildefrekvens. Hoppet var heller ikke uavhengig av bildefrekvensen (1,5 blokker ved 20 fps mot ~1,27). Nå lander du nøyaktig på blokka, og hoppet er ~1,27 blokker ved 20–144 fps (testet i vitest). Den gamle sniketesten forventet at du stoppet tidligere på kanten. Nå kan du lene deg ut til boksen så vidt overlapper blokka, som i MC
+
+### Nye funksjoner (2)
+- Saks: lages av 2 jernbarrer på skrå (begge diagonaler) og har 238 bruk. Den klipper løv 15× fortere og gir selve løvblokka, og ull går 5× fortere. Høyt gress gir gresset (2 for dobbelt gress), og det kan settes på gress med RMB. Saksen har eget ikon
+- Klippe sau: RMB med saks på en sau gir 1–3 ull og en klippesnapp-lyd. Sauen blir tynnere og hudfarget. Klipper du igjen, får du ingenting. Etter en stund spiser sauen gresset den står på (gress blir til jord), og ulla vokser ut igjen. En klippet sau gir ikke ull når den dør
+
+### Playtest
+- Core: **56 PASS / 0 FAIL / 0 PARTIAL** (`scripts/core-playtest.ts`, kjørt både før og etter fysikkendringen. H2 trenger fortsatt ett nytt forsøk i headless, som før)
+- it22-verify: **8/8 PASS** (`scripts/it22-verify.ts`):
+  - LP1: stige faller av når veggen hogges
+  - TP1: fakkel på sandsøyle faller av
+  - DG2: sand gjennom dobbelt gress
+  - SH1: saks laget i UI, løv/gress klippet og gresset satt ut
+  - RB1: brennende spiller går ut i regnet med W, med gris under tak og i regn som kontroll
+  - FB3: fyrstål brenner en planke under sand med fakkel
+  - FN1: W+Space mot gjerde, sau i 1×1-innhegning i 8 s, og grind åpnet med RMB som du går gjennom
+  - SS1: klipping, nytt forsøk uten ull, og sauen spiser gress og får ull igjen
+- FN1 feilet én gang i en full kjøring fordi høyden ble lest midt i et hopp (feil i testen). Den venter nå på landing og gikk grønt 2 av 2 ganger
+- Regresjon, alle kjørt én og én på endelig bygg: it21-verify 6/6, it20-verify 7/7, it19-verify 8/8, it18-verify 8/8, it18-explore 11/11, it17-verify 13/13, it16-verify 6/6
+- 162 vitest grønne (13 nye: ting som frigjøres når sand faller, sand gjennom dobbelt gress, saksoppskrift, -dropp og -fart, høyt gress som ting, klipping av sau, gjerde og grind, hopp og landing ved 4 bildefrekvenser). sneak-edge er justert til MC-grensen
+- Ny seksjon T i CORE-PLAYTEST.md
+
+### Kjente begrensninger
+- Gjerder tegnes fortsatt som en hel blokk (ingen stolper og spiler), så de kolliderer også som en hel bredde. En gjerderekke har derfor ingen glipper
+- Gamle stiger uten veggretning (meta 0) faller ikke av hvis det finnes en annen vegg ved siden av
+- En brennende mobb har bare oransje glød, ingen flammer på kroppen. Under tak er gløden svak
+- Sauer har bare én farge (ingen fargestoff), og lam finnes ikke
+- Saks slites også av blokker som ikke klippes (som i Java)
+
+### Media
+public/progress/it22/ (lokalt på `dev`, ikke publisert): skjermbilder it22-01…13:
+- 01–02: stiger på vegg, stige falt av
+- 03–04: fakkel på sand, fakkel falt av
+- 05–06: saks laget, løv og gress klippet
+- 07–08: brenner under tak, regnet slukker
+- 09: brent planke med sand
+- 10–12: sau med ull, klippet sau, sau som har spist gress
+- 13: gjerdehopp
+
+Klipp: `clip-it22-stige-sau-gjerde.webm`
+
+---
+
 ## Iterasjon 21 (2026-10-31)
 
 Start: lør. 31. okt. 04:55 CET · Slutt: lør. 31. okt. 05:38 CET (~43 min) · gren `dev` (ikke publisert)

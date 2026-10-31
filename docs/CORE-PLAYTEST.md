@@ -205,6 +205,17 @@ Last run: 2026-10-31 02:26–02:35 CET · it18 core (56 PASS / 0 FAIL) + scripts
 | S4 | Mobs avoid fire/lava | Animals fenced in by fire and a zombie behind a lava moat never step into fire/lava (they turn away or stop) | PASS | MA1 (30 s) + control build without the fix: FAIL (mobs walked in and burned) |
 | S5 | Double tall grass | Bone meal (RMB) on tall grass grows 2-tall grass; one 2-tall outline; LMB on either half removes both, only the lower half drops seeds; also generated in plains | PASS | DG1 + vitest |
 
+## T. Support pop-off, rain on burning, fences 1.5 tall, landing/jump arc, shears, shearing sheep (it22, `scripts/it22-verify.ts`, real input)
+| # | Check | Minecraft-expected | Status | Notes |
+|---|--------|-------------------|--------|-------|
+| T1 | Ladder needs its wall | Mining the block a ladder hangs on pops that ladder off as an item; ladders on other wall blocks stay | PASS | LP1 + vitest (was: the ladder floated in the air) |
+| T2 | Things on falling/burnt blocks | A torch on a sand column pops off when the column falls; a burnt plank under sand lets the sand fall and the torch pop; sand falls through both halves of double grass and removes it | PASS | TP1, FB3, DG2 + vitest (was: torch floated; sand popped into an item on double grass) |
+| T3 | Rain puts out burning | A burning player/mob under open sky in rain stops burning at once; under a roof it keeps burning | PASS | RB1 (walk out with W) + pig control |
+| T4 | Fences 1.5 tall | W + Space against a fence line can't get over it (also at low fps); a sheep in a 1×1 pen stays in; RMB opens the gate and you walk through | PASS | FN1 + vitest (was: jump + mid-air step-up landed on top; mobs stepped onto fences) |
+| T5 | Landing + jump arc | You land exactly on the block top and a jump is ~1.27 blocks at any frame rate | PASS | vitest at 144/60/30/20 fps (was: up to 0.3 hover after landing and 1.5-block jumps at 20 fps) |
+| T6 | Shears | 2 iron ingots diagonally; leaves break ×15 faster and drop the leaf block; tall grass drops itself (placeable on grass); durability 238 | PASS | SH1 (UI craft, LMB, RMB place) + vitest |
+| T7 | Shearing sheep | RMB with shears on a woolly sheep → 1–3 wool, it turns slim and skin-coloured; again → nothing; it eats grass (grass → dirt) and the wool grows back; a shorn sheep drops no wool | PASS | SS1 + vitest |
+
 ## Method rules
 1. **Real input:** synthesized keyboard/mouse via pointer lock. `__bv` may set up a scenario only — never perform the action under test.
 2. Log every bug and every deviation from Minecraft.

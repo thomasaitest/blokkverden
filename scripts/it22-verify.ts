@@ -529,6 +529,7 @@ async function main() {
     await page.keyboard.down('KeyW');
     for (let i = 0; i < 12; i++) { await page.keyboard.down('Space'); await sleep(120); await page.keyboard.up('Space'); await sleep(130); const pp = await page.evaluate(() => { const p = (window as any).__bv.player; return [+p.y.toFixed(2), +p.z.toFixed(2), p.flying, p.creative, (window as any).__bv.world.getBlock(4, 46, 8)]; }); console.log('FN1', JSON.stringify(pp)); minZ = Math.min(minZ, pp[1] as number); }
     await page.keyboard.up('KeyW');
+    await sleep(700); // land first (the last Space press may still be mid-air)
     const p1 = await st(page);
     await page.evaluate(() => { const bv = (window as any).__bv; bv.lookAt(4.5, 46.8, 7.0); });
     await sleep(300);

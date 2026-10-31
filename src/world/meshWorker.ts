@@ -49,7 +49,7 @@ function buildGetters(job: MeshJob) {
     const lx = x - ox;
     const lz = z - oz;
     if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE) {
-      return Math.max(chunk.skyLight[chunk.index(lx, y, lz)], chunk.blockLight[chunk.index(lx, y, lz)]);
+      return chunk.skyLight[chunk.index(lx, y, lz)] | (chunk.blockLight[chunk.index(lx, y, lz)] << 4);
     }
     if (lx === -1 && lz >= 0 && lz < CHUNK_SIZE) return edgeLight(job.edges.negXLight, y, lz);
     if (lx === CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE) return edgeLight(job.edges.posXLight, y, lz);

@@ -100,10 +100,13 @@ function emitQuad(
   // MC-like light curve: unlit caves (light 0) are near-black, torch/sky light ramps up steeply.
   // it16: the scene ambient now gives full texture colour at noon, so the old linear 0.15 floor made
   // pitch-dark caves look grey and lit.
-  let lightMul = lightCurve(lx2);
+  // it19: light is packed sky | block << 4. Vertex colour R(=B) = sky light, G = block light; the chunk
+  // shader dims only the sky part at night (MC: torches/fire keep lighting the night).
+  const lightMul = lightCurve(lx2 & 15);
+  let blockMul = lightCurve(lx2 >> 4);
   // Powered redstone / lit lamp boost
-  if (id === BlockId.RedDust && meta > 0) lightMul = Math.max(lightMul, 0.55 + meta / 15 * 0.45);
-  if (id === BlockId.Lamp && (meta & 1)) lightMul = Math.max(lightMul, 1.0);
+  if (id === BlockId.RedDust && meta > 0) blockMul = Math.max(blockMul, 0.55 + meta / 15 * 0.45);
+  if (id === BlockId.Lamp && (meta & 1)) blockMul = Math.max(blockMul, 1.0);
 
   // Quad corners: origin + u*du + v*dv mapped through face corners scale
   // Use face.corners as unit quad, scale U by du and V by dv along uAxis/vAxis
@@ -163,8 +166,9 @@ function emitQuad(
   if (id === BlockId.Lamp && (meta & 1)) powerBoost = 1.5;
   for (let i = 0; i < 4; i++) {
     const col = Math.min(1.5, aos[i] * shade * lightMul * powerBoost);
+    const bcol = Math.min(1.5, aos[i] * shade * blockMul * powerBoost);
     const alpha = def.transparent ? (def.liquid ? (id === BlockId.Lava ? 0.85 : 0.55) : id === BlockId.Torch ? 0.95 : 0.75) : 1;
-    a.colors.push(col, col, col, alpha);
+    a.colors.push(col, bcol, col, alpha);
   }
   const vb = a.vBase;
   if (aos[0] + aos[2] > aos[1] + aos[3]) {
@@ -178,7 +182,8 @@ function emitQuad(
 /** MC "X" plant model: two diagonal double-sided quads (sapling, tall grass). */
 function emitCross(a: Arrays, wx: number, y: number, wz: number, tile: number, light: number): void {
   const uv = tileUV(tile);
-  const col = Math.min(1.5, lightCurve(light) * 0.95);
+  const col = Math.min(1.5, lightCurve(light & 15) * 0.95);
+  const bcol = Math.min(1.5, lightCurve(light >> 4) * 0.95);
   const k = 0.15, K = 0.85; // MC inset
   const planes: [number, number, number, number][] = [[k, k, K, K], [k, K, K, k]];
   for (const [x0, z0, x1, z1] of planes) {
@@ -189,7 +194,7 @@ function emitCross(a: Arrays, wx: number, y: number, wz: number, tile: number, l
       for (const c of p) {
         a.positions.push(wx + c[0], y + c[1], wz + c[2]);
         a.normals.push(0, 1, 0); // MC: plants lit uniformly (no side shading)
-        a.colors.push(col, col, col, 1);
+        a.colors.push(col, bcol, col, 1);
       }
       a.uvs.push(uv.u0, uv.v1, uv.u1, uv.v1, uv.u1, uv.v0, uv.u0, uv.v0);
       const vb = a.vBase;
@@ -200,7 +205,7 @@ function emitCross(a: Arrays, wx: number, y: number, wz: number, tile: number, l
 }
 
 /** Double-sided vertical quad from (x0,z0) to (x1,z1), height h (plants). */
-function emitPlane(a: Arrays, wx: number, y: number, wz: number, x0: number, z0: number, x1: number, z1: number, h: number, tile: number, col: number): void {
+function emitPlane(a: Arrays, wx: number, y: number, wz: number, x0: number, z0: number, x1: number, z1: number, h: number, tile: number, col: number, bcol = col): void {
   const uv = tileUV(tile);
   for (const side of [1, -1]) {
     const p = side === 1
@@ -209,7 +214,7 @@ function emitPlane(a: Arrays, wx: number, y: number, wz: number, x0: number, z0:
     for (const c of p) {
       a.positions.push(wx + c[0], y + c[1], wz + c[2]);
       a.normals.push(0, 1, 0);
-      a.colors.push(col, col, col, 1);
+      a.colors.push(col, bcol, col, 1);
     }
     a.uvs.push(uv.u0, uv.v1, uv.u1, uv.v1, uv.u1, uv.v0, uv.u0, uv.v0);
     const vb = a.vBase;
@@ -220,10 +225,11 @@ function emitPlane(a: Arrays, wx: number, y: number, wz: number, x0: number, z0:
 
 /** MC crop model: '#' of four planes at 1/4 and 3/4. */
 function emitHash(a: Arrays, wx: number, y: number, wz: number, tile: number, light: number, h: number): void {
-  const col = Math.min(1.5, lightCurve(light) * 0.95);
+  const col = Math.min(1.5, lightCurve(light & 15) * 0.95);
+  const bcol = Math.min(1.5, lightCurve(light >> 4) * 0.95);
   for (const t of [0.25, 0.75]) {
-    emitPlane(a, wx, y, wz, t, 0, t, 1, h, tile, col);
-    emitPlane(a, wx, y, wz, 0, t, 1, t, h, tile, col);
+    emitPlane(a, wx, y, wz, t, 0, t, 1, h, tile, col, bcol);
+    emitPlane(a, wx, y, wz, 0, t, 1, t, h, tile, col, bcol);
   }
 }
 

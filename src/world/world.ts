@@ -267,6 +267,15 @@ export class World {
     return this.chunks.has(chunkKey(Math.floor(wx / CHUNK_SIZE), Math.floor(wz / CHUNK_SIZE)));
   }
 
+  /** Packed sky | block << 4 (mesher only). */
+  getLightPacked(wx: number, y: number, wz: number): number {
+    if (y < 0 || y >= CHUNK_HEIGHT) return 15;
+    const { cx, cz, lx, lz } = this.worldToChunk(wx, wz);
+    const c = this.chunks.get(chunkKey(cx, cz));
+    if (!c) return 15;
+    return c.getLightPacked(lx, y, lz);
+  }
+
   getLight(wx: number, y: number, wz: number): number {
     if (y < 0 || y >= CHUNK_HEIGHT) return 15;
     const { cx, cz, lx, lz } = this.worldToChunk(wx, wz);
@@ -390,7 +399,7 @@ export class World {
         const i = t + y * CHUNK_SIZE;
         if (n) {
           blocks[i] = n.get(lx, y, lz);
-          light[i] = n.getLight(lx, y, lz);
+          light[i] = n.getLightPacked(lx, y, lz);
         } else {
           blocks[i] = 0;
           light[i] = 15;
@@ -448,7 +457,7 @@ export class World {
         done.push(key);
       } else {
         const get = (x: number, y: number, z: number) => this.getBlock(x, y, z);
-        const getL = (x: number, y: number, z: number) => this.getLight(x, y, z);
+        const getL = (x: number, y: number, z: number) => this.getLightPacked(x, y, z);
         this.meshes.set(key, meshChunk(c, get, getL));
         c.dirty = false;
         c.meshVersion++;
@@ -464,7 +473,7 @@ export class World {
     const c = this.chunks.get(key);
     if (!c) return;
     if (c.lightDirty) this.relight(c);
-    this.meshes.set(key, meshChunk(c, (x, y, z) => this.getBlock(x, y, z), (x, y, z) => this.getLight(x, y, z)));
+    this.meshes.set(key, meshChunk(c, (x, y, z) => this.getBlock(x, y, z), (x, y, z) => this.getLightPacked(x, y, z)));
     c.dirty = false;
     c.meshVersion++;
     this.meshRevision++;

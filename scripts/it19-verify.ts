@@ -489,6 +489,36 @@ async function main() {
     record('D1-door-thin-panel', placed === 26 && zClosed > 17.4 && zClosed < 17.6 && open === 1 && zOpen < 16.6 ? 'PASS' : 'FAIL', JSON.stringify({ placed, m, zClosed: zClosed.toFixed(2), open, zOpen: zOpen.toFixed(2) }));
   }
 
+  // NL1 — night: a torch placed with RMB lights up the ground around it (block light is not dimmed at night)
+  if (run('NL1')) {
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.setDay(0.85); for (let x = 15; x <= 18; x++) for (let z = 4; z <= 9; z++) for (let y = 46; y <= 48; y++) bv.world.setBlock(x, y, z, 0); bv.forceRemeshAround?.(); });
+    await setHeld(page, 12);
+    await aim(page, 16.5, 46.05, 9.5, 16.5, 46.0, 6.5);
+    await sleep(1200);
+    const lum = async (name: string) => {
+      const buf = await page.screenshot({ type: 'png' });
+      if (name) { fs.mkdirSync(OUT, { recursive: true }); fs.writeFileSync(path.join(OUT, name), buf); }
+      return page.evaluate(async (b64) => {
+        const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode();
+        const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+        const g = c.getContext('2d')!; g.drawImage(img, 0, 0);
+        const m = (x0: number, y0: number, w: number, h: number) => { const d = g.getImageData(x0, y0, w, h).data; let s = 0; for (let i = 0; i < d.length; i += 4) s += d[i] + d[i + 1] + d[i + 2]; return s / (d.length / 4) / 3; };
+        const W = img.width, H = img.height;
+        return { near: m(W * 0.35 | 0, H * 0.55 | 0, W * 0.3 | 0, H * 0.15 | 0), far: m(0, H * 0.5 | 0, W * 0.1 | 0, H * 0.1 | 0) };
+      }, buf.toString('base64'));
+    };
+    const before = await lum('it19-09a-foer-fakkel.png');
+    await hold(page, 80, 'right'); await sleep(1500);
+    const torch = await gb(16, 46, 6);
+    const after = await lum('it19-09-fakkel-natt.png');
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.player.creative = true; bv.player.flying = true; bv.teleport(16.5, 58, 20.5); bv.lookAt(16.5, 46, 6.5); });
+    await sleep(1500);
+    await shot(page, 'it19-10-fakkel-ovenfra.png');
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.player.flying = false; bv.player.creative = false; bv.teleport(16.5, 46.05, 9.5); });
+    await page.evaluate(() => (window as any).__bv.setDay(0.5));
+    record('NL1-torch-lights-night', torch === 12 && after.near > before.near * 1.8 && after.near > 40 ? 'PASS' : 'FAIL', JSON.stringify({ torch, before, after }));
+  }
+
   const report = { when: new Date().toISOString(), results, bugs };
   fs.writeFileSync(path.join(OUT, 'it19-verify.json'), JSON.stringify(report, null, 2));
   const summary: Record<string, number> = { PASS: 0, FAIL: 0, PARTIAL: 0 };

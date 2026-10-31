@@ -132,6 +132,32 @@ export class GameRenderer {
       map: tex, vertexColors: true, transparent: true, depthWrite: false,
       side: THREE.FrontSide, alphaTest: 0.02,
     });
+    // it19 (MC): chunk vertex colour R = sky light, G = block light (torches, fire, lava, glowstone).
+    // Scene lights (sun/ambient) dim only the sky part at night; block-lit surfaces keep their brightness.
+    const patchBlockLight = (m: THREE.Material) => {
+      m.onBeforeCompile = (sh) => {
+        sh.fragmentShader = sh.fragmentShader
+          .replace('#include <color_fragment>', `
+            vec3 bvBase = diffuseColor.rgb;
+            #if defined( USE_COLOR_ALPHA )
+              diffuseColor.rgb *= vColor.r; diffuseColor.a *= vColor.a;
+              float bvBlock = vColor.g;
+            #elif defined( USE_COLOR )
+              diffuseColor.rgb *= vColor.r;
+              float bvBlock = vColor.g;
+            #else
+              float bvBlock = 0.0;
+            #endif
+          `)
+          .replace('#include <opaque_fragment>', `
+            outgoingLight = max(outgoingLight, bvBase * bvBlock * vec3(1.0, 0.93, 0.82));
+            #include <opaque_fragment>
+          `);
+      };
+      m.customProgramCacheKey = () => 'bv-blocklight';
+    };
+    patchBlockLight(this.opaqueMat);
+    patchBlockLight(this.transparentMat);
     this.dropMat = new THREE.MeshLambertMaterial({ map: tex });
 
     this.ambient = new THREE.AmbientLight(0xffffff, 0.5);

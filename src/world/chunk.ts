@@ -63,6 +63,13 @@ export class Chunk {
     this.lightDirty = true;
   }
 
+  /** it19: sky | block << 4 for the mesher (MC: block light — torches, fire — isn't dimmed at night). */
+  getLightPacked(lx: number, y: number, lz: number): number {
+    if (lx < 0 || lz < 0 || y < 0 || lx >= CHUNK_SIZE || lz >= CHUNK_SIZE || y >= CHUNK_HEIGHT) return 15;
+    const i = this.index(lx, y, lz);
+    return this.skyLight[i] | (this.blockLight[i] << 4);
+  }
+
   getLight(lx: number, y: number, lz: number): number {
     if (lx < 0 || lz < 0 || y < 0 || lx >= CHUNK_SIZE || lz >= CHUNK_SIZE || y >= CHUNK_HEIGHT) return 15;
     const i = this.index(lx, y, lz);

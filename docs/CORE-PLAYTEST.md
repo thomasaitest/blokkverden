@@ -173,6 +173,17 @@ Last run: 2026-10-31 02:26–02:35 CET · it18 core (56 PASS / 0 FAIL) + scripts
 | P10 | Mining penalties | ×5 slower with eyes under water, ×5 while airborne | PASS | X11 + vitest |
 | P11 | Movement basics | Pillar-jump (Space+RMB down), sneak-bridging, dig straight down, mine the ceiling and jump, water landing (no fall damage), Q drop + pickup, sleep at night | PASS | X1, X2, X4, X5, X8, X9, X10 |
 
+## Q. Fire, flint and steel, lava, thin doors (it19, `scripts/it19-verify.ts`, real input)
+| # | Check | Minecraft-expected | Status | Notes |
+|---|--------|-------------------|--------|-------|
+| Q1 | Flint and steel recipe | Iron ingot + flint (any arrangement) → flint and steel (64 uses) | PASS | FS0 + vitest |
+| Q2 | Lighting fire | RMB with flint and steel on a block face → fire in front (needs solid floor or something flammable next to it); 1 use; light 15; no collision; LMB puts it out, drops nothing | PASS | FS1 + vitest |
+| Q3 | Fire burns out / spreads | On stone it burns out after a few seconds; on helstein it burns forever; wood, leaves, wool, plants catch fire and burn away; water puts it out | PASS | FS1, FS2 + vitest |
+| Q4 | Burning | Standing in fire 1 dmg / 0.5 s, then burning 1 dmg/s for 8 s (flames over the screen); water puts it out | PASS | FS3 + vitest |
+| Q5 | Portal | Flint and steel on a complete portal frame lights it (1 use) | PASS | FS4 |
+| Q6 | Lava | Slow (~1 b/s), breaks a fall, 4 dmg / 0.5 s, keeps burning 15 s after leaving | PASS | L1 + vitest (was: lava did nothing — no damage, fell through it like air) |
+| Q7 | Doors (thin) | A closed door collides only as a 3/16 panel on its edge (2 tall); open: panel against the hinge side, walk through | PASS | D1 + vitest (was: full block) |
+
 ## Method rules
 1. **Real input:** synthesized keyboard/mouse via pointer lock. `__bv` may set up a scenario only — never perform the action under test.
 2. Log every bug and every deviation from Minecraft.

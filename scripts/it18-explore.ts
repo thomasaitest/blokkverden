@@ -467,7 +467,7 @@ async function main() {
     await page.evaluate(() => (window as any).__bv.look(Math.PI, 0));
     await walk(page, 'KeyW', 800);
     const back = (await st(page)).z;
-    const ok = placed === 26 && facing === 0 && openedByBlockClick === 1 && JSON.stringify(tgt) === '[13,46,2]' && upper === 0 && blocked > 3.2 && (metaOpen & 1) === 1 && through < 1.9 && (metaClosed & 1) === 0 && back < 1.9;
+    const ok = placed === 26 && facing === 0 && openedByBlockClick === 1 && JSON.stringify(tgt) === '[13,46,2]' && upper === 0 && blocked > 2.4 && blocked < 2.7 /* it19: thin 3/16 panel on the far edge */ && (metaOpen & 1) === 1 && through < 1.9 && (metaClosed & 1) === 0 && back < 1.9;
     record('X7-door', ok ? 'PASS' : 'FAIL', JSON.stringify({ placed, facing, tgt, upper, openedByBlockClick, blocked: blocked.toFixed(2), metaOpen, through: through.toFixed(2), metaClosed, back: back.toFixed(2) }));
   }
 

@@ -13,7 +13,7 @@ export function isGravityBlock(id: number): boolean { return id === BlockId.Sand
 export function needsSupportBelow(id: number): boolean {
   return id === BlockId.Torch || id === BlockId.RedDust || id === BlockId.PressurePlate
     || id === BlockId.Crop || id === BlockId.Sapling || id === BlockId.TallGrass
-    || id === BlockId.Dandelion || id === BlockId.Poppy;
+    || id === BlockId.Dandelion || id === BlockId.Poppy || id === BlockId.Door;
 }
 
 /** Cells a falling block passes through (MC: air, water, lava, fire). */

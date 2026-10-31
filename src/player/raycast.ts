@@ -52,6 +52,10 @@ export function raycast(world: World, p: PlayerState, maxDist = 6): Hit | null {
     if (id !== BlockId.Air && id !== BlockId.Water && id !== BlockId.Lava && id !== BlockId.Portal && (isSolid(id) || BLOCKS[id] != null)) {
       return { x: ix, y: iy, z: iz, nx, ny, nz, dist: t };
     }
+    // MC: a door is 2 blocks tall — the cell above a Door block is its upper half and targets the door
+    if (id === BlockId.Air && world.getBlock(ix, iy - 1, iz) === BlockId.Door) {
+      return { x: ix, y: iy - 1, z: iz, nx, ny, nz, dist: t };
+    }
 
     if (tMaxX < tMaxY) {
       if (tMaxX < tMaxZ) {

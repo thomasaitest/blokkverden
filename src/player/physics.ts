@@ -81,6 +81,11 @@ function hasGroundSupport(world: World, x: number, y: number, z: number): boolea
   return false;
 }
 
+/** MC ladder speeds (blocks/s). */
+export const LADDER_CLIMB = 2.35;
+export const LADDER_SLIDE = 3.0;
+const GRAVITY_LADDER = 16;
+
 function tryAxis(world: World, p: PlayerState, h: number, axis: 'x' | 'z', delta: number): void {
   if (Math.abs(delta) < 1e-8) return;
   const ox = p.x, oz = p.z;
@@ -132,12 +137,19 @@ export function movePlayer(
     || world.getBlock(Math.floor(p.x), Math.floor(p.y + 1), Math.floor(p.z)) === BlockId.Ladder;
 
   if (onLadder && !p.flying) {
-    p.vy = jump ? 4.2 : (p.sneaking ? -3.5 : -0.6);
     const sin = Math.sin(p.yaw), cos = Math.cos(p.yaw);
     p.vx = (wishX * cos + wishZ * sin) * 2.5;
     p.vz = (-wishX * sin + wishZ * cos) * 2.5;
+    const bx = p.x, bz = p.z, want = Math.hypot(p.vx * dt, p.vz * dt);
     tryAxis(world, p, h, 'x', p.vx * dt);
     tryAxis(world, p, h, 'z', p.vz * dt);
+    // MC ladders: walking into the wall (horizontal collision) or jumping climbs at ~2.35 b/s;
+    // sneaking holds you in place; otherwise you slide down, capped at 3 b/s (0.15 b/tick).
+    const moved = Math.hypot(p.x - bx, p.z - bz);
+    const pushingWall = want > 1e-6 && moved < want * 0.5;
+    if (jump || pushingWall) p.vy = LADDER_CLIMB;
+    else if (p.sneaking) p.vy = 0;
+    else p.vy = Math.max(-LADDER_SLIDE, Math.min(p.vy, 0) - GRAVITY_LADDER * dt);
     p.y += p.vy * dt;
     if (collidesAt(world, p.x, p.y, p.z, h)) { p.y -= p.vy * dt; p.vy = 0; }
     p.onGround = false;

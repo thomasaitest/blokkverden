@@ -387,6 +387,130 @@ async function main() {
     record('X5-mine-ceiling-jump', gone && p.y > 47.0 ? 'PASS' : 'FAIL', `gone=${gone} peakY=${p.y.toFixed(2)}`);
   }
 
+
+  // X6 — ladder: walk (W) into a ladder on a wall → climb without Space; release → slide; Shift → hold; climb out on top
+  if (run('X6')) {
+    await page.evaluate(() => {
+      const bv = (window as any).__bv;
+      for (let x = 2; x <= 8; x++) for (let y = 46; y <= 51; y++) bv.world.setBlock(x, y, 20, 3);
+      for (let y = 46; y <= 51; y++) bv.world.setBlock(5, y, 19, 33);
+      bv.teleport(5.5, 46.0, 18.2); bv.look(Math.PI, 0); bv.forceRemeshAround?.();
+    });
+    await setHeld(page, 0);
+    await aim(page, 5.5, 46.0, 16.0, 5.5, 47.5, 19.5);
+    await sleep(800);
+    await shot(page, 'it18-x6-stige-avstand.png');
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.teleport(5.5, 46.0, 18.2); bv.look(Math.PI, 0); });
+    await sleep(500);
+    await page.keyboard.down('KeyW'); await sleep(1000);
+    const yClimb = (await st(page)).y;
+    await page.keyboard.up('KeyW');
+    await page.keyboard.down('ShiftLeft'); await sleep(800);
+    const yHold = (await st(page)).y;
+    await page.keyboard.up('ShiftLeft');
+    await sleep(500);
+    const ySlide = (await st(page)).y;
+    await shot(page, 'it18-x6-stige.png');
+    await page.keyboard.down('KeyW');
+    for (let i = 0; i < 40 && (await st(page)).y < 51.95; i++) await sleep(100);
+    await sleep(250);
+    await page.keyboard.up('KeyW');
+    await sleep(500);
+    const top = await st(page);
+    record('X6-ladder', yClimb > 47.0 && Math.abs(yHold - yClimb) < 0.3 && ySlide < yHold - 0.3 && top.y > 51.9 && top.z > 19.7 && top.z < 21.0 && top.health === 20 ? 'PASS' : 'FAIL',
+      JSON.stringify({ yClimb: yClimb.toFixed(2), yHold: yHold.toFixed(2), ySlide: ySlide.toFixed(2), top: [top.x.toFixed(2), top.y.toFixed(2), top.z.toFixed(2)], hp: top.health }));
+  }
+
+  // X7 — door: place with RMB (real), it is 2 tall; click its UPPER half to open, walk through, click again to close → blocks you
+  if (run('X7')) {
+    await page.evaluate(() => {
+      const bv = (window as any).__bv;
+      for (let x = 10; x <= 16; x++) for (let y = 46; y <= 48; y++) bv.world.setBlock(x, y, 2, 4);
+      bv.world.setBlock(13, 46, 2, 0); bv.world.setBlock(13, 47, 2, 0);
+      bv.forceRemeshAround?.();
+    });
+    await setHeld(page, 26);
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.inv.slots[0] = { id: 26, count: 2 }; bv.hud.refreshHotbar(); });
+    // place against the floor inside the gap
+    await aim(page, 13.5, 46.0, 5.5, 13.5, 45.99, 2.5);
+    await hold(page, 60, 'right'); await sleep(300);
+    const placed = await gb(13, 46, 2);
+    const facing = await page.evaluate(() => ((window as any).__bv.world.getWaterLevel(13, 46, 2) >> 2) & 3);
+    // try to place a block into the upper half → refused
+    await setHeld(page, 4);
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.inv.slots[0] = { id: 4, count: 3 }; bv.hud.refreshHotbar(); });
+    await aim(page, 13.5, 46.0, 5.5, 13.5, 47.5, 2.6);
+    const tgt = await page.evaluate(() => { const h = (window as any).__bv.targetHit(); return h && [h.x, h.y, h.z]; });
+    await hold(page, 60, 'right'); await sleep(300);
+    const upper = await gb(13, 47, 2);
+    // MC: RMB on a door opens it even with a block in hand → it is open now; close it again
+    const openedByBlockClick = (await page.evaluate(() => (window as any).__bv.world.getWaterLevel(13, 46, 2))) & 1;
+    await hold(page, 60, 'right'); await sleep(300);
+    await setHeld(page, 0);
+    await aim(page, 13.5, 46.0, 4.5, 13.5, 47.6, 2.5);
+    await walk(page, 'KeyW', 800);
+    const blocked = (await st(page)).z;
+    await aim(page, 13.5, 46.0, 4.5, 13.5, 47.6, 2.5);
+    await sleep(300);
+    await shot(page, 'it18-x7-doer-lukket.png');
+    await hold(page, 60, 'right'); await sleep(300);
+    const metaOpen = await page.evaluate(() => (window as any).__bv.world.getWaterLevel(13, 46, 2));
+    await sleep(300);
+    await shot(page, 'it18-x7-doer-aapen.png');
+    await page.evaluate(() => (window as any).__bv.look(0, 0));
+    await walk(page, 'KeyW', 1200);
+    const through = (await st(page)).z;
+    await page.evaluate(() => (window as any).__bv.lookAt(13.5, 47.6, 2.5));
+    await hold(page, 60, 'right'); await sleep(300);
+    const metaClosed = await page.evaluate(() => (window as any).__bv.world.getWaterLevel(13, 46, 2));
+    await page.evaluate(() => (window as any).__bv.look(Math.PI, 0));
+    await walk(page, 'KeyW', 800);
+    const back = (await st(page)).z;
+    const ok = placed === 26 && facing === 0 && openedByBlockClick === 1 && JSON.stringify(tgt) === '[13,46,2]' && upper === 0 && blocked > 3.2 && (metaOpen & 1) === 1 && through < 1.9 && (metaClosed & 1) === 0 && back < 1.9;
+    record('X7-door', ok ? 'PASS' : 'FAIL', JSON.stringify({ placed, facing, tgt, upper, openedByBlockClick, blocked: blocked.toFixed(2), metaOpen, through: through.toFixed(2), metaClosed, back: back.toFixed(2) }));
+  }
+
+  // X8 — fall 20 blocks into 2-deep water: no fall damage (MC)
+  if (run('X8')) {
+    await page.evaluate(() => {
+      const bv = (window as any).__bv;
+      for (let x = 14; x <= 18; x++) for (let z = 14; z <= 18; z++) { bv.world.setBlock(x, 45, z, 3); bv.world.setBlock(x, 44, z, 3); }
+      for (let x = 15; x <= 17; x++) for (let z = 15; z <= 17; z++) { bv.world.setBlock(x, 45, z, 0); bv.world.setBlock(x, 44, z, 0); bv.world.setWater(x, 45, z, 7); bv.world.setWater(x, 44, z, 7); }
+      bv.forceRemeshAround?.();
+      bv.player.health = 20; bv.teleport(16.5, 66, 16.5);
+    });
+    await sleep(3500);
+    const p = await st(page);
+    record('X8-water-landing', p.health === 20 && p.y < 46.5 ? 'PASS' : 'FAIL', `hp=${p.health} y=${p.y.toFixed(2)}`);
+    await page.evaluate(() => (window as any).__bv.teleport(8.5, 46, 8.5));
+  }
+
+  // X9 — Q drops one of the held stack; walking back picks it up again
+  if (run('X9')) {
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.drops.drops.length = 0; bv.teleport(8.5, 46, 8.5); bv.look(0, 0); });
+    await setHeld(page, 4);
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.inv.slots[0] = { id: 4, count: 5 }; bv.hud.refreshHotbar(); });
+    await page.keyboard.press('KeyQ'); await sleep(300);
+    const after = await countItem(page, 4);
+    const nDrops = await page.evaluate(() => (window as any).__bv.drops.drops.length);
+    await sleep(2200);
+    await walk(page, 'KeyW', 1200);
+    await sleep(600);
+    const back = await countItem(page, 4);
+    record('X9-q-drop-pickup', after === 4 && nDrops === 1 && back === 5 ? 'PASS' : 'FAIL', JSON.stringify({ after, nDrops, back }));
+  }
+
+  // X10 — sleep in a bed at night (RMB) → morning
+  if (run('X10')) {
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.mobs.clear(); bv.world.setBlock(4, 46, 4, 20); bv.forceRemeshAround?.(); bv.setDay(0.9); });
+    await setHeld(page, 0);
+    await aim(page, 4.5, 46.0, 6.5, 4.5, 46.3, 4.5);
+    await hold(page, 60, 'right'); await sleep(500);
+    const t = await page.evaluate(() => (window as any).__bv.getState().dayTime % 1);
+    record('X10-bed-sleep', t > 0.25 && t < 0.35 ? 'PASS' : 'FAIL', `dayTime=${t.toFixed(3)}`);
+    await page.evaluate(() => (window as any).__bv.setDay(0.5));
+  }
+
   console.log('=== SUMMARY ===', JSON.stringify(results.map((r) => r.status)), 'BUGS', JSON.stringify(bugs));
   await ctx.close(); await browser.close(); child.kill('SIGKILL'); process.exit(0);
 }

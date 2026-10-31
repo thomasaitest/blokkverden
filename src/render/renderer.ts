@@ -601,7 +601,7 @@ export class GameRenderer {
 
 
   /** Swinging wooden door panels — closed fills the block face, open swings ~90°. */
-  syncDoors(doors: { x: number; y: number; z: number; open: boolean }[]): void {
+  syncDoors(doors: { x: number; y: number; z: number; open: boolean; facing?: number }[]): void {
     while (this.doorPool.length < doors.length) {
       const g = new THREE.Group();
       // 2-block tall panel flush with floor (no sky gap at threshold)
@@ -628,16 +628,22 @@ export class GameRenderer {
       );
       sill.position.set(0.49, 0.03, 0.1);
       g.add(panel); g.add(knob); g.add(sill);
+      // outer group sits at the block centre and turns with the door's facing; g is the hinge
+      const outer = new THREE.Group();
+      g.position.set(-0.5, 0, -0.5);
+      outer.add(g);
       this.doorPool.push(g);
-      this.doorGroup.add(g);
+      this.doorGroup.add(outer);
     }
     for (let i = 0; i < this.doorPool.length; i++) {
       const g = this.doorPool[i];
-      if (i >= doors.length) { g.visible = false; continue; }
+      const outer = g.parent!;
+      if (i >= doors.length) { outer.visible = false; continue; }
       const d = doors[i];
-      g.visible = true;
-      // Anchor hinge at block's -X,-Z corner
-      g.position.set(d.x, d.y, d.z);
+      outer.visible = true;
+      // Hinge at the block's −X,−Z corner for facing 0; other facings rotate about the block centre (MC: faces the placer)
+      outer.position.set(d.x + 0.5, d.y, d.z + 0.5);
+      outer.rotation.y = (d.facing ?? 0) * Math.PI / 2;
       g.rotation.y = d.open ? -Math.PI / 2 : 0;
     }
   }

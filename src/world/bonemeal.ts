@@ -35,14 +35,14 @@ export function applyBoneMeal(w: BoneMealAccess, x: number, y: number, z: number
     if (rnd() < 0.45) growOak(w, x, y, z, rnd, maxY);
     return true;
   }
-  // grass: the clicked block's top always gets a tuft; then up to 24 random spots within 3 blocks
+  // grass: the clicked block's top always gets a tuft; then 32 random spots within 3 blocks (±1 in height)
   w.setBlock(x, y + 1, z, BlockId.TallGrass);
-  for (let i = 0; i < 24; i++) {
-    const dx = Math.floor(rnd() * 7) - 3, dz = Math.floor(rnd() * 7) - 3;
-    const dy = Math.floor(rnd() * 3) - 1;
-    const gx = x + dx, gy = y + dy, gz = z + dz;
-    if (w.getBlock(gx, gy, gz) !== BlockId.Grass || w.getBlock(gx, gy + 1, gz) !== BlockId.Air) continue;
-    if (rnd() < 0.25) continue; // MC: patchy, not a full carpet
+  for (let i = 0; i < 32; i++) {
+    const gx = x + Math.floor(rnd() * 7) - 3, gz = z + Math.floor(rnd() * 7) - 3;
+    let gy = -1;
+    for (const dy of [0, 1, -1]) if (w.getBlock(gx, y + dy, gz) === BlockId.Grass && w.getBlock(gx, y + dy + 1, gz) === BlockId.Air) { gy = y + dy; break; }
+    if (gy < 0) continue;
+    if (rnd() < 0.35) continue; // MC: patchy, not a full carpet
     const r = rnd();
     w.setBlock(gx, gy + 1, gz, r < 0.06 ? BlockId.Dandelion : r < 0.1 ? BlockId.Poppy : BlockId.TallGrass);
   }

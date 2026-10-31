@@ -21,6 +21,7 @@ import { World, setViewRadius, VIEW_RADIUS } from './world/world';
 import { CHUNK_HEIGHT, CHUNK_SIZE } from './world/chunk';
 import { tickWater } from './world/water';
 import { applyBoneMeal, boneMealTarget } from './world/bonemeal';
+import { canPlaceDoor, doorFacingFromYaw, DOOR_FACING_SHIFT, doorFacing } from './world/doors';
 import { SoundBus } from './audio/sound';
 import { MobSystem } from './mobs/system';
 import { XpSystem } from './world/xp';
@@ -1313,13 +1314,13 @@ async function runGame(
     renderer.syncBoats(boats.boats);
     renderer.syncXp(xp.orbs);
     {
-      const doors: { x: number; y: number; z: number; open: boolean }[] = [];
+      const doors: { x: number; y: number; z: number; open: boolean; facing: number }[] = [];
       const lamps: { x: number; y: number; z: number; on: boolean }[] = [];
       const px = Math.floor(player.x), py = Math.floor(player.y), pz = Math.floor(player.z);
       for (let dy = -3; dy <= 4; dy++) for (let dz = -16; dz <= 16; dz++) for (let dx = -16; dx <= 16; dx++) {
         const x = px + dx, y = py + dy, z = pz + dz;
         const id = world.getBlock(x, y, z);
-        if (id === BlockId.Door) doors.push({ x, y, z, open: !!(world.getWaterLevel(x, y, z) & 1) });
+        if (id === BlockId.Door) { const dm = world.getWaterLevel(x, y, z); doors.push({ x, y, z, open: !!(dm & 1), facing: doorFacing(dm) }); }
         if (id === BlockId.Lamp) lamps.push({ x, y, z, on: !!(world.getWaterLevel(x, y, z) & 1) || redstone.getPower(x, y, z) > 0 });
       }
       renderer.syncDoors(doors);
@@ -1545,9 +1546,15 @@ async function runGame(
               const below = world.getBlock(px, py - 1, pz);
               const supportOk = placeId === BlockId.Sapling || isFlower(placeId ?? 0) ? canPlantSapling(below)
                 : placeId === BlockId.TallGrass ? below === BlockId.Grass
+                : placeId === BlockId.Door ? canPlaceDoor(world, px, py, pz, isSolid) && (
+                  // MC: the door's upper half may not overlap the player either
+                  px + 1 <= player.x - hw || px >= player.x + hw || py + 2 <= player.y || py >= player.y + ph || pz + 1 <= player.z - hw || pz >= player.z + hw)
                 : true;
-              if (placeId != null && isReplaceable(dest) && !intersectsPlayer && supportOk) {
+              // MC: nothing can be placed into a door's upper half
+              const intoDoorTop = below === BlockId.Door;
+              if (placeId != null && isReplaceable(dest) && !intersectsPlayer && supportOk && !intoDoorTop) {
                 world.setBlock(px, py, pz, placeId);
+                if (placeId === BlockId.Door) world.setMeta(px, py, pz, doorFacingFromYaw(player.yaw) << DOOR_FACING_SHIFT);
                 // MC: player-placed leaves are persistent (never decay)
                 if (placeId === BlockId.Leaves) world.setMeta(px, py, pz, LEAF_PERSISTENT);
                 // MC: sand placed over air falls

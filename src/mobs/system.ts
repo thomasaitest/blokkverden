@@ -1,3 +1,4 @@
+import { flowAt, WATER_PUSH, LAVA_PUSH } from '../world/flow';
 import { burnTick, createBurnState } from '../world/fire';
 import { isSolid, BlockId, isTallCollider, FENCE_HEIGHT } from '../blocks/types';
 import type { World } from '../world/world';
@@ -394,6 +395,13 @@ export class MobSystem {
       } else {
         m.vx = ndx * speed;
         m.vz = ndz * speed;
+        // it25 (MC): flowing water/lava carries mobs along its current, like the player and items
+        const fid = world.getBlock(Math.floor(m.x), Math.floor(m.y + 0.2), Math.floor(m.z));
+        if (fid === BlockId.Water || fid === BlockId.Lava) {
+          const f = flowAt((a, b, c) => world.getBlock(a, b, c), (a, b, c) => world.getWaterLevel(a, b, c), Math.floor(m.x), Math.floor(m.y + 0.2), Math.floor(m.z));
+          const push = fid === BlockId.Water ? WATER_PUSH : LAVA_PUSH;
+          m.vx += f.x * push; m.vz += f.z * push;
+        }
       }
       m.vy -= 28 * dt;
 

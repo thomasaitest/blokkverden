@@ -381,9 +381,21 @@ async function main() {
     await sleep(400);
     await shot(page, 'it25-03-ting-driver.png');
     record('CU2-item-drifts', !!d0 && !!d1 && d1.x - d0.x > 1.0 ? 'PASS' : 'FAIL', JSON.stringify({ d0, d1 }));
-    await page.evaluate(() => { const bv = (window as any).__bv; bv.world.setBlock(2, 46, 8, 0); });
-    await sleep(6000);
     await clearDrops();
+  }
+
+  // CU3 — a pig in the flowing channel drifts along the current (MC: mobs are pushed too)
+  if (run('CU3')) {
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.mobs.clear(); for (let x = 1; x <= 12; x++) { bv.world.setBlock(x, 47, 7, 3); bv.world.setBlock(x, 47, 9, 3); } bv.forceRemeshAround?.(); bv.teleport(8.5, 48.0, 9.5); const m = bv.spawnMob('gris', 0, 0, 0); m.x = 3.5; m.y = 46.0; m.z = 8.5; m.vx = 0; m.vz = 0; });
+    const m0 = await page.evaluate(() => { const m = (window as any).__bv.mobs.mobs[0]; return { x: m.x, z: m.z }; });
+    await simSleep(2.0);
+    const m1 = await page.evaluate(() => { const m = (window as any).__bv.mobs.mobs[0]; return m ? { x: m.x, y: m.y, z: m.z } : null; });
+    await page.evaluate(() => { const bv = (window as any).__bv; const m = bv.mobs.mobs[0]; bv.lookAt(m.x, m.y + 0.4, m.z); });
+    await sleep(300);
+    await shot(page, 'it25-09-gris-i-strom.png');
+    record('CU3-mob-drifts', !!m1 && m1.x - m0.x > 1.0 ? 'PASS' : 'FAIL', JSON.stringify({ m0, m1 }));
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.mobs.clear(); bv.world.setBlock(2, 46, 8, 0); for (let x = 1; x <= 12; x++) { bv.world.setBlock(x, 47, 7, 0); bv.world.setBlock(x, 47, 9, 0); } });
+    await sleep(6000);
   }
 
   // MK1 — RMB a cow with an empty bucket → milk bucket; hold RMB 1.6 s to drink → Sult removed, empty bucket back

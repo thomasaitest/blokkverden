@@ -99,9 +99,10 @@ export const LADDER_CLIMB = 2.35;
 export const LADDER_SLIDE = 3.0;
 const GRAVITY_LADDER = 16;
 
+/** A fence / closed gate overlaps the player's box (feet cell or the one below) — only the obstacle itself, not a fence beside you. */
 function tallColliderNear(world: World, x: number, y: number, z: number): boolean {
-  const hw = PLAYER_WIDTH / 2 + 0.01;
-  for (let by = Math.floor(y) - 1; by <= Math.floor(y) + 1; by++)
+  const hw = PLAYER_WIDTH / 2 - 0.001;
+  for (let by = Math.floor(y) - 1; by <= Math.floor(y); by++)
     for (let bz = Math.floor(z - hw); bz <= Math.floor(z + hw); bz++)
       for (let bx = Math.floor(x - hw); bx <= Math.floor(x + hw); bx++)
         if (isTallCollider(world.getBlock(bx, by, bz), world.getWaterLevel(bx, by, bz))) return true;

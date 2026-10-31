@@ -124,3 +124,17 @@ describe('it22 jump arc + landing are frame-rate independent', () => {
     });
   }
 });
+
+describe('it22 step-up still works next to a fence', () => {
+  it('walking along a fence line you still step up a 1-block ledge', () => {
+    // fence line along x=3 (z 0..20); a stone ledge at y=46 from z ≤ 5; walk −Z at x=4.5 (box 4.2..4.8, not over the fence)
+    const w: any = {
+      getBlock: (x: number, y: number, z: number) => (y === 45 ? BlockId.Grass : y === 46 && x === 3 ? BlockId.Fence : y === 46 && z <= 5 && x >= 4 ? BlockId.Stone : 0),
+      getWaterLevel: () => 0, hasChunkAt: () => true,
+    };
+    const p = createPlayer(4.5, 46, 9.5);
+    for (let i = 0; i < 120; i++) movePlayer(p, w, 0, -1, false, 1 / 60);
+    expect(p.y).toBeCloseTo(47, 1);
+    expect(p.z).toBeLessThan(6);
+  });
+});

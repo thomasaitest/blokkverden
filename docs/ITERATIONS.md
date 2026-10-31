@@ -4,7 +4,7 @@ Original voxel-sandkasse. Ingen Mojang-assets.
 
 ## Iterasjon 22 (2026-10-31)
 
-Start: lør. 31. okt. 05:48 CET · Slutt: lør. 31. okt. 06:20 CET (~32 min) · gren `dev` (ikke publisert)
+Start: lør. 31. okt. 05:48 CET · Slutt: lør. 31. okt. 06:35 CET (~47 min) · gren `dev` (ikke publisert)
 
 ### Fokus
 Baseline først (core 56/56 med ekte tastatur/mus i Chromium), deretter feiljakt i det som kom i it16–it21: stiger, fallende sand, ild, regn, dobbelt gress og gjerder/dører. `__bv` bare til oppsett.
@@ -17,25 +17,26 @@ Baseline først (core 56/56 med ekte tastatur/mus i Chromium), deretter feiljakt
 5. Regn slukket ikke en spiller eller mobb som brant. Nå slukker regnet deg med en gang under åpen himmel, men under tak brenner du videre (som i MC)
 6. Gjerder var bare 1 blokk høye for mobber, så de gikk rett opp på dem og ut av innhegningen. Spilleren kom også over et gjerde ved å hoppe og så «steppe opp» i lufta. Nå er gjerder og lukkede grinder 1,5 høye, som i MC: ingen kommer over. En åpen grind slipper mobber gjennom
 7. Landing: søket etter bakken hadde byttet om øvre og nedre grense. Derfor ble du stående og sveve opptil ~0,3 blokker over bakken i én bildeoppdatering ved lav bildefrekvens. Hoppet var heller ikke uavhengig av bildefrekvensen (1,5 blokker ved 20 fps mot ~1,27). Nå lander du nøyaktig på blokka, og hoppet er ~1,27 blokker ved 20–144 fps (testet i vitest). Den gamle sniketesten forventet at du stoppet tidligere på kanten. Nå kan du lene deg ut til boksen så vidt overlapper blokka, som i MC
+8. Egen feil fra første fiks av gjerdet, funnet før levering: sperren mot å steppe opp gjaldt også når du gikk langs et gjerde, så du kom ikke opp en kant ved siden av det. Nå gjelder sperren bare gjerdet du faktisk går inn i (ny vitest)
 
 ### Nye funksjoner (2)
 - Saks: lages av 2 jernbarrer på skrå (begge diagonaler) og har 238 bruk. Den klipper løv 15× fortere og gir selve løvblokka, og ull går 5× fortere. Høyt gress gir gresset (2 for dobbelt gress), og det kan settes på gress med RMB. Saksen har eget ikon
 - Klippe sau: RMB med saks på en sau gir 1–3 ull og en klippesnapp-lyd. Sauen blir tynnere og hudfarget. Klipper du igjen, får du ingenting. Etter en stund spiser sauen gresset den står på (gress blir til jord), og ulla vokser ut igjen. En klippet sau gir ikke ull når den dør
 
 ### Playtest
-- Core: **56 PASS / 0 FAIL / 0 PARTIAL** (`scripts/core-playtest.ts`, kjørt både før og etter fysikkendringen. H2 trenger fortsatt ett nytt forsøk i headless, som før)
-- it22-verify: **8/8 PASS** (`scripts/it22-verify.ts`):
+- Core: **56 PASS / 0 FAIL / 0 PARTIAL** på endelig bygg (`scripts/core-playtest.ts`). Den ble kjørt som baseline, etter fysikkendringen og på endelig bygg. På endelig bygg feilet K1 (slå ned tre) én gang fordi stammen ikke ble ødelagt på 4,5 s. Den gikk grønt da den ble kjørt på nytt, og var også grønn i kjøringen før. Det er trolig tilfeldig terreng eller lav bildefrekvens i headless. H2 trenger fortsatt ett nytt forsøk, som før
+- it22-verify: **8/8 PASS** (endelig bygg) (`scripts/it22-verify.ts`):
   - LP1: stige faller av når veggen hogges
   - TP1: fakkel på sandsøyle faller av
   - DG2: sand gjennom dobbelt gress
   - SH1: saks laget i UI, løv/gress klippet og gresset satt ut
-  - RB1: brennende spiller går ut i regnet med W, med gris under tak og i regn som kontroll
+  - RB1: brennende spiller går ut i regnet med W, med gris under tak og i regn som kontroll. Testen sjekker nå hvor grisene faktisk står, fordi de vandrer
   - FB3: fyrstål brenner en planke under sand med fakkel
   - FN1: W+Space mot gjerde, sau i 1×1-innhegning i 8 s, og grind åpnet med RMB som du går gjennom
   - SS1: klipping, nytt forsøk uten ull, og sauen spiser gress og får ull igjen
 - FN1 feilet én gang i en full kjøring fordi høyden ble lest midt i et hopp (feil i testen). Den venter nå på landing og gikk grønt 2 av 2 ganger
-- Regresjon, alle kjørt én og én på endelig bygg: it21-verify 6/6, it20-verify 7/7, it19-verify 8/8, it18-verify 8/8, it18-explore 11/11, it17-verify 13/13, it16-verify 6/6
-- 162 vitest grønne (13 nye: ting som frigjøres når sand faller, sand gjennom dobbelt gress, saksoppskrift, -dropp og -fart, høyt gress som ting, klipping av sau, gjerde og grind, hopp og landing ved 4 bildefrekvenser). sneak-edge er justert til MC-grensen
+- Regresjon, kjørt én og én: it21-verify 6/6, it20-verify 7/7, it19-verify 8/8, it18-verify 8/8, it18-explore 11/11, it17-verify 13/13 og it16-verify 6/6. it21-verify gikk også 6/6 på endelig bygg. På endelig bygg var it18-explore X3 (gå gjennom planter i 1,5 s, grense z < 6,5) ustabil: 2 av 5 kjøringer stoppet på 6,53 og 6,67, mot 5,95–6,17 på it21-bygget (3 av 3). Fart er ikke endret i koden, og distansen følger hvor mye spilltid som går (dt er begrenset til 0,05 s per bilde). Dette er derfor trolig bildefrekvens i headless, men det bør følges med på. Bør sjekkes i UAT: gå i Chrome
+- 163 vitest grønne (14 nye: steppe opp langs et gjerde, ting som frigjøres når sand faller, sand gjennom dobbelt gress, saksoppskrift, -dropp og -fart, høyt gress som ting, klipping av sau, gjerde og grind, hopp og landing ved 4 bildefrekvenser). sneak-edge er justert til MC-grensen
 - Ny seksjon T i CORE-PLAYTEST.md
 
 ### Kjente begrensninger

@@ -49,25 +49,74 @@ export function relightChunk(chunk: Chunk, getBlock: GetBlock, getChunk: GetChun
           blkQ.push(ox + lx, y, oz + lz, emit);
         }
       }
-  // Neighbor emitters near border
-  for (const [dcx, dcz] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) {
+  floodWorld(blkQ, getBlock, getChunk, false);
+  // it20: light from emitters in the 8 neighbouring chunks (torch a few blocks from the border). Before only
+  // emitters right on the border row were seeded, so a torch 2+ blocks inside the neighbour lit nothing here.
+  // Seeding from real emitters (not from the neighbour's stored light) can't create "ghost light".
+  floodFromNeighbourEmitters(chunk, getBlock, getChunk);
+  chunk.lightDirty = false;
+}
+
+function emissionAt(n: Chunk, lx: number, y: number, lz: number): number {
+  const bid = n.get(lx, y, lz);
+  let emit = lightEmission(bid);
+  if (bid === BlockId.Lamp && (n.waterLevel[n.index(lx, y, lz)] & 1)) emit = 15;
+  return emit;
+}
+
+/** Multi-source BFS from neighbour emitters; foreign cells use a scratch map, only `chunk` is written. */
+export function floodFromNeighbourEmitters(chunk: Chunk, getBlock: GetBlock, getChunk: GetChunk): void {
+  const ox = chunk.cx * CHUNK_SIZE, oz = chunk.cz * CHUNK_SIZE;
+  const q: number[] = [];
+  const seen = new Map<number, number>();
+  const key = (x: number, y: number, z: number) => ((x + 32768) * 65536 + (z + 32768)) * 64 + y;
+  for (let dcz = -1; dcz <= 1; dcz++) for (let dcx = -1; dcx <= 1; dcx++) {
+    if (!dcx && !dcz) continue;
     const n = getChunk(chunk.cx + dcx, chunk.cz + dcz);
     if (!n) continue;
     const nox = n.cx * CHUNK_SIZE, noz = n.cz * CHUNK_SIZE;
-    for (let y = 0; y < CHUNK_HEIGHT; y++)
-      for (let t = 0; t < CHUNK_SIZE; t++) {
-        let lx = 0, lz = 0;
-        if (dcx === -1) { lx = CHUNK_SIZE - 1; lz = t; }
-        if (dcx === 1) { lx = 0; lz = t; }
-        if (dcz === -1) { lx = t; lz = CHUNK_SIZE - 1; }
-        if (dcz === 1) { lx = t; lz = 0; }
-        const emit = lightEmission(n.get(lx, y, lz));
-        if (emit > 1) blkQ.push(nox + lx, y, noz + lz, emit);
+    for (let lz = 0; lz < CHUNK_SIZE; lz++) for (let lx = 0; lx < CHUNK_SIZE; lx++) {
+      const wx = nox + lx, wz = noz + lz;
+      const ddx = wx < ox ? ox - wx : wx >= ox + CHUNK_SIZE ? wx - (ox + CHUNK_SIZE - 1) : 0;
+      const ddz = wz < oz ? oz - wz : wz >= oz + CHUNK_SIZE ? wz - (oz + CHUNK_SIZE - 1) : 0;
+      if (ddx + ddz >= 15) continue;
+      for (let y = 0; y < CHUNK_HEIGHT; y++) {
+        const emit = emissionAt(n, lx, y, lz);
+        if (emit <= ddx + ddz) continue;
+        q.push(wx, y, wz, emit);
+        seen.set(key(wx, y, wz), emit);
       }
+    }
   }
-  floodWorld(blkQ, getBlock, getChunk, false);
-  chunk.lightDirty = false;
+  if (!q.length) return;
+  let qi = 0;
+  while (qi < q.length) {
+    const x = q[qi++], y = q[qi++], z = q[qi++], lv = q[qi++];
+    for (const [dx, dy, dz] of DIRS) {
+      const nx = x + dx, ny = y + dy, nz = z + dz;
+      if (ny < 0 || ny >= CHUNK_HEIGHT) continue;
+      // can't reach the chunk any more → stop early
+      const ddx = nx < ox ? ox - nx : nx >= ox + CHUNK_SIZE ? nx - (ox + CHUNK_SIZE - 1) : 0;
+      const ddz = nz < oz ? oz - nz : nz >= oz + CHUNK_SIZE ? nz - (oz + CHUNK_SIZE - 1) : 0;
+      const id = getBlock(nx, ny, nz);
+      if (isOpaque(id)) continue;
+      let next = lv - 1;
+      if (id === BlockId.Water || id === BlockId.Leaves) next -= 1;
+      if (next <= 0 || next <= ddx + ddz) continue;
+      if (!ddx && !ddz) {
+        const i = chunk.index(nx - ox, ny, nz - oz);
+        if (chunk.blockLight[i] >= next) continue;
+        chunk.blockLight[i] = next;
+      } else {
+        const k = key(nx, ny, nz);
+        if ((seen.get(k) ?? 0) >= next) continue;
+        seen.set(k, next);
+      }
+      q.push(nx, ny, nz, next);
+    }
+  }
 }
+
 
 function floodWorld(q: number[], getBlock: GetBlock, getChunk: GetChunk, isSky: boolean): void {
   let qi = 0;

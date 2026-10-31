@@ -341,6 +341,12 @@ export function animateMobRig(root: THREE.Group, m: Mob, dt: number, playerPos?:
       if (ch.name.includes('R')) ch.rotation.x += attack;
       if (ch.name.startsWith('wing') && !moving) ch.rotation.z = Math.sin(m.age * 4) * 0.15 * sign;
     }
+    // it22 (MC): a shorn sheep is slimmer and shows its pinkish-grey skin instead of white wool
+    if (m.kind === 'sau' && ch.name === 'body' && ch instanceof THREE.Mesh) {
+      const sh = !!m.sheared;
+      ch.scale.set(sh ? 0.78 : 1, sh ? 0.8 : 1, sh ? 0.92 : 1);
+      (ch.material as THREE.MeshLambertMaterial).color.setHex(sh ? 0xc9b4a4 : 0xffffff);
+    }
     if (ch.name === 'earL' || ch.name === 'earR') {
       ch.rotation.z = Math.sin(m.age * 5 + (ch.name === 'earL' ? 0 : 1)) * 0.25;
     }

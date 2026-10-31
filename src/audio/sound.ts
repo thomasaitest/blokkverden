@@ -112,6 +112,12 @@ export class SoundBus {
     this.noise(0.25, 0.12, 3000);
   }
 
+  /** it22: shears — two short snips */
+  shear(): void {
+    this.noise(0.04, 0.12, 4200);
+    setTimeout(() => this.noise(0.04, 0.1, 4800), 90);
+  }
+
   swing(): void {
     this.noise(0.06, 0.1, 1200);
   }

@@ -330,6 +330,7 @@ async function runGame(
   };
   // MC explosions: containers spill, chunks remesh, smoke puff
   mobs.takeContainer = (x, y, z) => { const c = containers.contentsAt(x, y, z); containers.removeAt(x, y, z); return c; };
+  mobs.onGrassEaten = () => markMesh();
   mobs.rainingAt = (x, y, z) => isRaining() && openToSky(world, x, y, z);
   mobs.onBlast = (x, y, z, blocks) => {
     particles.burst(x, y, z, 0x555555, 40, 'break');
@@ -1531,7 +1532,16 @@ async function runGame(
           if (!useable) ateThisClick = true;
         }
       }
-      if (!hit || ateThisClick) { /* eaten or nothing to interact with */ }
+      // it22 (MC): right-click a sheep with shears → 1–3 wool, the sheep is shorn
+      const shearsHeld = inv.held();
+      const sheep = !ateThisClick && shearsHeld && ITEMS[shearsHeld.id]?.tool === 'shears'
+        ? mobs.pickAt(player.x, player.y + EYE_HEIGHT, player.z, 3.2, player.yaw, player.pitch) : null;
+      if (sheep && sheep.kind === 'sau' && !sheep.sheared) {
+        if (mobs.shear(sheep, drops) > 0) {
+          if (!player.creative) inv.setHeld(damageTool(shearsHeld));
+          sound.shear(); hud.markDirty();
+        }
+      } else if (!hit || ateThisClick) { /* eaten or nothing to interact with */ }
       else {
       const tid = world.getBlock(hit.x, hit.y, hit.z);
       if (tid === BlockId.CraftingTable) { invUi.openTable(); input.inventoryOpen = true; }

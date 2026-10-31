@@ -1,4 +1,4 @@
-import { BlockId, collidesBlock, isSolid, isOpaque, isCrossPlant } from '../blocks/types';
+import { BlockId, collidesBlock, isSolid, isOpaque, isCrossPlant, isTallCollider } from '../blocks/types';
 import type { World } from '../world/world';
 import { CHUNK_HEIGHT } from '../world/chunk';
 
@@ -48,9 +48,17 @@ function collidesAt(world: World, x: number, y: number, z: number, h: number): b
   const minX = Math.floor(minXf), maxX = Math.floor(maxXf);
   const minY = Math.floor(minYf), maxY = Math.floor(maxYf);
   const minZ = Math.floor(minZf), maxZ = Math.floor(maxZf);
-  for (let by = minY; by <= maxY; by++) {
+  // it22: start one cell lower — a fence / closed gate below the feet reaches 0.5 into this cell (MC 1.5 tall)
+  for (let by = minY - 1; by <= maxY; by++) {
     for (let bz = minZ; bz <= maxZ; bz++) {
       for (let bx = minX; bx <= maxX; bx++) {
+        if (by < minY) {
+          if (by < 0) continue;
+          const lid = world.getBlock(bx, by, bz);
+          const lmeta = world.getWaterLevel(bx, by, bz);
+          if (isTallCollider(lid, lmeta) && collidesBlock(lid, bx, by, bz, minXf, minYf, maxXf, maxYf, minZf, maxZf, lmeta)) return true;
+          continue;
+        }
         // MC: entities can't move into chunks that aren't loaded yet (would fall through 'air').
         if (by >= 0 && by < CHUNK_HEIGHT && typeof world.hasChunkAt === 'function' && !world.hasChunkAt(bx, bz)) return true;
         const id = world.getBlock(bx, by, bz);
@@ -91,6 +99,15 @@ export const LADDER_CLIMB = 2.35;
 export const LADDER_SLIDE = 3.0;
 const GRAVITY_LADDER = 16;
 
+function tallColliderNear(world: World, x: number, y: number, z: number): boolean {
+  const hw = PLAYER_WIDTH / 2 + 0.01;
+  for (let by = Math.floor(y) - 1; by <= Math.floor(y) + 1; by++)
+    for (let bz = Math.floor(z - hw); bz <= Math.floor(z + hw); bz++)
+      for (let bx = Math.floor(x - hw); bx <= Math.floor(x + hw); bx++)
+        if (isTallCollider(world.getBlock(bx, by, bz), world.getWaterLevel(bx, by, bz))) return true;
+  return false;
+}
+
 function tryAxis(world: World, p: PlayerState, h: number, axis: 'x' | 'z', delta: number): void {
   if (Math.abs(delta) < 1e-8) return;
   const ox = p.x, oz = p.z;
@@ -108,7 +125,8 @@ function tryAxis(world: World, p: PlayerState, h: number, axis: 'x' | 'z', delta
 
   // Auto step-up ≤1 block (MC-like). Prefer raising onto the obstacle then keeping the move.
   // Allow when on ground or falling/settling — not while jumping hard upward.
-  if (p.onGround || p.vy <= 0.05 || p.inWater) {
+  // it22 (MC): no auto step-up onto a fence / closed gate (1.5 tall) — before, a jump + step-up at the apex climbed it
+  if ((p.onGround || p.vy <= 0.05 || p.inWater) && !tallColliderNear(world, p.x, p.y, p.z)) {
     for (let step = 0.05; step <= STEP_HEIGHT + 1e-6; step += 0.05) {
       const ny = p.y + step;
       if (collidesAt(world, p.x, ny, p.z, h)) continue;
@@ -194,10 +212,13 @@ export function movePlayer(
   }
   p.vx = mx;
   p.vz = mz;
+  const vPrev = p.vy;
   p.vy -= gravity * dt;
   if (p.inLava) p.vy *= 0.8; else if (p.inWater) p.vy *= 0.9;
+  let jumped = false;
   if (jump && (p.onGround || liquid)) {
     p.vy = jumpVel;
+    jumped = true;
     p.onGround = false;
     if (!liquid) p.fallStartY = p.y;
   }
@@ -215,7 +236,12 @@ export function movePlayer(
   tryAxis(world, p, h, 'z', p.vz * dt);
 
   const prevY = p.y;
-  p.y += p.vy * dt;
+  // it22: frame-rate independent jump arc on land — move by the average velocity over the frame (exact for constant
+  // gravity). Before, the jump frame moved a full jumpVel·dt with no gravity, so at 20 fps a jump reached 1.5 blocks
+  // (over a 1.5-tall fence) instead of ~1.27.
+  if (liquid) p.y += p.vy * dt;
+  else if (jumped) { p.y += (jumpVel - 0.5 * gravity * dt) * dt; p.vy = jumpVel - gravity * dt; }
+  else p.y += (vPrev + p.vy) * 0.5 * dt;
   p.onGround = false;
 
   if (collidesAt(world, p.x, p.y, p.z, h)) {
@@ -227,14 +253,17 @@ export function movePlayer(
       p.onGround = true;
       p.fallStartY = null;
     } else if (p.vy <= 0) {
-      let lo = Math.min(prevY, p.y);
-      let hi = Math.max(prevY, p.y);
-      for (let i = 0; i < 16; i++) {
-        const mid = (lo + hi) / 2;
-        if (collidesAt(world, p.x, mid, p.z, h)) hi = mid;
-        else lo = mid;
+      // it22: find the lowest free height between the colliding new y and the free previous y. The old search had
+      // lo/hi swapped and returned ≈ the previous frame's height, so you "landed" up to ~0.3 above the ground at
+      // low frame rates (and a buffered jump from there cleared a 1.5-tall fence).
+      let bad = p.y, good = prevY;
+      if (collidesAt(world, p.x, good, p.z, h)) good = Math.max(prevY, p.y);
+      for (let i = 0; i < 18; i++) {
+        const mid = (bad + good) / 2;
+        if (collidesAt(world, p.x, mid, p.z, h)) bad = mid;
+        else good = mid;
       }
-      p.y = lo;
+      p.y = good;
       let guard = 0;
       while (collidesAt(world, p.x, p.y, p.z, h) && guard++ < 40) p.y += 0.005;
       p.y = Math.round(p.y * 200) / 200;

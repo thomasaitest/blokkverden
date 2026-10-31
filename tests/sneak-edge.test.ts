@@ -23,7 +23,9 @@ describe('sneak edge', () => {
     p.sneaking = true;
     p.yaw = 0;
     for (let i = 0; i < 40; i++) movePlayer(p, w, 0, -1, false, 0.05);
-    expect(p.z).toBeGreaterThanOrEqual(4.15);
+    // MC: sneaking you may lean out until your box (±0.3) no longer overlaps the block (edge z=4 → z ≥ 3.7).
+    // it22: was ≥ 4.15 — the old landing search left the player hovering, which stopped the walk earlier.
+    expect(p.z).toBeGreaterThanOrEqual(3.7);
     expect(p.y).toBeGreaterThan(20.5);
   }, 15000);
 

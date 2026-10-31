@@ -146,6 +146,11 @@ export function usesMeta(id: number): boolean {
     || id === BlockId.Lamp || id === BlockId.Crop || id === BlockId.RedDust;
 }
 
+/** it22: fence / closed fence gate collision height (MC 1.5). */
+export const FENCE_HEIGHT = 1.5;
+/** it22: blocks whose collision reaches up into the cell above them (fence, closed gate). */
+export function isTallCollider(id: number, meta = 0): boolean { return id === BlockId.Fence || (id === BlockId.Gate && !(meta & 1)); }
+
 export function collidesBlock(
   id: number, bx: number, by: number, bz: number,
   minX: number, minY: number, maxX: number, maxY: number, minZ: number, maxZ: number,
@@ -159,10 +164,15 @@ export function collidesBlock(
     return maxX > bx + x0 && minX < bx + x1 && maxZ > bz + z0 && minZ < bz + z1 && maxY > by && minY < by + 2;
   }
   if ((id === BlockId.Door || id === BlockId.Gate || id === BlockId.Trapdoor) && (meta & 1)) return false;
+  // it22 (MC): fences and closed fence gates are 1.5 blocks tall — nothing can jump over them. The fence renders as a
+  // full block here, so it also collides full-width (a fence line has no gaps to squeeze through).
+  if (id === BlockId.Fence || id === BlockId.Gate) {
+    return maxY > by && minY < by + FENCE_HEIGHT && maxX > bx && minX < bx + 1 && maxZ > bz && minZ < bz + 1;
+  }
   if (id === BlockId.Slab) {
     return maxY > by && minY < by + 0.5 && maxX > bx && minX < bx + 1 && maxZ > bz && minZ < bz + 1;
   }
-  if (id === BlockId.Fence || id === BlockId.GlassPane) {
+  if (id === BlockId.GlassPane) {
     const cx0 = bx + 0.375, cx1 = bx + 0.625, cz0 = bz + 0.375, cz1 = bz + 0.625;
     return maxX > cx0 && minX < cx1 && maxZ > cz0 && minZ < cz1 && maxY > by && minY < by + 1.5;
   }

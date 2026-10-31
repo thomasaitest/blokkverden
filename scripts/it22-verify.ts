@@ -508,6 +508,92 @@ async function main() {
     await page.evaluate(() => { const bv = (window as any).__bv; for (let x = 14; x <= 19; x++) for (let z = 14; z <= 19; z++) for (let y = 46; y <= 49; y++) bv.world.setBlock(x, y, z, 0); });
   }
 
+  // FN1 — fences are 1.5 tall (MC): holding W + Space against a fence line can't get over it; a sheep in a 1×1 pen stays inside;
+  // RMB opens the gate and you walk through
+  if (run('FN1')) {
+    await heal();
+    await page.evaluate(() => {
+      const bv = (window as any).__bv;
+      for (let x = 0; x <= 16; x++) for (let z = 4; z <= 14; z++) for (let y = 46; y <= 49; y++) bv.world.setBlock(x, y, z, 0);
+      for (let x = 0; x <= 16; x++) bv.world.setBlock(x, 46, 8, x === 8 ? 29 : 28); // fence line along z=8 with a gate at x=8
+      bv.world.setMeta(8, 46, 8, 0);
+      for (let x = 11; x <= 13; x++) for (let z = 3; z <= 5; z++) if (x !== 12 || z !== 4) bv.world.setBlock(x, 46, z, 28); // 1×1 pen
+      bv.forceRemeshAround?.();
+      bv.mobs.clear();
+      bv.mobs.spawn('sau', 12.5, 46.02, 4.5);
+    });
+    await setHeld(page, 0);
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.teleport(4.5, 46.05, 10.5); bv.look(0, 0); });
+    await sleep(300);
+    let minZ = 99;
+    await page.keyboard.down('KeyW');
+    for (let i = 0; i < 12; i++) { await page.keyboard.down('Space'); await sleep(120); await page.keyboard.up('Space'); await sleep(130); const pp = await page.evaluate(() => { const p = (window as any).__bv.player; return [+p.y.toFixed(2), +p.z.toFixed(2), p.flying, p.creative, (window as any).__bv.world.getBlock(4, 46, 8)]; }); console.log('FN1', JSON.stringify(pp)); minZ = Math.min(minZ, pp[1] as number); }
+    await page.keyboard.up('KeyW');
+    const p1 = await st(page);
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.lookAt(4.5, 46.8, 7.0); });
+    await sleep(300);
+    await shot(page, 'it22-13-gjerde-hopp.png');
+    // sheep pen: 8 s
+    const sheepPos: number[][] = [];
+    for (let i = 0; i < 16; i++) { await sleep(500); sheepPos.push(await page.evaluate(() => { const m = (window as any).__bv.mobs.mobs[0]; return [+m.x.toFixed(2), +m.y.toFixed(2), +m.z.toFixed(2)]; })); }
+    const stayed = sheepPos.every(([x, y, z]) => x > 12 && x < 13 && z > 4 && z < 5 && y < 46.5);
+    // open the gate (RMB) and walk through
+    await aim(page, 8.5, 46.05, 10.2, 8.5, 46.5, 8.5);
+    await sleep(200);
+    await hold(page, 80, 'right'); await sleep(300);
+    const gateMeta = await page.evaluate(() => (window as any).__bv.world.getWaterLevel(8, 46, 8));
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.look(0, 0); });
+    await walk(page, 'KeyW', 1000);
+    const p2 = await st(page);
+    record('FN1-fence-1.5-tall', minZ > 8.9 && p1.y < 46.6 && stayed && (gateMeta & 1) === 1 && p2.z < 7.5 ? 'PASS' : 'FAIL',
+      JSON.stringify({ minZ: +minZ.toFixed(2), p1y: +p1.y.toFixed(2), stayed, sheep: sheepPos.slice(-3), gateMeta, p2z: +p2.z.toFixed(2) }));
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.mobs.clear(); for (let x = 0; x <= 16; x++) for (let z = 2; z <= 14; z++) for (let y = 46; y <= 49; y++) bv.world.setBlock(x, y, z, 0); });
+  }
+
+  // SS1 — shears on a sheep (real RMB) → 1–3 wool, the sheep is shorn (slim, skin-coloured); a 2nd click gives nothing; it eats grass → wool back
+  if (run('SS1')) {
+    await heal(); await clearDrops();
+    await page.evaluate(() => {
+      const bv = (window as any).__bv;
+      for (let x = 10; x <= 14; x++) for (let z = 12; z <= 16; z++) for (let y = 46; y <= 48; y++) bv.world.setBlock(x, y, z, 0);
+      for (let x = 11; x <= 13; x++) for (let z = 13; z <= 15; z++) if (x !== 12 || z !== 14) bv.world.setBlock(x, 46, z, 28); // fence ring, 1×1 pen
+      bv.world.setBlock(12, 46, 16, 3); // a step to stand on
+      bv.forceRemeshAround?.();
+      bv.mobs.clear();
+      bv.mobs.spawn('sau', 12.5, 46.02, 14.5);
+      bv.mobs.spawn('sau', 6.5, 46.02, 18.5); // woolly control sheep
+      bv.mobs.sheepEatSeconds = 1e9;
+    });
+    await setHeld(page, 86);
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.inv.slots[0].durability = 238; bv.hud.refreshHotbar(); });
+    const aimSheep = () => page.evaluate(() => { const bv = (window as any).__bv; const m = bv.mobs.mobs[0]; bv.teleport(12.5, 47.05, 16.6); bv.lookAt(m.x, m.y + 0.5, m.z); });
+    await aimSheep(); await sleep(600);
+    await shot(page, 'it22-10-sau-med-ull.png');
+    await aimSheep(); await sleep(100);
+    console.log('SS1 pick', JSON.stringify(await page.evaluate(() => { const bv = (window as any).__bv; const p = bv.player; const m = bv.mobs.pickAt(p.x, p.y + 1.62, p.z, 3.2, p.yaw, p.pitch); const s = bv.mobs.mobs[0]; return { m: m && [m.kind, m.x, m.y, m.z], s: [s.x, s.y, s.z], p: [p.x, p.y, p.z, p.yaw, p.pitch], locked: bv.input.pointerLocked, held: bv.inv.slots[bv.inv.selected] }; })));
+    await hold(page, 80, 'right'); await sleep(700);
+    const wool1 = (await dropIds()).filter((i: number) => i === 59).length;
+    const st1 = await page.evaluate(() => { const bv = (window as any).__bv; return { sh: bv.mobs.mobs.map((m: any) => !!m.sheared), dur: bv.inv.slots[0]?.durability }; });
+    await aimSheep(); await sleep(400);
+    await shot(page, 'it22-11-sau-klippet.png');
+    await hold(page, 80, 'right'); await sleep(500);
+    const wool2 = (await dropIds()).filter((i: number) => i === 59).length;
+    // let it graze: shorn sheep eats the grass under it → dirt, wool back
+    await page.evaluate(() => { const bv = (window as any).__bv; const prev = bv.mobs.onGrassEaten; bv.mobs.onGrassEaten = (x: number, y: number, z: number) => { (window as any).__eaten = [x, y, z]; prev?.(x, y, z); }; bv.mobs.sheepEatSeconds = 0.5; });
+    let regrown = false, dirt = 0;
+    for (let i = 0; i < 40 && !regrown; i++) {
+      await sleep(250);
+      const r = await page.evaluate(() => { const bv = (window as any).__bv; const m = bv.mobs.mobs[0]; return { sh: !!m.sheared, g: bv.world.getBlock(Math.floor(m.x), 45, Math.floor(m.z)) }; });
+      if (!r.sh) { regrown = true; const e = await page.evaluate(() => (window as any).__eaten); dirt = e ? await gb(e[0], e[1], e[2]) : -1; console.log('SS1 eaten', JSON.stringify(e)); }
+    }
+    await page.evaluate(() => { (window as any).__bv.mobs.sheepEatSeconds = 1e9; });
+    await aimSheep(); await sleep(400);
+    await shot(page, 'it22-12-sau-spiste-gress.png');
+    record('SS1-shear-sheep', wool1 >= 1 && wool1 <= 3 && st1.sh[0] === true && st1.sh[1] === false && st1.dur === 237 && wool2 === wool1 && regrown && dirt === 2 ? 'PASS' : 'FAIL',
+      JSON.stringify({ wool1, st1, wool2, regrown, dirt }));
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.mobs.clear(); for (let x = 10; x <= 14; x++) for (let z = 12; z <= 17; z++) { bv.world.setBlock(x, 45, z, 1); for (let y = 46; y <= 48; y++) bv.world.setBlock(x, y, z, 0); } });
+  }
+
   const sum = { PASS: 0, FAIL: 0, PARTIAL: 0, UNTESTED: 0 } as Record<Status, number>;
   for (const r of results) sum[r.status]++;
   console.log('\n=== SUMMARY ===', sum);

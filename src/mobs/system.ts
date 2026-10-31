@@ -1,5 +1,5 @@
 import { burnTick, createBurnState } from '../world/fire';
-import { isSolid, BlockId } from '../blocks/types';
+import { isSolid, BlockId, isTallCollider, FENCE_HEIGHT } from '../blocks/types';
 import type { World } from '../world/world';
 import { CHUNK_HEIGHT } from '../world/chunk';
 import type { PlayerState } from '../player/physics';
@@ -22,8 +22,18 @@ function collides(world: World, x: number, y: number, z: number, w: number, h: n
   const z0 = Math.floor(z - hw), z1 = Math.floor(z + hw);
   for (let by = y0; by <= y1; by++)
     for (let bz = z0; bz <= z1; bz++)
+      for (let bx = x0; bx <= x1; bx++) {
+        const id = world.getBlock(bx, by, bz);
+        // it22 (MC): an open fence gate lets mobs through
+        if (id === BlockId.Gate && (world.getWaterLevel(bx, by, bz) & 1)) continue;
+        if (isSolid(id)) return true;
+      }
+  // it22 (MC): fences / closed gates are 1.5 tall — a mob can't step or jump onto them
+  if (y - y0 < FENCE_HEIGHT - 1) {
+    for (let bz = z0; bz <= z1; bz++)
       for (let bx = x0; bx <= x1; bx++)
-        if (isSolid(world.getBlock(bx, by, bz))) return true;
+        if (isTallCollider(world.getBlock(bx, y0 - 1, bz), world.getWaterLevel(bx, y0 - 1, bz))) return true;
+  }
   return false;
 }
 
@@ -91,6 +101,9 @@ export function burnsInSun(world: World, m: { x: number; y: number; z: number; h
   return true;
 }
 
+/** it22: mean seconds between grass-eating attempts of a shorn sheep (MC adult: 1/1000 per tick ≈ 50 s). */
+export const SHEEP_EAT_SECONDS = 50;
+
 export class MobSystem {
   mobs: Mob[] = [];
   nextId = 1;
@@ -103,6 +116,9 @@ export class MobSystem {
   onBlast?: (x: number, y: number, z: number, blocks: Blasted[]) => void;
   /** it22 (MC): true when rain falls on (x,y,z) — rain puts out burning mobs. */
   rainingAt?: (x: number, y: number, z: number) => boolean;
+  /** it22 (MC): a sheared sheep ate the grass block at (x,y,z) (it turned into dirt). */
+  onGrassEaten?: (x: number, y: number, z: number) => void;
+  sheepEatSeconds = SHEEP_EAT_SECONDS;
 
   clear(): void { this.mobs = []; }
 
@@ -285,6 +301,15 @@ export class MobSystem {
           if (m.hp <= 0) continue;
         }
       }
+      // it22 (MC): a shorn sheep now and then eats the grass it stands on (grass → dirt) and grows its wool back
+      if (m.kind === 'sau' && m.sheared && m.onGround && Math.random() < dt / this.sheepEatSeconds) {
+        const gx = Math.floor(m.x), gy = Math.floor(m.y - 0.1), gz = Math.floor(m.z);
+        if (world.getBlock(gx, gy, gz) === BlockId.Grass) {
+          world.setBlock(gx, gy, gz, BlockId.Dirt);
+          m.sheared = false;
+          this.onGrassEaten?.(gx, gy, gz);
+        }
+      }
       m.attackCool -= dt;
       if (m.knockBack && m.knockBack > 0) m.knockBack -= dt;
       const def = MOB_DEFS[m.kind];
@@ -440,7 +465,7 @@ export class MobSystem {
     const meat = m.burning ? ItemId.CookedMeat : ItemId.RawMeat;
     if (m.kind === 'gris') drops.spawn(x, y, z, stack(meat, 1));
     if (m.kind === 'ku') { drops.spawn(x, y, z, stack(ItemId.Leather, 1)); drops.spawn(x, y, z, stack(meat, 1 + (Math.random() * 2 | 0))); }
-    if (m.kind === 'sau') drops.spawn(x, y, z, stack(ItemId.WoolItem, 1));
+    if (m.kind === 'sau' && !m.sheared) drops.spawn(x, y, z, stack(ItemId.WoolItem, 1)); // it22: a shorn sheep drops no wool
     if (m.kind === 'høne') drops.spawn(x, y, z, stack(ItemId.Feather, 1));
     if (m.kind === 'ulv') drops.spawn(x, y, z, stack(ItemId.Bone, 1 + (Math.random() * 2 | 0)));
     if (m.kind === 'bueskytt') {
@@ -498,22 +523,39 @@ export class MobSystem {
     m.vy = 5;
   }
 
-  hitAt(x: number, y: number, z: number, reach: number, yaw: number, pitch: number, dmg: number, sound: SoundBus): boolean {
+  /** First living mob along the view ray within reach (same hit test as melee). */
+  pickAt(x: number, y: number, z: number, reach: number, yaw: number, pitch: number): Mob | null {
     const cosP = Math.cos(pitch);
     const dx = -Math.sin(yaw) * cosP;
     const dy = Math.sin(pitch);
     const dz = -Math.cos(yaw) * cosP;
+    let best: Mob | null = null, bt = Infinity;
     for (const m of this.mobs) {
+      if (m.hp <= 0) continue;
       const mx = m.x - x, my = m.y + m.height * 0.5 - y, mz = m.z - z;
       const t = mx * dx + my * dy + mz * dz;
       if (t < 0 || t > reach) continue;
       const px = x + dx * t, py = y + dy * t, pz = z + dz * t;
-      if (Math.hypot(px - m.x, py - (m.y + m.height * 0.5), pz - m.z) < Math.max(m.width, m.height) * 0.75) {
-        this.hurtMob(m, dmg, dx, dz);
-        sound.mobHit();
-        return true;
-      }
+      if (Math.hypot(px - m.x, py - (m.y + m.height * 0.5), pz - m.z) < Math.max(m.width, m.height) * 0.75 && t < bt) { bt = t; best = m; }
     }
-    return false;
+    return best;
+  }
+
+  hitAt(x: number, y: number, z: number, reach: number, yaw: number, pitch: number, dmg: number, sound: SoundBus): boolean {
+    const m = this.pickAt(x, y, z, reach, yaw, pitch);
+    if (!m) return false;
+    const cosP = Math.cos(pitch);
+    this.hurtMob(m, dmg, -Math.sin(yaw) * cosP, -Math.cos(yaw) * cosP);
+    sound.mobHit();
+    return true;
+  }
+
+  /** it22 (MC): shears on a woolly sheep → 1–3 wool, the sheep is shorn. Returns the wool count (0 = nothing to shear). */
+  shear(m: Mob, drops: DropSystem, rng: () => number = Math.random): number {
+    if (m.kind !== 'sau' || m.sheared || m.hp <= 0) return 0;
+    m.sheared = true;
+    const n = 1 + Math.floor(rng() * 3);
+    for (let i = 0; i < n; i++) drops.spawn(Math.floor(m.x), Math.floor(m.y + 0.5), Math.floor(m.z), stack(ItemId.WoolItem, 1));
+    return n;
   }
 }

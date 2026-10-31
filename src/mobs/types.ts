@@ -41,6 +41,8 @@ export interface Mob {
   /** Creeper blew itself up (no drops / XP, like MC). */
   exploded?: boolean;
   attacking?: boolean;
+  /** it22 (MC): sheep that has been shorn (no wool until it eats grass). */
+  sheared?: boolean;
   /** Wolf: tamed companion */
   tamed?: boolean;
   sitting?: boolean;

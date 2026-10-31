@@ -64,3 +64,63 @@ describe('it22 shears (MC)', () => {
     expect(ITEMS[BlockId.TallGrass].placeBlock).toBe(BlockId.TallGrass);
   });
 });
+
+import { MobSystem } from '../src/mobs/system';
+describe('it22 shearing sheep (MC)', () => {
+  it('shears give 1–3 wool once; a shorn sheep gives nothing more', () => {
+    const ms = new MobSystem();
+    const spawned: number[] = [];
+    const drops = { spawn: (_x: number, _y: number, _z: number, s: { id: number; count: number }) => spawned.push(s.id) } as any;
+    const sheep = { kind: 'sau', hp: 8, x: 0, y: 1, z: 0 } as any;
+    const n = ms.shear(sheep, drops, () => 0.99);
+    expect(n).toBe(3);
+    expect(spawned).toEqual([ItemId.WoolItem, ItemId.WoolItem, ItemId.WoolItem]);
+    expect(sheep.sheared).toBe(true);
+    expect(ms.shear(sheep, drops)).toBe(0);
+    expect(ms.shear({ kind: 'gris', hp: 10, x: 0, y: 1, z: 0 } as any, drops)).toBe(0);
+    expect(ms.shear({ kind: 'sau', hp: 8, x: 0, y: 1, z: 0 } as any, drops, () => 0)).toBe(1);
+  });
+});
+
+import { createPlayer, movePlayer } from '../src/player/physics';
+describe('it22 fences are 1.5 tall (MC)', () => {
+  const fenceWorld = (gateOpen = false): any => ({
+    getBlock: (x: number, y: number, z: number) => (y === 45 ? BlockId.Grass : y === 46 && z === 8 ? (x === 4 ? BlockId.Gate : BlockId.Fence) : 0),
+    getWaterLevel: (x: number, y: number, z: number) => (gateOpen && x === 4 && y === 46 && z === 8 ? 1 : 0),
+    hasChunkAt: () => true,
+  });
+  it('walking + jumping into a fence line never gets you over it (no mid-air step-up onto the fence)', () => {
+    const p = createPlayer(6.5, 46.0, 10.5);
+    for (let i = 0; i < 400; i++) movePlayer(p, fenceWorld(), 0, -1, i < 320 && i % 20 < 3, 1 / 60);
+    expect(p.z).toBeGreaterThan(9.2);
+    expect(p.y).toBeLessThan(46.5);
+  });
+  it('a closed gate blocks like the fence; an open gate lets you through', () => {
+    const p = createPlayer(4.5, 46.0, 10.5);
+    for (let i = 0; i < 300; i++) movePlayer(p, fenceWorld(false), 0, -1, i % 20 < 3, 1 / 60);
+    expect(p.z).toBeGreaterThan(9.2);
+    const q = createPlayer(4.5, 46.0, 10.5);
+    for (let i = 0; i < 300; i++) movePlayer(q, fenceWorld(true), 0, -1, false, 1 / 60);
+    expect(q.z).toBeLessThan(7);
+  });
+});
+
+describe('it22 jump arc + landing are frame-rate independent', () => {
+  const flat: any = { getBlock: (_x: number, y: number) => (y === 45 ? BlockId.Grass : 0), getWaterLevel: () => 0, hasChunkAt: () => true };
+  for (const dt of [1 / 144, 1 / 60, 1 / 30, 0.05]) {
+    it(`dt=${dt.toFixed(3)}: apex ≈ 1.27 blocks and you land exactly on the ground`, () => {
+      const p = createPlayer(0.5, 46, 0.5);
+      let maxY = 0; const lands: number[] = [];
+      for (let t = 0; t < 3; t += dt) {
+        const g = p.onGround;
+        movePlayer(p, flat, 0, 0, (t % 0.5) < 0.1, dt);
+        if (!g && p.onGround) lands.push(p.y);
+        maxY = Math.max(maxY, p.y);
+      }
+      expect(maxY - 46).toBeGreaterThan(1.2);
+      expect(maxY - 46).toBeLessThan(1.3);
+      expect(lands.length).toBeGreaterThan(2);
+      for (const y of lands) expect(y).toBeCloseTo(46, 2);
+    });
+  }
+});

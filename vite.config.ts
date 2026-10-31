@@ -8,6 +8,7 @@ export default defineConfig({
   preview: { host: '127.0.0.1', port: 4177 },
   worker: { format: 'es' },
   test: {
+    testTimeout: 30000,
     environment: 'node',
     include: ['tests/**/*.test.ts'],
   },

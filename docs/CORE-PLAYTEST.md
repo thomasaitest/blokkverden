@@ -232,11 +232,21 @@ Last run: 2026-10-31 02:26–02:35 CET · it18 core (56 PASS / 0 FAIL) + scripts
 | # | Check | Minecraft-expected | Status | Notes |
 |---|--------|-------------------|--------|-------|
 | V1 | Falling water dries up | Water poured on a pillar falls down (falling water, level 8, not a source) and spreads at the bottom; scoop the source → the waterfall and all water below it disappear | PASS | FW1 (0 water left) + vitest (was: water that had run down a ledge stayed forever) |
-| V2 | Flowing lava | A lava source spreads 3 blocks in the overworld, one step every ~1.5 s, lower at the edges; flowing lava can't be scooped; scoop the source → the flow recedes and vanishes | PASS | LV1 (25 cells, metas 3/1, 0 left) + vitest |
+| V2 | Flowing lava | A lava source spreads 3 blocks in the overworld, one step every ~1.5 s, lower at the edges; flowing lava can't be scooped; scoop the source → the flow recedes and vanishes | PASS | LV1 (25 cells, strengths 6/2 since it25 — was 3/1, 0 left) + vitest |
 | V3 | Cobblestone generator | Water meeting flowing lava turns the lava into cobblestone (a source still makes obsidian); mine it and it forms again | PASS | CB1 (iron pickaxe, real LMB) + vitest |
 | V4 | Lava onto water → stone | Lava falling onto water turns the water into stone, with a fizz | PASS | ST1 + vitest |
 | V5 | Liquid steps | Flowing water/lava cells of different heights show the step side; lower flow cells no longer vanish when seen at an angle | PASS (visual) | screenshots it24-01/03 |
 | V6 | Fence model | Fence = thin post + two rails to neighbouring fences, gates and solid blocks, plank texture (was a full block with a fence picture) | PASS (visual) | FN1 (placed with RMB) + vitest |
+
+## W. Liquid current, Helvete lava, milk bucket (it25, `scripts/it25-verify.ts`, real input)
+| # | Check | Minecraft-expected | Status | Notes |
+|---|--------|-------------------|--------|-------|
+| W1 | Current pushes the player | Standing still (no keys) in flowing water carries you along the flow (~1.4 b/s); a still pool of sources doesn't push | PASS | CU1 (2.1 blocks in 1.5 s game time) + vitest |
+| W2 | Items drift | An item dropped (Q) into flowing water drifts along the current | PASS | CU2 + vitest |
+| W3 | Mobs drift | A mob in flowing water is carried along too | PASS | CU3 (pig, ~3 blocks in 2 s) |
+| W4 | Helvete lava | In Helvete lava flows 7 blocks and ~3× as fast (one step per 0.5 s); the overworld still flows 3 | PASS | HL1 (113 cells in 4.5 s, edge strength 1, recedes) + OW1 + vitest |
+| W5 | Milk bucket | RMB a cow with an empty bucket → milk bucket (from a stack: the milk goes to the inventory); pigs give nothing; hold RMB 1.6 s to drink → effects (Sult) removed, empty bucket back; can't be poured | PASS | MK1, MK2 + vitest |
+| W6 | Step side | The side of a higher liquid cell is drawn only above the lower neighbour's surface (no double transparent layer) | PASS (visual) | WS1 screenshot it25-08 |
 
 ## Method rules
 1. **Real input:** synthesized keyboard/mouse via pointer lock. `__bv` may set up a scenario only — never perform the action under test.

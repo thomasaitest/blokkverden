@@ -104,3 +104,21 @@ describe('it25 milk bucket (MC)', () => {
     expect(w.getBlock(8, 21, 8)).toBe(BlockId.Air);
   });
 });
+
+import { MobSystem } from '../src/mobs/system';
+import { SoundBus } from '../src/audio/sound';
+
+describe('it25 mobs in a current (MC)', () => {
+  it('a pig in a walled channel of flowing water is carried along the flow', () => {
+    const w = flat();
+    for (let x = 0; x < 16; x++) for (let z = 0; z < 16; z++) if (z < 7 || z > 9) { w.setBlock(x, 21, z, BlockId.Stone); w.setBlock(x, 22, z, BlockId.Stone); }
+    pour(w, WATER_BUCKET, 1, 21, 8, false);
+    for (let i = 0; i < 14; i++) tickWater(w, 400, undefined, F);
+    const sys = new MobSystem();
+    const m = sys.spawn('gris', 3.5, 21, 8.5);
+    const player = createPlayer(14.5, 30, 2.5);
+    const drops = new DropSystem();
+    for (let i = 0; i < 40; i++) sys.update(w, player, 0.05, drops, new SoundBus(), () => {});
+    expect(m.x).toBeGreaterThan(5.0);
+  });
+});

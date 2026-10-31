@@ -320,7 +320,8 @@ function buildMesh(
         if (id === BlockId.Air) continue;
         const def = BLOCKS[id];
         if (!def) continue;
-        if (transparentPass !== def.transparent) continue;
+        if (id === BlockId.Fence) { if (transparentPass) continue; } // it24: solid plank model → opaque pass
+        else if (transparentPass !== def.transparent) continue;
         if (!transparentPass && isFullCube(id)) continue; // handled by greedy
         // Doors/lamps rendered as special meshes in renderer
         if (id === BlockId.Door || id === BlockId.Lamp) continue;
@@ -330,7 +331,7 @@ function buildMesh(
         if (id === BlockId.Fence) {
           const lt = getLight(wx, y, wz);
           const conn = (dx: number, dz: number) => { const n = getWorld(wx + dx, y, wz + dz); return n === BlockId.Fence || n === BlockId.Gate || isFullCube(n) && isOpaque(n); };
-          for (const b of fenceBoxes(conn)) emitBox(a, wx, y, wz, b, def.tiles.side, lt);
+          for (const b of fenceBoxes(conn)) emitBox(a, wx, y, wz, b, 7, lt); // MC: fence uses the plank texture
           continue;
         }
         if (id === BlockId.Ladder) {
@@ -363,7 +364,16 @@ function buildMesh(
           if (skipTop && face.dir[1] === 1) continue;
           if ((id === BlockId.Water || id === BlockId.Lava) && face.dir[1] === -1 && getWorld(wx, y - 1, wz) === id) continue;
           const neighbor = getWorld(wx + face.dir[0], y + face.dir[1], wz + face.dir[2]);
-          if (!faceExposed(id, neighbor, def)) continue;
+          let exposed = faceExposed(id, neighbor, def);
+          // it24 (MC): a liquid side facing a lower cell of the same liquid shows the step (was culled → you looked
+          // straight through the higher cell and the lower flow vanished at an angle)
+          if (!exposed && def.liquid && neighbor === id && face.dir[1] === 0 && getWorld(wx, y + 1, wz) !== id) {
+            const nx = wx + face.dir[0], nz = wz + face.dir[2];
+            const nm = getMeta(nx, y, nz);
+            const nh = getWorld(nx, y + 1, nz) === id ? 1 : id === BlockId.Lava ? lavaHeight(nm || 7) : Math.min(1, Math.max(0.125, (nm || 7) / 7));
+            exposed = nh < hTop - 0.01;
+          }
+          if (!exposed) continue;
           emitQuad(a, face, wx, y, wz, 1, 1, id, getWorld, getLight, getMeta, hTop);
         }
       }

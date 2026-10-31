@@ -104,3 +104,14 @@ describe('it24 cobblestone / stone (MC)', () => {
     expect(st).toEqual([[8, 21, 8]]);
   });
 });
+
+describe('it24 fence model (MC)', async () => {
+  const { fenceBoxes } = await import('../src/world/mesher');
+  it('lone fence is just the 4/16 post; each connection adds two rails', () => {
+    expect(fenceBoxes(() => false)).toEqual([[6 / 16, 0, 6 / 16, 10 / 16, 1, 10 / 16]]);
+    const two = fenceBoxes((dx, dz) => dx === 1 && dz === 0);
+    expect(two.length).toBe(3);
+    expect(two[1][3]).toBe(1); // rail reaches the +x edge
+    expect(fenceBoxes(() => true).length).toBe(9);
+  });
+});

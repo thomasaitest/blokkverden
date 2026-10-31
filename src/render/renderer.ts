@@ -581,8 +581,9 @@ export class GameRenderer {
   syncBoats(boats: Boat[]): void {
     while (this.boatPool.length < boats.length) {
       const g = new THREE.Group();
-      const hull = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.4, 1.1), new THREE.MeshLambertMaterial({ color: 0xc48a3a }));
-      const seat = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.15, 0.7), new THREE.MeshLambertMaterial({ color: 0x6b4420 }));
+      // it26: long axis along local z = the heading (forward is −z at yaw 0); the boat used to sail sideways
+      const hull = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.4, 1.8), new THREE.MeshLambertMaterial({ color: 0xc48a3a }));
+      const seat = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.15, 1.2), new THREE.MeshLambertMaterial({ color: 0x6b4420 }));
       seat.position.y = 0.2;
       g.add(hull); g.add(seat);
       this.boatPool.push(g as unknown as THREE.Mesh);

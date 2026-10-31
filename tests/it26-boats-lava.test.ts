@@ -106,3 +106,24 @@ describe('it26 breaking boats (MC)', () => {
     expect(bs.pickAt(0.5, 21.6, 0, 3.2, 0, 0)).toBeNull();
   });
 });
+
+describe('it26 boat hull (oriented)', () => {
+  it('the nose stops at the wall (hull long along the heading), and a boat stuck sideways still cannot pass a wall', () => {
+    const w = flat();
+    for (let x = 2; x <= 12; x++) for (let z = 6; z <= 10; z++) w.setWater(x, 21, z, 7);
+    for (let z = 4; z <= 12; z++) { w.setBlock(10, 21, z, BlockId.Stone); w.setBlock(10, 22, z, BlockId.Stone); }
+    const bs = new BoatSystem();
+    const b = bs.place(5.5, 21.8, 8.5);
+    b.yaw = -Math.PI / 2; b.vx = 3;
+    for (let i = 0; i < 60; i++) { b.vx = 3; (bs as any).move(w, b, 0.05); }
+    expect(b.x).toBeGreaterThan(9.1); expect(b.x).toBeLessThan(9.25);
+    // sideways in a 1-wide gap: stuck mode uses the small core but still stops at the end wall
+    const c = flat();
+    for (let x = 2; x <= 9; x++) { c.setBlock(x, 21, 7, BlockId.Stone); c.setBlock(x, 21, 9, BlockId.Stone); }
+    c.setBlock(9, 21, 8, BlockId.Stone);
+    const s = bs.place(4.5, 20.9, 8.5); s.yaw = 0;
+    for (let i = 0; i < 80; i++) { s.vx = 3; (bs as any).move(c, s, 0.05); }
+    expect(s.x).toBeLessThan(8.75);
+    expect(s.x).toBeGreaterThan(8.5);
+  });
+});

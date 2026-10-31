@@ -346,7 +346,7 @@ async function main() {
     await page.evaluate(() => { const bv = (window as any).__bv; for (let x = 1; x <= 14; x++) { bv.world.setBlock(x, 46, 7, 3); bv.world.setBlock(x, 46, 9, 3); bv.world.setBlock(x, 47, 7, 3); bv.world.setBlock(x, 47, 9, 3); } bv.world.setBlock(1, 46, 8, 3); bv.world.setBlock(1, 47, 8, 3); bv.forceRemeshAround?.(); });
     await sleep(500);
     await setHeld(page, 88);
-    await aim(page, 1.5, 48.0, 8.5, 2.5, 45.95, 8.5); // on the end wall, looking down the channel
+    await aim(page, 1.2, 48.0, 8.5, 3.5, 46.0, 8.5); // on the end wall, looking down the channel (ray clears the wall top)
     await sleep(200);
     await hold(page, 80, 'right'); await sleep(300);
     await simSleep(6);
@@ -355,9 +355,9 @@ async function main() {
   // BD1 — a boat placed (real RMB) in a flowing channel drifts with the current (MC)
   if (run('BD1')) {
     await channel();
-    const src = await gb(2, 46, 8);
+    const src = await gb(3, 46, 8), wallTop = await gb(1, 48, 8);
     await setHeld(page, 66);
-    await aim(page, 1.5, 48.0, 8.5, 3.5, 45.9, 8.5);
+    await aim(page, 1.2, 48.0, 8.5, 4.5, 46.0, 8.5);
     await sleep(200);
     await hold(page, 80, 'right'); await sleep(200);
     const b0 = (await boatInfo())[0];
@@ -365,8 +365,8 @@ async function main() {
     await simSleep(2.0);
     const b1 = (await boatInfo())[0];
     await shot(page, 'it26-01-bat-driver.png');
-    record('BD1-boat-drifts', src === 10 && !!b0 && !!b1 && b1.x - b0.x > 1.2 && Math.abs(b1.z - 8.5) < 0.2 ? 'PASS' : 'FAIL',
-      JSON.stringify({ src, b0, b1 }));
+    record('BD1-boat-drifts', src === 10 && wallTop === 0 && !!b0 && b0.y < 47 && !!b0 && !!b1 && b1.x - b0.x > 1.2 && Math.abs(b1.z - 8.5) < 0.2 ? 'PASS' : 'FAIL',
+      JSON.stringify({ src, wallTop, b0, b1 }));
   }
 
   // BC1 — riding a boat (real RMB to mount, W to row) into a wall: it stops at the wall instead of sailing through it
@@ -400,7 +400,10 @@ async function main() {
     await simSleep(1.0); await page.keyboard.up('KeyW');
     const end = (await boatInfo())[0];
     await page.keyboard.press('ShiftLeft'); await sleep(300);
-    record('BC1-boat-stops-at-wall', placed === 1 && mounted && !!end && end.x < 11.6 && end.x > 10.5 && Math.abs(end.x - mid.x) < 0.05 ? 'PASS' : 'FAIL',
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.boatSys.dismount(bv.player); for (let x = 6; x <= 11; x++) { bv.world.setBlock(x, 45, 13, 3); } bv.teleport(9.5, 46.0, 13.5); bv.lookAt(11.4, 45.9, 6.5); });
+    await sleep(700);
+    await shot(page, 'it26-02b-bat-ved-vegg.png');
+    record('BC1-boat-stops-at-wall', placed === 1 && mounted && !!end && end.x < 11.3 && end.x > 10.9 && Math.abs(end.x - mid.x) < 0.05 ? 'PASS' : 'FAIL',
       JSON.stringify({ placed, mounted, mid, end }));
   }
 
@@ -456,6 +459,8 @@ async function main() {
         bv.world.setBlock(x, cy - 1, z, 40);
         for (let y = cy; y <= cy + 5; y++) bv.world.setBlock(x, y, z, 0);
       }
+      // stone pillar to stand on for the screenshot (lava flows around it)
+      bv.world.setBlock(cx + 4, cy, cz, 40); bv.world.setBlock(cx + 4, cy + 1, cz, 40);
       bv.forceRemeshAround?.();
       return { cx, cy, cz };
     });
@@ -469,13 +474,14 @@ async function main() {
     await simSleep(4.5);
     const m = [await gm(cx, cy, cz), await gm(cx + 1, cy, cz), await gm(cx + 2, cy, cz)];
     await aim(page, cx + 3.5, cy + 0.9, cz + 0.5, cx - 0.5, cy + 0.5, cz + 0.5);
-    await page.evaluate(({ cx, cy, cz }) => { const bv = (window as any).__bv; bv.teleport(cx + 4.5, cy + 2.0, cz + 0.5); bv.lookAt(cx + 0.5, cy + 0.8, cz + 0.5); }, pad);
+    await page.evaluate(({ cx, cy, cz }) => { const bv = (window as any).__bv; bv.teleport(cx + 4.5, cy + 2.0, cz + 0.5); bv.lookAt(cx + 0.5, cy + 0.6, cz + 1.5); }, pad);
     await sleep(900);
     await shot(page, 'it26-05-helvete-lava-trinn.png');
     await page.evaluate(() => (window as any).__bv.exitHelvete());
     await sleep(2000);
     await ensureLocked(page);
-    record('LH1-helvete-lava-step', ent?.ok && m[0] === 0 && m[1] === 7 && m[2] === 6 ? 'PASS' : 'FAIL', JSON.stringify({ ent: ent?.ok, m, note: 'visual check of screenshot' }));
+    const hpL = await page.evaluate(() => (window as any).__bv.player.health);
+    record('LH1-helvete-lava-step', ent?.ok && hpL === 20 && m[0] === 0 && m[1] === 7 && m[2] === 6 ? 'PASS' : 'FAIL', JSON.stringify({ ent: ent?.ok, m, note: 'visual check of screenshot' }));
   }
 
   const sum = { PASS: 0, FAIL: 0, PARTIAL: 0, UNTESTED: 0 } as Record<Status, number>;

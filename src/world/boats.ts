@@ -80,24 +80,26 @@ export class BoatSystem {
     return null;
   }
 
-  /** it26 (MC): a boat can't sail into solid blocks (it drove straight through shores and walls). */
-  private blocked(world: World, x: number, y: number, z: number): boolean {
-    const r = 0.45;
+  /** it26 (MC): a boat can't sail into solid blocks (it drove straight through shores and walls).
+   *  The hull is checked as an oriented box (long along its heading), r = half width, l = half length. */
+  private blocked(world: World, x: number, y: number, z: number, yaw: number, l = 0.8, r = 0.42): boolean {
+    const fx = -Math.sin(yaw), fz = -Math.cos(yaw);
     const y0 = Math.floor(y + 0.25), y1 = Math.floor(y + 0.9);
-    for (const [ox, oz] of [[-r, -r], [r, -r], [-r, r], [r, r]] as const) {
-      const bx = Math.floor(x + ox), bz = Math.floor(z + oz);
+    for (const a of [-l, 0, l]) for (const c of [-r, r]) {
+      const bx = Math.floor(x + fx * a + fz * c), bz = Math.floor(z + fz * a - fx * c);
       for (let yy = y0; yy <= y1; yy++) if (isSolid(world.getBlock(bx, yy, bz))) return true;
     }
     return false;
   }
 
   private move(world: World, b: Boat, dt: number): void {
-    // already stuck inside a block (placed into a corner) → don't trap it, let it move out
-    if (this.blocked(world, b.x, b.y, b.z)) { b.x += b.vx * dt; b.z += b.vz * dt; return; }
+    // turned into a tight spot: fall back to a small core box so it can turn/move out, but never through a wall
+    const stuck = this.blocked(world, b.x, b.y, b.z, b.yaw);
+    const l = stuck ? 0.3 : 0.8, r = stuck ? 0.3 : 0.42;
     const nx = b.x + b.vx * dt;
-    if (!this.blocked(world, nx, b.y, b.z)) b.x = nx; else b.vx = 0;
+    if (!this.blocked(world, nx, b.y, b.z, b.yaw, l, r)) b.x = nx; else b.vx = 0;
     const nz = b.z + b.vz * dt;
-    if (!this.blocked(world, b.x, b.y, nz)) b.z = nz; else b.vz = 0;
+    if (!this.blocked(world, b.x, b.y, nz, b.yaw, l, r)) b.z = nz; else b.vz = 0;
   }
 
   /** it26 (MC): current of the water the boat floats in (horizontal, normalised), or {0,0}. */

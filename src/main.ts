@@ -1701,7 +1701,8 @@ async function runGame(
           }
         } else if (held && held.id === ItemId.Boat) {
           const px = hit.x + hit.nx, py = hit.y + hit.ny, pz = hit.z + hit.nz;
-          boats.place(px + 0.5, py + 0.4, pz + 0.5);
+          // it26 (MC): a placed boat faces the way you look
+          boats.place(px + 0.5, py + 0.4, pz + 0.5).yaw = player.yaw;
           inv.setHeld(null); hud.markDirty(); sound.placeBlock();
         } else if (held && held.id === ItemId.FishingRod) {
           if (fishing.casting) {

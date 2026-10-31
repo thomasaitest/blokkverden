@@ -511,6 +511,36 @@ async function main() {
     await page.evaluate(() => (window as any).__bv.setDay(0.5));
   }
 
+  // X11 — mining under water is ×5 slower (dirt by hand: ~0.5 s on land → ~2.5 s with eyes under water)
+  if (run('X11')) {
+    const timeBreak = async (x: number, y: number, z: number) => {
+      const t0 = Date.now();
+      await page.mouse.down();
+      for (let i = 0; i < 80 && (await gb(x, y, z)) !== 0; i++) await sleep(50);
+      await page.mouse.up();
+      return Date.now() - t0;
+    };
+    await setHeld(page, 0);
+    await page.evaluate(() => { const bv = (window as any).__bv; bv.world.setBlock(2, 46, 10, 2); bv.forceRemeshAround?.(); });
+    await aim(page, 2.5, 46.0, 12.5, 2.5, 46.5, 10.5);
+    await sleep(300);
+    const land = await timeBreak(2, 46, 10);
+    await page.evaluate(() => {
+      const bv = (window as any).__bv;
+      for (let x = 0; x <= 6; x++) for (let z = 12; z <= 18; z++) for (let y = 42; y <= 45; y++) bv.world.setBlock(x, y, z, (x === 0 || x === 6 || z === 12 || z === 18) ? 3 : 0);
+      for (let x = 1; x <= 5; x++) for (let z = 13; z <= 17; z++) { bv.world.setBlock(x, 41, z, 3); for (let y = 42; y <= 45; y++) bv.world.setWater(x, y, z, 7); }
+      bv.world.setBlock(3, 42, 13, 2);
+      bv.forceRemeshAround?.();
+    });
+    await aim(page, 3.5, 42.0, 15.0, 3.5, 42.5, 13.5);
+    await sleep(500);
+    const st0 = await st(page);
+    const water = await timeBreak(3, 42, 13);
+    const st1 = await st(page);
+    record('X11-mining-underwater', land < 1100 && water > 2000 && water < 4500 ? 'PASS' : 'FAIL', JSON.stringify({ land, water, y0: st0.y.toFixed(2), y1: st1.y.toFixed(2) }));
+    await page.evaluate(() => (window as any).__bv.teleport(8.5, 46, 8.5));
+  }
+
   console.log('=== SUMMARY ===', JSON.stringify(results.map((r) => r.status)), 'BUGS', JSON.stringify(bugs));
   await ctx.close(); await browser.close(); child.kill('SIGKILL'); process.exit(0);
 }

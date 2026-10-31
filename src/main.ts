@@ -5,7 +5,7 @@ import { Inventory } from './items/inventory';
 import { updateGravityAround, needsSupportBelow } from './world/gravity';
 import { canPlantSapling, growOak, SAPLING_GROW_CHANCE, SAPLING_MIN_LIGHT } from './world/saplings';
 import { LeafDecay, LEAF_PERSISTENT } from './world/leafdecay';
-import { type ItemStack, ITEMS, breakDuration, dropForBlock, damageTool, armorPoints, ItemId, blockMaterial } from './items/types';
+import { type ItemStack, ITEMS, breakDuration, dropForBlock, damageTool, armorPoints, ItemId, blockMaterial, miningPenalty } from './items/types';
 import { bindDesktopControls, consumeLook, consumePlace, createInput } from './player/controls';
 import { createPlayer, movePlayer, EYE_HEIGHT, headInSolid } from './player/physics';
 import { raycast } from './player/raycast';
@@ -1358,7 +1358,8 @@ async function runGame(
         breakAcc = 0; breakTarget = null; hud.setBreakProgress(0);
       } else {
         // MC creative: blocks (even bedrock) break instantly
-        const need = player.creative ? 0.05 : breakDuration(id, inv.held());
+        const eyesInWater = world.getBlock(Math.floor(player.x), Math.floor(player.y + EYE_HEIGHT), Math.floor(player.z)) === BlockId.Water;
+        const need = player.creative ? 0.05 : breakDuration(id, inv.held()) * miningPenalty(player.onGround || boats.mounted, eyesInWater);
         breakAcc += dt;
         hud.setBreakProgress(need > 0 ? breakAcc / need : 1);
         if (need > 0 && breakAcc >= need) {

@@ -188,6 +188,10 @@ export function breakDuration(blockId: number, held: ItemStack | null): number {
   if (mult > 1 && !canHarvest(blockId, held)) mult /= 3.33;
   return base / mult;
 }
+/** MC mining penalties: ×5 slower with your head under water, ×5 slower while not standing on the ground (they stack). */
+export function miningPenalty(onGround: boolean, eyesInWater: boolean): number {
+  return (onGround ? 1 : 5) * (eyesInWater ? 5 : 1);
+}
 export function dropForBlock(blockId: number, held: ItemStack | null): ItemStack | null {
   if (blockId === 0 || blockId === 10) return null;
   if (blockId === 48) return null;

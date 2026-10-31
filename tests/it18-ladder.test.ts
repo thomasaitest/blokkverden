@@ -41,3 +41,13 @@ describe('it18 ladders (MC)', () => {
     expect(dmg).toBe(0);
   });
 });
+
+import { miningPenalty } from '../src/items/types';
+describe('it18 mining penalties (MC)', () => {
+  it('×5 airborne, ×5 eyes under water, stacking', () => {
+    expect(miningPenalty(true, false)).toBe(1);
+    expect(miningPenalty(false, false)).toBe(5);
+    expect(miningPenalty(true, true)).toBe(5);
+    expect(miningPenalty(false, true)).toBe(25);
+  });
+});

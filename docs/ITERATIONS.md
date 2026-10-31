@@ -2,6 +2,45 @@
 
 Original voxel-sandkasse. Ingen Mojang-assets.
 
+## Iterasjon 18 (2026-10-31)
+
+Start: lør. 31. okt. 01:50 CET · Slutt: lør. 31. okt. END CET (~MIN min) · gren `dev` (ikke publisert)
+
+### Fokus
+Feiljakt med ekte tastatur/mus i Chromium (nytt `scripts/it18-explore.ts`: tårnhopp, sniking langs kant/brobygging, stiger, dører, vannlanding, Q-slipp, søvn, graving under vann). Så tre små MC-ting rundt planter: beinmel, blomster, vann som vasker bort planter. `__bv` bare til oppsett.
+
+### Fikset
+1. Vann rant inn i chunker som ikke var generert ennå. Det genererte nye chunker i det uendelige (81 → 157 chunker på 200 tikk i test), og brukte opp hele vannbudsjettet. Vann du helte ut i nærheten sto derfor stille i opptil 30+ s (W1 feilet i full kjøring). Nå renner vann aldri inn i ugenererte chunker. Nærmeste chunker tikkes først, og 3×3 chunker rundt spilleren har 400 oppdateringer per tikk
+2. Stiger: du måtte holde mellomrom for å klatre, og Shift fikk deg til å suse ned. Nå som MC: gå inn i stigen (W) for å klatre (~2,35 blokker/s), Shift holder deg på stedet, uten taster sklir du ned (maks 3 blokker/s). Du klatrer over kanten på toppen, uten fallskade
+3. Dører var bare én blokk (øvre halvdel var luft): klikk på øvre del gikk tvers gjennom, du kunne bygge inn i døra, og den svevde når gulvet ble fjernet. Nå oppfører døra seg som 2 blokker høy: øvre halvdel kan siktes på (høyreklikk åpner/lukker, også med en blokk i hånda, som i MC), og ingenting kan plasseres der. Døra krever 2 ledige ruter og gulv, vender mot den som plasserer den, faller av som ting når gulvet fjernes, og stopper vann
+4. Graving gikk like fort under vann og i lufta. Nå som MC: 5× tregere med hodet under vann og 5× tregere når du ikke står på bakken (land 0,7 s → under vann 2,9 s for jord med hånda)
+5. Partikler når du knuser blokker var alltid brune. Nå får de fargen til blokkas tekstur (grønt løv, sandfarget sand, grå stein)
+6. Vann vasket ikke bort planter. Nå bryter rennende vann fakler, rødtråd, avlinger, spirer, høyt gress og blomster til ting (som i MC)
+
+### Nye funksjoner (3)
+- Beinmel: 1 bein gir 3 beinmel. Høyreklikk på avling gir +2–5 vekststadier (ingenting brukes på moden avling). På spire er det 45 % sjanse for at treet vokser med en gang, og beinmelet brukes uansett. På gressblokk sprer det seg høyt gress og noen blomster innen 3 blokker. Grønne partikler
+- Blomster: løvetann og valmue (egne teksturer) finnes spredt på gress i slette og skog. De er X-modeller uten kollisjon, knuses med en gang, gir seg selv, plantes på gress, jord eller åkerjord, og faller av og vaskes bort
+- Vann vasker bort planter og fakler (se fiks 6)
+
+### Playtest
+- Core: **56 PASS / 0 FAIL / 0 PARTIAL** (`scripts/core-playtest.ts`, endelig bygg; H2 trenger fortsatt ett nytt forsøk i headless, som før)
+- it18-verify: **8/8 PASS** (`scripts/it18-verify.ts`: FL1, BM0–BM3, FL2, W1, PC1)
+- it18-explore: **11/11 PASS** (`scripts/it18-explore.ts`: X1 tårnhopp, X2 brobygging, X3 gå gjennom planter, X4 grave ned, X5 tak + hopp, X6 stige, X7 dør, X8 vannlanding, X9 Q-slipp, X10 søvn, X11 graving under vann)
+- Regresjon: it17-verify 13/13, it16-verify 6/6
+- 114 vitest grønne (17 nye: beinmel, blomster, vannvask, vannbudsjett/ingen nye chunker, dører blokkerer vann, partikkelfarge, stiger, dører, gravestraff)
+- Ny seksjon P i CORE-PLAYTEST.md
+
+### Kjente begrensninger
+- Beinmel på høyt gress gjør ingenting (MC: dobbelt høyt gress finnes ikke ennå)
+- Dørens kollisjon er hele blokka når den er lukket (MC: tynt panel). Merkeboksen rundt stige er en hel blokk
+- Flint brukes fortsatt bare til piler (ingen fyrstål eller ild ennå)
+- Sand og grus faller fortsatt umiddelbart (ingen fallanimasjon)
+
+### Media
+public/progress/it18/ (lokalt på `dev`, ikke publisert): skjermbilder it18-00…08, it18-x1/x2/x6/x7, klipp `clip-it18-beinmel.webm`, `clip-it18-blomster.webm`, `clip-it18-vann-vasker.webm`
+
+---
+
 ## Iterasjon 17 (2026-10-31)
 
 Start: lør. 31. okt. 00:51 CET · Slutt: lør. 31. okt. 01:20 CET (~29 min) · gren `dev` (ikke publisert)

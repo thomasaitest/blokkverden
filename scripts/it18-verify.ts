@@ -444,15 +444,18 @@ async function main() {
       for (let x = 1; x <= 9; x++) for (let z = -1; z <= 3; z++) if (x === 1 || x === 9 || z === -1 || z === 3) bv.world.setBlock(x, 46, z, 3);
       bv.world.setBlock(4, 46, 1, 78); bv.world.setBlock(5, 46, 1, 12); bv.world.setBlock(6, 46, 1, 79);
       bv.world.setWater(3, 46, 1, 7);
+      for (let y = 46; y <= 48; y++) bv.world.setBlock(5, y, 6, 3); // viewing pillar
       bv.forceRemeshAround?.();
     });
-    await aim(page, 5.5, 48.5, 7.5, 5.5, 46.0, 1.5);
+    await aim(page, 5.5, 49.05, 6.5, 5.5, 46.3, 1.5);
     await sleep(600);
     await shot(page, 'it18-06-vann-foer.png');
     let t = 0;
     for (; t < 30; t++) { await sleep(1000); const all = [await gb(4, 46, 1), await gb(5, 46, 1), await gb(6, 46, 1)]; if (all.every((v) => v === 10)) break; }
     const cells = [await gb(4, 46, 1), await gb(5, 46, 1), await gb(6, 46, 1)];
     const ids = await dropIds();
+    await aim(page, 5.5, 49.05, 6.5, 5.5, 46.3, 1.5);
+    await sleep(500);
     await shot(page, 'it18-07-vann-etter.png');
     record('W1-water-washes-plants', cells.every((v) => v === 10) && ids.includes(12) && ids.includes(79) ? 'PASS' : 'FAIL', `t=${t}s cells=${cells} drops=${ids}`);
   }

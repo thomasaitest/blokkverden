@@ -169,7 +169,7 @@ Last run: 2026-10-31 02:08–02:13 CET · it18 core (56 PASS / 0 FAIL) + scripts
 | P6 | Water washes | Flowing water breaks torches, red dust, crops, saplings, tall grass, flowers into items | PASS | W1 + vitest |
 | P7 | Break particles | Particles take the block's texture colour (was always brown) | PASS | PC1 screenshot + vitest |
 | P8 | Ladders | W into a ladder climbs (no Space needed, ~2.35 b/s); Shift holds; idle slides down ≤ 3 b/s; climb out on top; no fall damage | PASS | X6 + vitest (was: Space only, Shift dropped you fast) |
-| P9 | Doors (2 tall) | Placing needs 2 free cells + floor; upper half targetable (RMB opens/closes, also with a block in hand) and can't be built into; faces the placer; pops when the floor goes | PASS | X7 + vitest (was: upper half was air — clicks went through, blocks could be placed into the door) |
+| P9 | Doors (2 tall) | Placing needs 2 free cells + floor; upper half targetable (RMB opens/closes, also with a block in hand) and can't be built into; faces the placer; pops when the floor goes; blocks water | PASS | X7 + vitest (was: upper half was air — clicks went through, blocks could be placed into the door) |
 | P10 | Mining penalties | ×5 slower with eyes under water, ×5 while airborne | PASS | X11 + vitest |
 | P11 | Movement basics | Pillar-jump (Space+RMB down), sneak-bridging, dig straight down, mine the ceiling and jump, water landing (no fall damage), Q drop + pickup, sleep at night | PASS | X1, X2, X4, X5, X8, X9, X10 |
 

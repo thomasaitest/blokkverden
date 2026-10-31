@@ -69,6 +69,8 @@ export function tickWater(
             const nx = wx + dx;
             const nz = wz + dz;
             if (!loaded(nx, nz)) continue;
+            // MC: a door (both halves) blocks water
+            if (y > 0 && world.getBlock(nx, y - 1, nz) === BlockId.Door && world.getBlock(nx, y, nz) === BlockId.Air) continue;
             const nb = world.getBlock(nx, y, nz);
             if (nb === BlockId.Air || isWashable(nb)) {
               updates.push({ x: nx, y, z: nz, level: level - 1 });

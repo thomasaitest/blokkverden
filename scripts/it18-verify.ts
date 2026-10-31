@@ -431,6 +431,7 @@ async function main() {
     await hold(page, 150); await sleep(300);
     const broken = await gb(14, 46, 4);
     const ids = await dropIds();
+    console.log('FL2 drops', JSON.stringify(await page.evaluate(() => (window as any).__bv.drops.drops.map((d: any) => [d.stack.id, Math.round(d.x), Math.round(d.y), Math.round(d.z)]))));
     record('FL2-place-break-flower', onGrass === 79 && onStone === 0 && poppy === 80 && broken === 0 && ids.includes(79) ? 'PASS' : 'FAIL', JSON.stringify({ onGrass, onStone, poppy, broken, ids }));
   }
 

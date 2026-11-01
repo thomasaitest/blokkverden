@@ -36,7 +36,8 @@ Open two browsers → Sammen → host / join.
 ## Deploy (requires Thomas approval)
 
 - Worker name: `blokkverden-mp`
-- Expected URL: `wss://blokkverden-mp.<account>.workers.dev` (set `VITE_MP_URL` for Pages)
+- Live Worker: `https://blokkverden-mp.heddasverden.workers.dev` (WSS: `wss://blokkverden-mp.heddasverden.workers.dev`)
+- Pages build injects `VITE_MP_URL` from the GitHub repo variable of the same name
 - GitHub secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
 - Workflow: `.github/workflows/mp-server.yml` (`workflow_dispatch` only — no auto-deploy)
 
